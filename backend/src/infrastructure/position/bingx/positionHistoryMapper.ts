@@ -1,44 +1,13 @@
 import { PositionFactory } from '@/domain/position/factories/PositionFactory';
 import type { PositionRecord } from '@/domain/position/interfaces/PositionRecord';
 import { UnexpectedBingXResponseError } from '@/infrastructure/bingx/errors';
-
-type RawObject = Readonly<Record<string, unknown>>;
-
-function isRawObject(value: unknown): value is RawObject {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-/** Erster vorhandener Wert unter einem der Feldnamen (BingX benennt Felder je nach Endpoint anders). */
-function pick(raw: RawObject, ...fieldNames: readonly string[]): unknown {
-  for (const fieldName of fieldNames) {
-    if (raw[fieldName] !== undefined) return raw[fieldName];
-  }
-  return undefined;
-}
-
-function requireString(raw: RawObject, ...fieldNames: readonly string[]): string {
-  const value = pick(raw, ...fieldNames);
-  if (typeof value !== 'string') throw unexpectedField(fieldNames, 'String');
-  return value;
-}
-
-function requireNumber(raw: RawObject, ...fieldNames: readonly string[]): number {
-  const value = pick(raw, ...fieldNames);
-  if (typeof value !== 'number') throw unexpectedField(fieldNames, 'Zahl');
-  return value;
-}
-
-function requireBoolean(raw: RawObject, ...fieldNames: readonly string[]): boolean {
-  const value = pick(raw, ...fieldNames);
-  if (typeof value !== 'boolean') throw unexpectedField(fieldNames, 'Boolean');
-  return value;
-}
-
-function unexpectedField(fieldNames: readonly string[], expectedType: string): Error {
-  return new UnexpectedBingXResponseError(
-    `positionHistory: Feld ${fieldNames.join('/')} fehlt oder ist kein ${expectedType}.`,
-  );
-}
+import {
+  isRawObject,
+  requireBoolean,
+  requireNumber,
+  requireString,
+  withEndpointContext,
+} from '@/infrastructure/bingx/rawFields';
 
 function mapRawPosition(rawPosition: unknown): PositionRecord {
   if (!isRawObject(rawPosition)) {
@@ -77,5 +46,7 @@ export function mapPositionHistoryResponse(data: unknown): PositionRecord[] {
       'Antwort von positionHistory enthält kein Array positionHistory.',
     );
   }
-  return data.positionHistory.map(mapRawPosition);
+  return data.positionHistory.map((rawPosition: unknown) =>
+    withEndpointContext('positionHistory', () => mapRawPosition(rawPosition)),
+  );
 }

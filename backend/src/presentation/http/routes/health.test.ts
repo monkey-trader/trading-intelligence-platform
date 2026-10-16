@@ -2,6 +2,12 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 // Import bewusst über den @/-Alias: der Test prüft so auch die Alias-Konfiguration.
 import { createServer } from '@/presentation/http/createServer';
+import type { OpenPosition } from '@/domain/position/entities/OpenPosition';
+
+/** Stub: /health braucht keine offenen Positionen. */
+async function getOpenPositionsStub(): Promise<OpenPosition[]> {
+  return [];
+}
 
 describe('GET /health', () => {
   let server: FastifyInstance | undefined;
@@ -12,7 +18,7 @@ describe('GET /health', () => {
   });
 
   it('antwortet mit 200 und status "ok"', async () => {
-    server = createServer();
+    server = createServer({ getOpenPositions: getOpenPositionsStub });
 
     const response = await server.inject({ method: 'GET', url: '/health' });
 
