@@ -49,22 +49,38 @@ Daraus übernommene BingX-Erfahrungen:
 - BingX liefert Zahlen meist als **Strings** → defensiv parsen, Feldnamen variieren
   (mehrere Kandidaten prüfen, Rohantwort mitspeichern).
 - Income (`/openApi/swap/v2/user/income`): in 7-Tage-Fenstern, max. 1000 pro Seite,
-  Deduplizierung über `tranId`.
-- Positionen (`/openApi/swap/v1/trade/positionHistory`): **pro Symbol** abfragen,
-  7-Tage-Fenster (größere Fenster liefern still eine leere Liste), Paging über `pageIndex`.
+  Deduplizierung über `tranId`. Reicht nur **~90 Tage** zurück. Ältere Fenster liefern
+  `data: []` oder `data: null` (gemessen am 2026-10-16). `positionHistory` reicht weiter zurück.
+  Symbole, die nur vor über 90 Tagen gehandelt wurden, findet ein Income-Scan deshalb nicht.
+  Lösung: Eine einmalige, fortsetzbare Suche fragt `positionHistory` für alle USDT-Kontrakte
+  aus `/openApi/swap/v2/quote/contracts` ab (~1'200 Stück, erster Lauf ca. 1 h).
+  Lücke: Delistete Kontrakte stehen nicht in dieser Liste und werden nicht gefunden.
+- Positionen (`/openApi/swap/v1/trade/positionHistory`), am 2026-10-16 gegen die echte API gemessen:
+  - `symbol`, `startTs` und `endTs` sind Pflicht, es geht nur **pro Symbol**.
+  - Maximal 90 Tage pro Abfrage, sonst Fehler `109400` ("the query range is more than ninety days").
+    Wir nutzen **89-Tage-Fenster**.
+  - `pageIndex` zählt **ab 0**, `pageSize` gibt die Seitengröße an.
+  - Gefiltert wird nach `updateTime` (Schließzeitpunkt). Teilweise geschlossene Positionen
+    erscheinen erst, wenn sie ganz geschlossen sind.
+  - `positionId` ist 19-stellig und wird als String behandelt, nie als Number.
 - Fortschritt pro Datenquelle in einer State-Tabelle merken, mit 1 h Überlappung.
 - Nutzer-Notizen werden vom Import **niemals** überschrieben.
 
 ### Bekanntes Problem im Prototyp
 Im Prototyp ist die Tabelle `positions` **leer**, obwohl der Sync alle Symbole als erledigt
-markiert und `income` 2'137 Einträge hat. Der Import scheitert still (vermutlich falscher
-Antwort-Schlüssel beim Auslesen oder ungeeignete Parameter). Ohne Positionen können Notizen
-keinem Trade zugeordnet werden.
+markiert und `income` 2'137 Einträge hat. Ohne Positionen können Notizen keinem Trade
+zugeordnet werden.
+
+**Ursache (bestätigt am 2026-10-16):** Der Prototyp beginnt das Paging mit `pageIndex=1`.
+BingX zählt aber ab 0, deshalb wurde jede erste Seite übersprungen und die Antwort war
+`code: 0` mit leerer Liste. Die 7-Tage-Fenster waren unnötig, aber nicht die Ursache.
 
 Konsequenz für dieses Projekt:
 - Erstes Feature ist der **Positions-Import**, und er muss nachweislich Daten liefern.
 - Eine leere API-Antwort bei vorhandenem Income für dasselbe Symbol ist verdächtig und wird
-  geloggt, nicht stillschweigend als "erledigt" markiert.
+  geloggt, nicht stillschweigend als "erledigt" markiert. Geprüft wird über den ganzen
+  Zeitraum, nicht pro Fenster: Ein `REALIZED_PNL` aus einem Teilschluss kann in einem Fenster
+  liegen, dessen Position erst später erscheint.
 - Tests mit echten (anonymisierten) BingX-Antwortbeispielen als Fixtures.
 
 ## Vorgehen
