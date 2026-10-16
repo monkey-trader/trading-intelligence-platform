@@ -1,10 +1,11 @@
-import type { OpenPosition } from '@/domain/position/entities/OpenPosition';
+import type { OpenPositionsSnapshot } from '@/domain/position/entities/OpenPositionsSnapshot';
 import {
   OpenPositionsUnavailableError,
   type OpenPositionsUnavailableReason,
 } from '@/domain/position/errors/OpenPositionsUnavailableError';
 import { PositionDomainError } from '@/domain/position/errors/PositionDomainError';
 import type { OpenPositionSource } from '@/domain/position/interfaces/OpenPositionSource';
+import type { Clock } from '@/domain/shared/interfaces/Clock';
 import type { BingXGetClient } from '@/infrastructure/bingx/BingXGetClient';
 import {
   BingXApiError,
@@ -20,14 +21,19 @@ const OPEN_POSITIONS_PATH = '/openApi/swap/v2/user/positions';
 /**
  * Fragt die aktuell offenen Positionen live bei BingX ab und speichert nichts.
  * BingX-Fehler werden in OpenPositionsUnavailableError übersetzt, unbekannte Fehler gehen durch.
+ * `fetchedAt` stammt aus der Clock, gelesen nach der erfolgreichen Antwort.
  */
 export class BingXOpenPositionSource implements OpenPositionSource {
-  constructor(private readonly client: BingXGetClient) {}
+  constructor(
+    private readonly client: BingXGetClient,
+    private readonly clock: Clock,
+  ) {}
 
-  async fetchOpenPositions(): Promise<OpenPosition[]> {
+  async fetchOpenPositions(): Promise<OpenPositionsSnapshot> {
     try {
       const data = await this.client.get(OPEN_POSITIONS_PATH, {});
-      return mapOpenPositionsResponse(data);
+      const positions = mapOpenPositionsResponse(data);
+      return { positions, fetchedAt: this.clock.now() };
     } catch (error: unknown) {
       const reason = toUnavailableReason(error);
       if (reason === undefined) throw error;

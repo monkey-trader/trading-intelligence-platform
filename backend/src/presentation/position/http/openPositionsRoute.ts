@@ -1,12 +1,13 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
-import type { OpenPosition } from '@/domain/position/entities/OpenPosition';
+import type { OpenPositionsOverview } from '@/application/position/GetOpenPositionsUseCase';
+import { PROBLEM_CONTENT_TYPE, PROBLEM_SCHEMA } from '@/presentation/http/problem';
 import { mapOpenPositionsError } from '@/presentation/position/http/errorMapper';
 import {
-  type OpenPositionDto,
-  toOpenPositionDto,
+  type OpenPositionsSnapshotDto,
+  toOpenPositionsSnapshotDto,
 } from '@/presentation/position/http/toOpenPositionDto';
 
-export type GetOpenPositions = () => Promise<OpenPosition[]>;
+export type GetOpenPositions = () => Promise<OpenPositionsOverview>;
 
 const DECIMAL_SCHEMA = { type: 'string', pattern: '^-?\\d+(\\.\\d+)?$' } as const;
 
@@ -30,6 +31,7 @@ const OPEN_POSITION_SCHEMA = {
     'realisedProfit',
     'pnlRatio',
     'liquidationPrice',
+    'liquidationDistanceRatio',
     'openTime',
     'updateTime',
   ],
@@ -49,31 +51,22 @@ const OPEN_POSITION_SCHEMA = {
     realisedProfit: DECIMAL_SCHEMA,
     pnlRatio: DECIMAL_SCHEMA,
     liquidationPrice: DECIMAL_SCHEMA,
+    // Decimal oder null (ohne Liquidationspreis); das Pattern greift nur bei Strings.
+    liquidationDistanceRatio: { ...DECIMAL_SCHEMA, type: ['string', 'null'] },
     openTime: { type: 'integer' },
     updateTime: { type: 'integer' },
   },
 } as const;
 
-/** Entspricht `Problem` in docs/openapi.yaml. */
-const PROBLEM_SCHEMA = {
+/** Entspricht `OpenPositionsSnapshot` in docs/openapi.yaml. */
+const OPEN_POSITIONS_SNAPSHOT_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['type', 'title', 'status'],
+  required: ['positions', 'totalUnrealizedProfit', 'fetchedAt'],
   properties: {
-    type: {
-      type: 'string',
-      enum: [
-        'not-configured',
-        'rate-limited',
-        'unreachable',
-        'upstream-error',
-        'invalid-response',
-        'internal',
-      ],
-    },
-    title: { type: 'string' },
-    status: { type: 'integer' },
-    detail: { type: 'string' },
+    positions: { type: 'array', items: OPEN_POSITION_SCHEMA },
+    totalUnrealizedProfit: DECIMAL_SCHEMA,
+    fetchedAt: { type: 'integer' },
   },
 } as const;
 
@@ -87,7 +80,9 @@ export function registerOpenPositionsRoute(
     {
       schema: {
         response: {
-          200: { type: 'array', items: OPEN_POSITION_SCHEMA },
+          200: OPEN_POSITIONS_SNAPSHOT_SCHEMA,
+          // 403 setzt der Host-Guard im onRequest-Hook, noch vor dem Handler.
+          403: PROBLEM_SCHEMA,
           500: PROBLEM_SCHEMA,
           502: PROBLEM_SCHEMA,
           503: PROBLEM_SCHEMA,
@@ -95,10 +90,10 @@ export function registerOpenPositionsRoute(
         },
       },
     },
-    async (request, reply): Promise<OpenPositionDto[] | FastifyReply> => {
+    async (request, reply): Promise<OpenPositionsSnapshotDto | FastifyReply> => {
       try {
-        const positions = await getOpenPositions();
-        return positions.map(toOpenPositionDto);
+        const overview = await getOpenPositions();
+        return toOpenPositionsSnapshotDto(overview);
       } catch (error: unknown) {
         const mapped = mapOpenPositionsError(error);
         // Die Ursache (inkl. cause) landet nur im Server-Log, nie im Body.
@@ -106,7 +101,7 @@ export function registerOpenPositionsRoute(
         if (mapped.retryAfterSeconds !== undefined) {
           reply.header('retry-after', String(mapped.retryAfterSeconds));
         }
-        return reply.code(mapped.status).type('application/problem+json').send(mapped.problem);
+        return reply.code(mapped.status).type(PROBLEM_CONTENT_TYPE).send(mapped.problem);
       }
     },
   );

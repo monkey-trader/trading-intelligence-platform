@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { createServer } from '@/presentation/http/createServer';
-import type { OpenPosition } from '@/domain/position/entities/OpenPosition';
+import type { OpenPositionsOverview } from '@/application/position/GetOpenPositionsUseCase';
 import { OpenPositionsUnavailableError } from '@/domain/position/errors/OpenPositionsUnavailableError';
 import type { OpenPositionsUnavailableReason } from '@/domain/position/errors/OpenPositionsUnavailableError';
 
@@ -21,11 +21,18 @@ const OPEN_POSITION_SCHEMA_FIELDS = [
   'realisedProfit',
   'pnlRatio',
   'liquidationPrice',
+  'liquidationDistanceRatio',
   'openTime',
   'updateTime',
 ];
 
-const suiPosition: OpenPosition = {
+type OverviewPosition = OpenPositionsOverview['positions'][number];
+
+/** inject() setzt standardmäßig den Host-Header localhost:80. */
+const SERVER_SETTINGS = { allowedHosts: ['localhost:80'] } as const;
+const FETCHED_AT = 1791800000000;
+
+const suiPosition: OverviewPosition = {
   positionId: '9100000000000000001',
   symbol: 'SUI-USDT',
   side: 'LONG',
@@ -41,11 +48,12 @@ const suiPosition: OpenPosition = {
   realisedProfit: '-0.2400',
   pnlRatio: '0.5208',
   liquidationPrice: '0.865',
+  liquidationDistanceRatio: '0.14356436',
   openTime: 1791500000000,
   updateTime: 1791600000000,
 };
 
-const goldPosition: OpenPosition = {
+const goldPosition: OverviewPosition = {
   positionId: '9100000000000000002',
   symbol: 'NCCOGOLD2USD-USDT',
   side: 'SHORT',
@@ -61,11 +69,19 @@ const goldPosition: OpenPosition = {
   realisedProfit: '-0.5187',
   pnlRatio: '-0.0904',
   liquidationPrice: '4410.5',
+  liquidationDistanceRatio: '0.05640719',
   openTime: 1791700000000,
   updateTime: 1791710000000,
 };
 
-function failingWith(error: unknown): () => Promise<OpenPosition[]> {
+function overviewOf(
+  positions: readonly OverviewPosition[],
+  totalUnrealizedProfit: string,
+): () => Promise<OpenPositionsOverview> {
+  return async () => ({ positions: [...positions], totalUnrealizedProfit, fetchedAt: FETCHED_AT });
+}
+
+function failingWith(error: unknown): () => Promise<OpenPositionsOverview> {
   return async () => {
     throw error;
   };
@@ -79,42 +95,117 @@ describe('GET /positions/open', () => {
     server = undefined;
   });
 
-  it('antwortet mit 200 und den DTOs in der gelieferten Reihenfolge', async () => {
-    server = createServer({ getOpenPositions: async () => [goldPosition, suiPosition] });
+  it('antwortet mit 200 und der Hülle exakt laut Spec (Positionen in gelieferter Reihenfolge)', async () => {
+    server = createServer(
+      { getOpenPositions: overviewOf([goldPosition, suiPosition], '18.75') },
+      SERVER_SETTINGS,
+    );
 
     const response = await server.inject({ method: 'GET', url: '/positions/open' });
 
     expect(response.statusCode).toBe(200);
     expect(response.headers['content-type']).toMatch(/^application\/json/);
-    expect(response.json()).toEqual([goldPosition, suiPosition]);
+    expect(response.json()).toEqual({
+      positions: [goldPosition, suiPosition],
+      totalUnrealizedProfit: '18.75',
+      fetchedAt: FETCHED_AT,
+    });
   });
 
-  it('antwortet mit 200 und [] , wenn keine Position offen ist', async () => {
-    server = createServer({ getOpenPositions: async () => [] });
+  it('liefert liquidationDistanceRatio null ohne Liquidationspreis', async () => {
+    const crossPosition: OverviewPosition = {
+      ...suiPosition,
+      isolated: false,
+      liquidationPrice: '0',
+      liquidationDistanceRatio: null,
+    };
+    server = createServer(
+      { getOpenPositions: overviewOf([crossPosition], '25.0000') },
+      SERVER_SETTINGS,
+    );
 
     const response = await server.inject({ method: 'GET', url: '/positions/open' });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual([]);
+    expect(response.json()).toEqual({
+      positions: [crossPosition],
+      totalUnrealizedProfit: '25.0000',
+      fetchedAt: FETCHED_AT,
+    });
   });
 
-  it('gibt zusätzliche Felder einer Entity nicht aus', async () => {
+  it('antwortet mit 200 und leerer Liste, wenn keine Position offen ist', async () => {
+    server = createServer({ getOpenPositions: overviewOf([], '0') }, SERVER_SETTINGS);
+
+    const response = await server.inject({ method: 'GET', url: '/positions/open' });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      positions: [],
+      totalUnrealizedProfit: '0',
+      fetchedAt: FETCHED_AT,
+    });
+  });
+
+  it('gibt zusätzliche Felder einer Entity oder der Hülle nicht aus', async () => {
     const positionWithExtras = {
       ...suiPosition,
       riskRate: '0.0071',
       rawPayload: '{"intern":true}',
     };
-    server = createServer({ getOpenPositions: async () => [positionWithExtras] });
+    const overviewWithExtras = {
+      positions: [positionWithExtras],
+      totalUnrealizedProfit: '25.0000',
+      fetchedAt: FETCHED_AT,
+      debugInfo: 'intern-abc',
+    };
+    server = createServer({ getOpenPositions: async () => overviewWithExtras }, SERVER_SETTINGS);
 
     const response = await server.inject({ method: 'GET', url: '/positions/open' });
 
     expect(response.statusCode).toBe(200);
     const body: unknown = response.json();
-    expect(Array.isArray(body)).toBe(true);
-    const firstEntry: unknown = Array.isArray(body) ? body[0] : undefined;
+    expect(Object.keys(body ?? {}).sort()).toEqual([
+      'fetchedAt',
+      'positions',
+      'totalUnrealizedProfit',
+    ]);
+    const positions: unknown =
+      typeof body === 'object' && body !== null && 'positions' in body ? body.positions : undefined;
+    expect(Array.isArray(positions)).toBe(true);
+    const firstEntry: unknown = Array.isArray(positions) ? positions[0] : undefined;
     expect(Object.keys(firstEntry ?? {}).sort()).toEqual([...OPEN_POSITION_SCHEMA_FIELDS].sort());
     expect(response.body).not.toContain('riskRate');
     expect(response.body).not.toContain('rawPayload');
+    expect(response.body).not.toContain('intern-abc');
+  });
+
+  it('antwortet bei fremdem Host-Header mit 403 forbidden-host, ohne den Use Case aufzurufen', async () => {
+    let useCaseCalls = 0;
+    server = createServer(
+      {
+        getOpenPositions: async () => {
+          useCaseCalls += 1;
+          return { positions: [], totalUnrealizedProfit: '0', fetchedAt: FETCHED_AT };
+        },
+      },
+      SERVER_SETTINGS,
+    );
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/positions/open',
+      headers: { host: 'evil.example:3000' },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.headers['content-type']).toMatch(/^application\/problem\+json/);
+    expect(response.json()).toEqual({
+      type: 'forbidden-host',
+      title: expect.any(String),
+      status: 403,
+    });
+    expect(useCaseCalls).toBe(0);
   });
 
   it.each([
@@ -126,9 +217,10 @@ describe('GET /positions/open', () => {
   ] as const)(
     'antwortet bei %s mit %i als application/problem+json',
     async (reason: OpenPositionsUnavailableReason, expectedStatus) => {
-      server = createServer({
-        getOpenPositions: failingWith(new OpenPositionsUnavailableError(reason)),
-      });
+      server = createServer(
+        { getOpenPositions: failingWith(new OpenPositionsUnavailableError(reason)) },
+        SERVER_SETTINGS,
+      );
 
       const response = await server.inject({ method: 'GET', url: '/positions/open' });
 
@@ -139,9 +231,10 @@ describe('GET /positions/open', () => {
   );
 
   it('setzt Retry-After: 30 bei rate-limited', async () => {
-    server = createServer({
-      getOpenPositions: failingWith(new OpenPositionsUnavailableError('rate-limited')),
-    });
+    server = createServer(
+      { getOpenPositions: failingWith(new OpenPositionsUnavailableError('rate-limited')) },
+      SERVER_SETTINGS,
+    );
 
     const response = await server.inject({ method: 'GET', url: '/positions/open' });
 
@@ -150,9 +243,10 @@ describe('GET /positions/open', () => {
   });
 
   it('setzt kein Retry-After bei not-configured', async () => {
-    server = createServer({
-      getOpenPositions: failingWith(new OpenPositionsUnavailableError('not-configured')),
-    });
+    server = createServer(
+      { getOpenPositions: failingWith(new OpenPositionsUnavailableError('not-configured')) },
+      SERVER_SETTINGS,
+    );
 
     const response = await server.inject({ method: 'GET', url: '/positions/open' });
 
@@ -160,7 +254,10 @@ describe('GET /positions/open', () => {
   });
 
   it('antwortet bei einem unbekannten Fehler mit 500 internal', async () => {
-    server = createServer({ getOpenPositions: failingWith(new Error('Programmierfehler')) });
+    server = createServer(
+      { getOpenPositions: failingWith(new Error('Programmierfehler')) },
+      SERVER_SETTINGS,
+    );
 
     const response = await server.inject({ method: 'GET', url: '/positions/open' });
 
@@ -172,9 +269,10 @@ describe('GET /positions/open', () => {
 
   it('gibt den Text von cause nicht im Body preis', async () => {
     const cause = new Error('BingX-Detail geheim-xyz');
-    server = createServer({
-      getOpenPositions: failingWith(new OpenPositionsUnavailableError('upstream-error', cause)),
-    });
+    server = createServer(
+      { getOpenPositions: failingWith(new OpenPositionsUnavailableError('upstream-error', cause)) },
+      SERVER_SETTINGS,
+    );
 
     const response = await server.inject({ method: 'GET', url: '/positions/open' });
 

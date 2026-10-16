@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GetOpenPositionsUseCase } from '@/application/position/GetOpenPositionsUseCase';
 import type { OpenPosition } from '@/domain/position/entities/OpenPosition';
+import type { OpenPositionsSnapshot } from '@/domain/position/entities/OpenPositionsSnapshot';
 import type { OpenPositionSource } from '@/domain/position/interfaces/OpenPositionSource';
 import { OpenPositionsUnavailableError } from '@/domain/position/errors/OpenPositionsUnavailableError';
 
@@ -27,13 +28,15 @@ function openPosition(overrides: Partial<OpenPosition> = {}): OpenPosition {
   };
 }
 
-/** Fake-Source: liefert die vorbereiteten Positionen und zählt die Aufrufe. */
-function createFakeSource(positions: readonly OpenPosition[]) {
+const FETCHED_AT = 1_791_800_000_000;
+
+/** Fake-Source: liefert einen Snapshot mit den vorbereiteten Positionen und zählt die Aufrufe. */
+function createFakeSource(positions: readonly OpenPosition[], fetchedAt: number = FETCHED_AT) {
   let callCount = 0;
   const source: OpenPositionSource = {
-    async fetchOpenPositions(): Promise<OpenPosition[]> {
+    async fetchOpenPositions(): Promise<OpenPositionsSnapshot> {
       callCount += 1;
-      return [...positions];
+      return { positions: [...positions], fetchedAt };
     },
   };
   return { source, getCallCount: () => callCount };
@@ -48,7 +51,7 @@ describe('GetOpenPositionsUseCase', () => {
 
     const result = await new GetOpenPositionsUseCase(source).execute();
 
-    expect(result.map((position) => position.positionId)).toEqual(['2', '3', '1']);
+    expect(result.positions.map((position) => position.positionId)).toEqual(['2', '3', '1']);
     expect(getCallCount()).toBe(1);
   });
 
@@ -78,7 +81,7 @@ describe('GetOpenPositionsUseCase', () => {
 
     const result = await new GetOpenPositionsUseCase(source).execute();
 
-    expect(result.map((position) => position.symbol)).toEqual([
+    expect(result.positions.map((position) => position.symbol)).toEqual([
       'ZEC-USDT',
       'BTC-USDT',
       'ETH-USDT',
@@ -106,34 +109,98 @@ describe('GetOpenPositionsUseCase', () => {
       side: 'LONG',
       openTime: sameTime,
     });
-    const useCase = new GetOpenPositionsUseCase({
-      fetchOpenPositions: async () => [shortPosition, longB, longA],
-    });
+    const { source } = createFakeSource([shortPosition, longB, longA]);
 
-    const sorted = await useCase.execute();
+    const sorted = await new GetOpenPositionsUseCase(source).execute();
 
-    expect(sorted.map((position) => position.positionId)).toEqual(['1', '2', '3']);
+    expect(sorted.positions.map((position) => position.positionId)).toEqual(['1', '2', '3']);
   });
 
-  it('liefert die Positionen selbst unverändert', async () => {
+  it('liefert die Positionen unverändert, ergänzt um liquidationDistanceRatio', async () => {
     const position = openPosition();
     const { source } = createFakeSource([position]);
 
     const result = await new GetOpenPositionsUseCase(source).execute();
 
-    expect(result).toEqual([position]);
+    // LONG: (1.0100 − 0.865) / 1.0100 = 0.1435643564… → 0.14356436
+    expect(result.positions).toEqual([{ ...position, liquidationDistanceRatio: '0.14356436' }]);
   });
 
-  it('liefert ein leeres Array, wenn keine Position offen ist', async () => {
+  it('berechnet liquidationDistanceRatio je Seite und null ohne Liquidationspreis', async () => {
+    const longPosition = openPosition({
+      positionId: '1',
+      side: 'LONG',
+      markPrice: '81365.0',
+      liquidationPrice: '76507',
+      openTime: 3,
+    });
+    const shortPosition = openPosition({
+      positionId: '2',
+      side: 'SHORT',
+      markPrice: '4175.00',
+      liquidationPrice: '4410.5',
+      openTime: 2,
+    });
+    const crossPosition = openPosition({
+      positionId: '3',
+      liquidationPrice: '0',
+      openTime: 1,
+    });
+    const { source } = createFakeSource([crossPosition, shortPosition, longPosition]);
+
+    const result = await new GetOpenPositionsUseCase(source).execute();
+
+    expect(
+      result.positions.map((position) => [position.positionId, position.liquidationDistanceRatio]),
+    ).toEqual([
+      ['1', '0.05970626'],
+      ['2', '0.05640719'],
+      ['3', null],
+    ]);
+  });
+
+  it('liefert die exakte Summe des unrealisierten PnL', async () => {
+    const { source } = createFakeSource([
+      openPosition({ positionId: '1', unrealizedProfit: '25.0000' }),
+      openPosition({ positionId: '2', unrealizedProfit: '-6.2500' }),
+      openPosition({ positionId: '3', unrealizedProfit: '0.00000001' }),
+    ]);
+
+    const result = await new GetOpenPositionsUseCase(source).execute();
+
+    expect(result.totalUnrealizedProfit).toBe('18.75000001');
+  });
+
+  it('übernimmt fetchedAt aus dem Snapshot der Source', async () => {
+    const { source } = createFakeSource([openPosition()], 1_791_123_456_789);
+
+    const result = await new GetOpenPositionsUseCase(source).execute();
+
+    expect(result.fetchedAt).toBe(1_791_123_456_789);
+  });
+
+  it('liefert genau positions, totalUnrealizedProfit und fetchedAt', async () => {
+    const { source } = createFakeSource([openPosition()]);
+
+    const result = await new GetOpenPositionsUseCase(source).execute();
+
+    expect(Object.keys(result).sort()).toEqual(['fetchedAt', 'positions', 'totalUnrealizedProfit']);
+  });
+
+  it('liefert eine leere Liste und Summe "0", wenn keine Position offen ist', async () => {
     const { source } = createFakeSource([]);
 
-    await expect(new GetOpenPositionsUseCase(source).execute()).resolves.toEqual([]);
+    await expect(new GetOpenPositionsUseCase(source).execute()).resolves.toEqual({
+      positions: [],
+      totalUnrealizedProfit: '0',
+      fetchedAt: FETCHED_AT,
+    });
   });
 
   it('reicht OpenPositionsUnavailableError unverändert durch', async () => {
     const unavailableError = new OpenPositionsUnavailableError('rate-limited');
     const failingSource: OpenPositionSource = {
-      async fetchOpenPositions(): Promise<OpenPosition[]> {
+      async fetchOpenPositions(): Promise<OpenPositionsSnapshot> {
         throw unavailableError;
       },
     };

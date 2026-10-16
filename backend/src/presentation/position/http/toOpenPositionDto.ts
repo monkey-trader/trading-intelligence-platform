@@ -1,6 +1,9 @@
-import type { OpenPosition } from '@/domain/position/entities/OpenPosition';
+import type {
+  OpenPositionsOverview,
+  OpenPositionWithDistance,
+} from '@/application/position/GetOpenPositionsUseCase';
 
-/** Antwortform von GET /positions/open, entspricht dem Schema `OpenPosition` in docs/openapi.yaml. */
+/** Eintrag der Antwort von GET /positions/open, entspricht `OpenPosition` in docs/openapi.yaml. */
 export type OpenPositionDto = {
   positionId: string;
   symbol: string;
@@ -17,12 +20,20 @@ export type OpenPositionDto = {
   realisedProfit: string;
   pnlRatio: string;
   liquidationPrice: string;
+  liquidationDistanceRatio: string | null;
   openTime: number;
   updateTime: number;
 };
 
+/** Antwort von GET /positions/open, entspricht `OpenPositionsSnapshot` in docs/openapi.yaml. */
+export type OpenPositionsSnapshotDto = {
+  positions: OpenPositionDto[];
+  totalUnrealizedProfit: string;
+  fetchedAt: number;
+};
+
 /** Explizite Abbildung, damit zusätzliche Felder einer Entity nie in die Antwort gelangen. */
-export function toOpenPositionDto(position: OpenPosition): OpenPositionDto {
+export function toOpenPositionDto(position: OpenPositionWithDistance): OpenPositionDto {
   return {
     positionId: position.positionId,
     symbol: position.symbol,
@@ -39,7 +50,19 @@ export function toOpenPositionDto(position: OpenPosition): OpenPositionDto {
     realisedProfit: position.realisedProfit,
     pnlRatio: position.pnlRatio,
     liquidationPrice: position.liquidationPrice,
+    liquidationDistanceRatio: position.liquidationDistanceRatio,
     openTime: position.openTime,
     updateTime: position.updateTime,
+  };
+}
+
+/** Explizite Abbildung der Hülle, zusätzliche Felder fallen weg. */
+export function toOpenPositionsSnapshotDto(
+  overview: OpenPositionsOverview,
+): OpenPositionsSnapshotDto {
+  return {
+    positions: overview.positions.map(toOpenPositionDto),
+    totalUnrealizedProfit: overview.totalUnrealizedProfit,
+    fetchedAt: overview.fetchedAt,
   };
 }

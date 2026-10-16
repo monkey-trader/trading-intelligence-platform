@@ -14,6 +14,7 @@ import { BingXContractSymbolSource } from '@/infrastructure/position/BingXContra
 import { BingXPositionHistorySource } from '@/infrastructure/position/BingXPositionHistorySource';
 import { BingXTradedSymbolSource } from '@/infrastructure/position/BingXTradedSymbolSource';
 import { SqlitePositionRepository } from '@/infrastructure/position/SqlitePositionRepository';
+import { systemClock } from '@/infrastructure/shared/SystemClock';
 import { formatDiscoveryResult } from '@/presentation/position/cli/formatDiscoveryResult';
 import { formatImportResult } from '@/presentation/position/cli/formatImportResult';
 
@@ -40,18 +41,17 @@ async function run(): Promise<number> {
       apiSecret: config.apiSecret,
       baseUrl: config.baseUrl,
     });
-    const clock = { now: (): number => Date.now() };
     const positionHistorySource = new BingXPositionHistorySource(client);
     const positionRepository = new SqlitePositionRepository(database);
     const importStateRepository = new SqliteImportStateRepository(database);
-    const fullImportStartMs = clock.now() - config.fullImportDays * DAY_MS;
+    const fullImportStartMs = systemClock.now() - config.fullImportDays * DAY_MS;
 
     const importResult = await new ImportPositionsUseCase({
       positionHistorySource,
       tradedSymbolSource: new BingXTradedSymbolSource(client),
       positionRepository,
       importStateRepository,
-      clock,
+      clock: systemClock,
       windowSizeMs: WINDOW_SIZE_MS,
       overlapMs: OVERLAP_MS,
     }).execute({ fullImportStartMs });
@@ -65,7 +65,7 @@ async function run(): Promise<number> {
       windowSizeMs: WINDOW_SIZE_MS,
     }).execute({
       fullImportStartMs,
-      discoveryUntilMs: clock.now() - DISCOVERY_MIN_AGE_MS,
+      discoveryUntilMs: systemClock.now() - DISCOVERY_MIN_AGE_MS,
       onProgress: (checkedCount, totalCount, symbol) => {
         if (checkedCount % PROGRESS_EVERY_SYMBOLS === 0 || checkedCount === totalCount) {
           process.stderr.write(`  Suche alte Symbole: ${checkedCount}/${totalCount} (${symbol})\n`);

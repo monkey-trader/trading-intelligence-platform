@@ -1,6 +1,6 @@
-import type { OpenPosition } from '@/domain/position/entities/OpenPosition';
+import type { OpenPositionsSnapshot } from '@/domain/position/entities/OpenPositionsSnapshot';
 
-/** Port: liefert die aktuell offenen Positionen. */
+/** Port: liefert die aktuell offenen Positionen samt Abfragezeitpunkt. */
 export type OpenPositionSource = {
-  fetchOpenPositions(): Promise<OpenPosition[]>;
+  fetchOpenPositions(): Promise<OpenPositionsSnapshot>;
 };
