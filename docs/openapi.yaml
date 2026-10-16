@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Trading Intelligence Platform API
-  version: 0.1.0
+  version: 0.2.0
   description: >-
     HTTP/JSON-API des Backends. Diese Spezifikation ist der Vertrag zwischen Backend
     und Clients: erst hier anpassen, dann implementieren.
@@ -10,7 +10,7 @@ info:
     identifier: LicenseRef-Proprietary
 servers:
   - url: http://127.0.0.1:3000
-    description: Lokale Entwicklung
+    description: Lokale Entwicklung (nur Loopback, Phase 1 ohne Authentifizierung)
 security: []
 paths:
   /health:
@@ -29,10 +29,53 @@ paths:
                 $ref: '#/components/schemas/HealthResponse'
               example:
                 status: ok
+  /positions/open:
+    get:
+      operationId: getOpenPositions
+      summary: Aktuell offene Positionen
+      description: >-
+        Fragt BingX live ab, nichts wird gespeichert. Sortiert nach Eröffnungszeit, neueste
+        zuerst, bei Gleichstand nach Symbol. Leeres Array, wenn keine Position offen ist.
+      tags:
+        - Positionen
+      responses:
+        '200':
+          description: Offene Positionen.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OpenPosition'
+        '500':
+          $ref: '#/components/responses/Problem'
+        '502':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
+        '504':
+          $ref: '#/components/responses/Problem'
 tags:
   - name: System
     description: Betriebliche Endpunkte
+  - name: Positionen
+    description: Positionen des BingX-Futures-Kontos
 components:
+  responses:
+    Problem:
+      description: >-
+        BingX nicht konfiguriert, ausgelastet, nicht erreichbar oder mit ungültiger Antwort
+        (502 upstream-error/invalid-response, 503 not-configured/rate-limited, 504 unreachable,
+        500 internal). Enthält keine internen Details.
+      headers:
+        Retry-After:
+          description: Sekunden bis zum nächsten Versuch, nur bei rate-limited (503).
+          schema:
+            type: integer
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
   schemas:
     HealthResponse:
       type: object
@@ -44,3 +87,98 @@ components:
           type: string
           enum:
             - ok
+    Decimal:
+      type: string
+      pattern: '^-?\d+(\.\d+)?$'
+      description: Dezimalzahl als String, verlustfrei wie von BingX geliefert.
+      example: '0.9634'
+    Problem:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          enum:
+            - not-configured
+            - rate-limited
+            - unreachable
+            - upstream-error
+            - invalid-response
+            - internal
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+    OpenPosition:
+      type: object
+      additionalProperties: false
+      required:
+        - positionId
+        - symbol
+        - side
+        - isolated
+        - positionAmount
+        - avgOpenPrice
+        - markPrice
+        - leverage
+        - initialMargin
+        - margin
+        - positionValue
+        - unrealizedProfit
+        - realisedProfit
+        - pnlRatio
+        - liquidationPrice
+        - openTime
+        - updateTime
+      properties:
+        positionId:
+          type: string
+          description: BingX-Positions-ID (19-stellig, immer String).
+        symbol:
+          type: string
+          example: SUI-USDT
+        side:
+          type: string
+          enum:
+            - LONG
+            - SHORT
+        isolated:
+          type: boolean
+        positionAmount:
+          $ref: '#/components/schemas/Decimal'
+        avgOpenPrice:
+          $ref: '#/components/schemas/Decimal'
+        markPrice:
+          $ref: '#/components/schemas/Decimal'
+        leverage:
+          type: number
+          exclusiveMinimum: 0
+        initialMargin:
+          $ref: '#/components/schemas/Decimal'
+        margin:
+          $ref: '#/components/schemas/Decimal'
+        positionValue:
+          $ref: '#/components/schemas/Decimal'
+        unrealizedProfit:
+          $ref: '#/components/schemas/Decimal'
+        realisedProfit:
+          $ref: '#/components/schemas/Decimal'
+          description: Bereits realisierter PnL aus Teilschlüssen und Gebühren.
+        pnlRatio:
+          $ref: '#/components/schemas/Decimal'
+          description: Unrealisierter PnL relativ zur Margin (0.25 = 25 %).
+        liquidationPrice:
+          $ref: '#/components/schemas/Decimal'
+          description: '"0" bedeutet keine Liquidation.'
+        openTime:
+          type: integer
+          description: Eröffnung in Epoch-Millisekunden.
+        updateTime:
+          type: integer
+          description: Letzte Änderung in Epoch-Millisekunden.

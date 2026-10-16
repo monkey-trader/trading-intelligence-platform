@@ -63,6 +63,10 @@ Daraus übernommene BingX-Erfahrungen:
   - Gefiltert wird nach `updateTime` (Schließzeitpunkt). Teilweise geschlossene Positionen
     erscheinen erst, wenn sie ganz geschlossen sind.
   - `positionId` ist 19-stellig und wird als String behandelt, nie als Number.
+- Offene Positionen (`GET /openApi/swap/v2/user/positions`, gemessen am 2026-10-16): `data` ist ein
+  Array, Beträge kommen als Strings, aber `liquidationPrice` als **number**; das Eröffnungsfeld heißt `createTime`.
+  Gemessen nur im Hedge-Modus (`positionSide` LONG/SHORT). Im One-Way-Modus käme `BOTH`, das lehnen
+  wir derzeit ab (502).
 - Fortschritt pro Datenquelle in einer State-Tabelle merken, mit 1 h Überlappung.
 - Nutzer-Notizen werden vom Import **niemals** überschrieben.
 
@@ -95,6 +99,8 @@ Konsequenz für dieses Projekt:
 - BingX-API-Key **nur mit Lese-Rechten**; der Code macht nur signierte GET-Requests.
 - Secrets (`BX_KEY`, `BX_SECRET`) nur in `.env`, niemals im Code oder Repo. `.env` steht in `.gitignore`.
 - Die eigene API gibt niemals Secrets aus.
+- Phase 1 ohne Authentifizierung: Der Server bindet nur auf Loopback (`127.0.0.1`), ein anderer
+  `HOST` nur mit ausdrücklichem `ALLOW_REMOTE=true`.
 
 ## Subagents (`.claude/agents/`)
 - `architect` – prüft Schichtengrenzen und den API-Vertrag

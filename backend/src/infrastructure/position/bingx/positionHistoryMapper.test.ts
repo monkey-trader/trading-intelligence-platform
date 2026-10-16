@@ -119,6 +119,14 @@ describe('mapPositionHistoryResponse', () => {
     ).toBe(true);
   });
 
+  it('nennt den Endpunkt in der Fehlermeldung eines falsch typisierten Felds', () => {
+    const data = {
+      positionHistory: [{ ...page0Fixture.data.positionHistory[0], leverage: 'sieben' }],
+    };
+
+    expect(() => mapPositionHistoryResponse(data)).toThrow(/positionHistory.*leverage/);
+  });
+
   it('wirft einen Fehler, wenn ein Pflichtfeld fehlt', () => {
     const withoutNetProfit = Object.fromEntries(
       Object.entries(firstRawPosition).filter(([fieldName]) => fieldName !== 'netProfit'),

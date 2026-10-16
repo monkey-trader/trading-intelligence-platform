@@ -1,3 +1,5 @@
+import { type BingXConfig, readBingXConfig } from '@/infrastructure/config/bingxConfig';
+
 export type ImportConfig = {
   apiKey: string;
   apiSecret: string;
@@ -8,7 +10,6 @@ export type ImportConfig = {
 
 type Environment = Readonly<Record<string, string | undefined>>;
 
-const DEFAULT_BASE_URL = 'https://open-api.bingx.com';
 const DEFAULT_DATABASE_PATH = 'data/journal.sqlite';
 const DEFAULT_FULL_IMPORT_DAYS = 365;
 
@@ -17,21 +18,22 @@ const DEFAULT_FULL_IMPORT_DAYS = 365;
  * Fehlertexte nennen nur den Variablennamen, nie einen Wert.
  */
 export function readImportConfig(environment: Environment): ImportConfig {
+  const bingXConfig = readBingXConfig(environment) ?? failOnMissingKeys(environment);
   return {
-    apiKey: required(environment, 'BX_KEY'),
-    apiSecret: required(environment, 'BX_SECRET'),
-    baseUrl: nonEmpty(environment.BX_BASE) ?? DEFAULT_BASE_URL,
+    ...bingXConfig,
     databasePath: nonEmpty(environment.JOURNAL_DB) ?? DEFAULT_DATABASE_PATH,
     fullImportDays: parseFullImportDays(nonEmpty(environment.IMPORT_FULL_DAYS)),
   };
 }
 
-function required(environment: Environment, variableName: string): string {
-  const value = nonEmpty(environment[variableName]);
-  if (value === undefined) {
-    throw new Error(`Umgebungsvariable ${variableName} fehlt (in .env setzen).`);
+/** Der Import braucht die Keys zwingend. Die Meldung nennt die fehlende Variable, nie einen Wert. */
+function failOnMissingKeys(environment: Environment): BingXConfig {
+  for (const variableName of ['BX_KEY', 'BX_SECRET']) {
+    if (nonEmpty(environment[variableName]) === undefined) {
+      throw new Error(`Umgebungsvariable ${variableName} fehlt (in .env setzen).`);
+    }
   }
-  return value;
+  throw new Error('BingX-Konfiguration unvollständig (BX_KEY/BX_SECRET in .env setzen).');
 }
 
 function nonEmpty(value: string | undefined): string | undefined {
