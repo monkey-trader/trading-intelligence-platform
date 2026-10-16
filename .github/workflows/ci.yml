@@ -44,3 +44,46 @@ jobs:
 
       - name: OpenAPI-Spezifikation prüfen
         run: npx --yes @redocly/cli@2.64.1 lint ../docs/openapi.yaml
+
+  web:
+    name: Web-Client (Lint + Tests + Build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: clients/web
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: clients/web/package-lock.json
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: API-Typen erzeugen und Drift prüfen
+        run: |
+          npm run generate:api
+          # Schlägt fehl, wenn die generierten Typen nicht zur Spec passen (auch bei neuen Dateien).
+          test -z "$(git status --porcelain -- src/infrastructure/api/)" || {
+            git status --porcelain -- src/infrastructure/api/
+            git diff -- src/infrastructure/api/
+            exit 1
+          }
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Formatierung prüfen
+        run: npm run format:check
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build

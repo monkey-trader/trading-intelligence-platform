@@ -1,0 +1,139 @@
+/* Mobile-first: jede Zeile ist eine Karte, die Spaltennamen kommen aus data-label. */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.table thead {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.table tbody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.row {
+  display: block;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  box-shadow: var(--shadow-card);
+}
+
+.cell {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+  text-align: right;
+  font-weight: var(--font-weight-regular);
+}
+
+.cell::before {
+  content: attr(data-label);
+  /* Die Zelle kann fett sein (z.B. Seite), das Label bleibt normal. */
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  text-align: left;
+}
+
+.symbolCell {
+  font-weight: var(--font-weight-strong);
+  font-size: var(--font-size-large);
+}
+
+.sideLong {
+  color: var(--color-positive);
+  font-weight: var(--font-weight-strong);
+}
+
+.sideShort {
+  color: var(--color-negative);
+  font-weight: var(--font-weight-strong);
+}
+
+.positive {
+  color: var(--color-positive);
+}
+
+.negative {
+  color: var(--color-negative);
+}
+
+.neutral {
+  color: var(--color-text);
+}
+
+@media (min-width: 768px) {
+  .table {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-medium);
+    box-shadow: var(--shadow-card);
+  }
+
+  .table thead {
+    position: static;
+    display: table-header-group;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+
+  .table tbody {
+    display: table-row-group;
+  }
+
+  .headerCell {
+    padding: var(--space-2) var(--space-3);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-strong);
+    text-align: right;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .headerCell:first-child,
+  .symbolCell {
+    text-align: left;
+  }
+
+  .row {
+    display: table-row;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .row:not(:last-child) .cell {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .cell {
+    display: table-cell;
+    padding: var(--space-2) var(--space-3);
+    white-space: nowrap;
+  }
+
+  .cell::before {
+    content: none;
+  }
+
+  .symbolCell {
+    font-size: var(--font-size-base);
+  }
+}

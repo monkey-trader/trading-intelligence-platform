@@ -1,0 +1,6 @@
+dist/
+coverage/
+node_modules/
+package-lock.json
+# Aus docs/openapi.yaml erzeugt, die CI prüft per git diff, dass sie aktuell ist.
+src/infrastructure/api/generated.ts

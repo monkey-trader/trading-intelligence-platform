@@ -1,0 +1,73 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-3);
+}
+
+.title {
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-strong);
+}
+
+.message {
+  padding: var(--space-4);
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  text-align: center;
+}
+
+.errorPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-negative-surface);
+  border: 1px solid var(--color-negative);
+  border-radius: var(--radius-medium);
+}
+
+.errorText {
+  color: var(--color-negative);
+  font-weight: var(--font-weight-strong);
+}
+
+.staleWarning {
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-warning);
+  background: var(--color-warning-surface);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-small);
+  font-size: var(--font-size-small);
+}
+
+.retryButton {
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-surface);
+  background: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-small);
+  font-weight: var(--font-weight-strong);
+  cursor: pointer;
+}
+
+.retryButton:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (min-width: 768px) {
+  .page {
+    padding: var(--space-6) var(--space-5);
+    gap: var(--space-5);
+  }
+
+  .title {
+    font-size: var(--font-size-x-large);
+  }
+}
