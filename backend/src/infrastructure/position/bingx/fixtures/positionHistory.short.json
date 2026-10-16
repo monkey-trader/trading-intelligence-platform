@@ -1,0 +1,26 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "positionHistory": [
+      {
+        "positionId": "9000000000000000099",
+        "symbol": "NCCOGOLD2USD-USDT",
+        "isolated": true,
+        "positionSide": "SHORT",
+        "openTime": 1780300000000,
+        "updateTime": 1780310017000,
+        "avgPrice": "3412.55",
+        "avgClosePrice": "3398.10",
+        "realisedProfit": "-2.1675",
+        "netProfit": "-2.4019",
+        "positionAmt": "0.15",
+        "closePositionAmt": "0.15",
+        "leverage": 15,
+        "closeAllPositions": true,
+        "positionCommission": "-0.1024",
+        "totalFunding": "-0.132"
+      }
+    ]
+  }
+}

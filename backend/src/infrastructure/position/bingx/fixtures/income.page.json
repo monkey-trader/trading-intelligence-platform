@@ -1,0 +1,52 @@
+[
+  {
+    "symbol": "ONDO-USDT",
+    "incomeType": "TRADING_FEE",
+    "income": "-0.0256",
+    "asset": "USDT",
+    "time": 1780000000500,
+    "info": "Trading fee",
+    "tranId": "8000000000000000001",
+    "tradeId": "7000000000000000001"
+  },
+  {
+    "symbol": "ONDO-USDT",
+    "incomeType": "REALIZED_PNL",
+    "income": "1.7000",
+    "asset": "USDT",
+    "time": 1780018017000,
+    "info": "Realized PnL",
+    "tranId": "8000000000000000002",
+    "tradeId": "7000000000000000002"
+  },
+  {
+    "symbol": "XRP-USDT",
+    "incomeType": "FUNDING_FEE",
+    "income": "-0.0113",
+    "asset": "USDT",
+    "time": 1780030000000,
+    "info": "Funding fee",
+    "tranId": "8000000000000000003",
+    "tradeId": ""
+  },
+  {
+    "symbol": "NCCOGOLD2USD-USDT",
+    "incomeType": "TRADING_FEE",
+    "income": "-0.1024",
+    "asset": "USDT",
+    "time": 1780300000400,
+    "info": "Trading fee",
+    "tranId": "8000000000000000004",
+    "tradeId": "7000000000000000004"
+  },
+  {
+    "symbol": "NCCOGOLD2USD-USDT",
+    "incomeType": "REALIZED_PNL",
+    "income": "-2.1675",
+    "asset": "USDT",
+    "time": 1780310017000,
+    "info": "Realized PnL",
+    "tranId": "8000000000000000005",
+    "tradeId": "7000000000000000005"
+  }
+]

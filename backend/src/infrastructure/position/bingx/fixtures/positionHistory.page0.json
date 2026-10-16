@@ -1,0 +1,62 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "positionHistory": [
+      {
+        "positionId": "9000000000000000000",
+        "symbol": "ONDO-USDT",
+        "isolated": true,
+        "positionSide": "LONG",
+        "openTime": 1780000000000,
+        "updateTime": 1780018017000,
+        "avgPrice": "0.4120",
+        "avgClosePrice": "0.4188",
+        "realisedProfit": "1.7000",
+        "netProfit": "1.5123",
+        "positionAmt": "250.00",
+        "closePositionAmt": "250.00",
+        "leverage": 7,
+        "closeAllPositions": true,
+        "positionCommission": "-0.05121506352000001",
+        "totalFunding": "-0.1356"
+      },
+      {
+        "positionId": "9000000000000000001",
+        "symbol": "ONDO-USDT",
+        "isolated": true,
+        "positionSide": "LONG",
+        "openTime": 1780086400000,
+        "updateTime": 1780104417000,
+        "avgPrice": "0.3985",
+        "avgClosePrice": "0.3950",
+        "realisedProfit": "-0.6318",
+        "netProfit": "-0.7999",
+        "positionAmt": "180.50",
+        "closePositionAmt": "180.50",
+        "leverage": 3,
+        "closeAllPositions": true,
+        "positionCommission": "-0.0321",
+        "totalFunding": "-0.136"
+      },
+      {
+        "positionId": "9000000000000000002",
+        "symbol": "ONDO-USDT",
+        "isolated": true,
+        "positionSide": "LONG",
+        "openTime": 1780172800000,
+        "updateTime": 1780190817000,
+        "avgPrice": "0.4310",
+        "avgClosePrice": "0.4402",
+        "realisedProfit": "2.7600",
+        "netProfit": "2.4410",
+        "positionAmt": "300.00",
+        "closePositionAmt": "300.00",
+        "leverage": 10,
+        "closeAllPositions": true,
+        "positionCommission": "-0.0519",
+        "totalFunding": "-0.2671"
+      }
+    ]
+  }
+}

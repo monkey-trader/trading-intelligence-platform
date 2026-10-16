@@ -1,0 +1,46 @@
+openapi: 3.1.0
+info:
+  title: Trading Intelligence Platform API
+  version: 0.1.0
+  description: >-
+    HTTP/JSON-API des Backends. Diese Spezifikation ist der Vertrag zwischen Backend
+    und Clients: erst hier anpassen, dann implementieren.
+  license:
+    name: Proprietär
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: http://127.0.0.1:3000
+    description: Lokale Entwicklung
+security: []
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Lebenszeichen des Backends
+      description: Antwortet mit 200, solange der Server läuft. Gibt keine Konfiguration oder Secrets aus.
+      tags:
+        - System
+      responses:
+        '200':
+          description: Backend läuft.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: ok
+tags:
+  - name: System
+    description: Betriebliche Endpunkte
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
