@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Trading Intelligence Platform API
-  version: 0.2.0
+  version: 0.3.0
   description: >-
     HTTP/JSON-API des Backends. Diese Spezifikation ist der Vertrag zwischen Backend
     und Clients: erst hier anpassen, dann implementieren.
@@ -10,7 +10,9 @@ info:
     identifier: LicenseRef-Proprietary
 servers:
   - url: http://127.0.0.1:3000
-    description: Lokale Entwicklung (nur Loopback, Phase 1 ohne Authentifizierung)
+    description: >-
+      Lokale Entwicklung. Phase 1 ohne Authentifizierung, daher nur Loopback; Anfragen mit
+      einem anderen Host-Header werden mit 403 forbidden-host abgelehnt (Schutz vor DNS-Rebinding).
 security: []
 paths:
   /health:
@@ -29,24 +31,27 @@ paths:
                 $ref: '#/components/schemas/HealthResponse'
               example:
                 status: ok
+        '403':
+          $ref: '#/components/responses/Problem'
   /positions/open:
     get:
       operationId: getOpenPositions
       summary: Aktuell offene Positionen
       description: >-
-        Fragt BingX live ab, nichts wird gespeichert. Sortiert nach Eröffnungszeit, neueste
-        zuerst, bei Gleichstand nach Symbol. Leeres Array, wenn keine Position offen ist.
+        Fragt BingX ab, nichts wird gespeichert. Antworten werden bis zu 5 s zwischengespeichert,
+        `fetchedAt` nennt das tatsächliche Alter der Daten. Positionen sind nach Eröffnungszeit
+        sortiert, neueste zuerst. Leere Liste, wenn keine Position offen ist.
       tags:
         - Positionen
       responses:
         '200':
-          description: Offene Positionen.
+          description: Offene Positionen mit Summen.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/OpenPosition'
+                $ref: '#/components/schemas/OpenPositionsSnapshot'
+        '403':
+          $ref: '#/components/responses/Problem'
         '500':
           $ref: '#/components/responses/Problem'
         '502':
@@ -64,9 +69,8 @@ components:
   responses:
     Problem:
       description: >-
-        BingX nicht konfiguriert, ausgelastet, nicht erreichbar oder mit ungültiger Antwort
-        (502 upstream-error/invalid-response, 503 not-configured/rate-limited, 504 unreachable,
-        500 internal). Enthält keine internen Details.
+        Fehlerantwort ohne interne Details: 403 forbidden-host, 502 upstream-error/invalid-response,
+        503 not-configured/rate-limited, 504 unreachable, 500 internal.
       headers:
         Retry-After:
           description: Sekunden bis zum nächsten Versuch, nur bei rate-limited (503).
@@ -103,6 +107,7 @@ components:
         type:
           type: string
           enum:
+            - forbidden-host
             - not-configured
             - rate-limited
             - unreachable
@@ -115,6 +120,24 @@ components:
           type: integer
         detail:
           type: string
+    OpenPositionsSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+        - positions
+        - totalUnrealizedProfit
+        - fetchedAt
+      properties:
+        positions:
+          type: array
+          items:
+            $ref: '#/components/schemas/OpenPosition'
+        totalUnrealizedProfit:
+          $ref: '#/components/schemas/Decimal'
+          description: Summe des unrealisierten PnL aller offenen Positionen (exakt, "0" wenn keine).
+        fetchedAt:
+          type: integer
+          description: Zeitpunkt der Abfrage bei BingX in Epoch-Millisekunden.
     OpenPosition:
       type: object
       additionalProperties: false
@@ -134,6 +157,7 @@ components:
         - realisedProfit
         - pnlRatio
         - liquidationPrice
+        - liquidationDistanceRatio
         - openTime
         - updateTime
       properties:
@@ -176,6 +200,14 @@ components:
         liquidationPrice:
           $ref: '#/components/schemas/Decimal'
           description: '"0" bedeutet keine Liquidation.'
+        liquidationDistanceRatio:
+          description: >-
+            Abstand des Mark-Preises zum Liquidationspreis relativ zum Mark-Preis, 8 Nachkommastellen
+            (0.06 = 6 %). LONG (mark − liq) / mark, SHORT (liq − mark) / mark. null ohne
+            Liquidationspreis ("0") oder bei Mark-Preis 0.
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
         openTime:
           type: integer
           description: Eröffnung in Epoch-Millisekunden.
