@@ -13,10 +13,12 @@ sind austauschbar und sprechen nur über die API mit dem Backend.
 - Das Backend besitzt Import, Datenbank und Fachlogik. Clients greifen **nie** direkt auf die DB zu.
 - Kommunikation nur über eine HTTP/JSON-API, beschrieben als OpenAPI-Spezifikation (`docs/openapi.yaml`).
 - Die OpenAPI-Spezifikation ist der Vertrag: erst die Spec anpassen, dann implementieren.
-- Ein UI kommt erst, wenn Import und API stehen.
+- Das Web-UI (`clients/web/`) zeigt nur, was die API liefert; Fachlogik und Berechnungen
+  (z.B. Summen, Liquidationsabstand) gehören ins Backend.
 
 ## Stack
 - Backend: Node.js + TypeScript
+- Web-Client: Vite + React + TypeScript, CSS Modules
 - Datenbank: SQLite
 - Tests: Vitest
 - Paketmanager: **nur npm** (kein pnpm, kein yarn)
@@ -26,8 +28,23 @@ sind austauschbar und sprechen nur über die API mit dem Backend.
 ```
 backend/src/{domain,application,infrastructure,presentation}/<feature>/
 docs/openapi.yaml
-clients/        (später, z.B. clients/web/)
+clients/web/    Web-Client (Vite + React), spricht nur über die HTTP-API
+                API-Typen per `npm run generate:api` aus docs/openapi.yaml (openapi-typescript 7.13.0
+                verlangt TS ^5, läuft mit TS 6 über `overrides` in package.json, getestet)
 ```
+
+## Lokal starten
+Einmalig installieren und die Keys hinterlegen:
+```bash
+(cd backend && npm ci) && (cd clients/web && npm ci)
+cp backend/.env.example backend/.env   # BX_KEY und BX_SECRET eintragen (Key nur mit Lese-Rechten)
+```
+Dann zwei Terminals:
+```bash
+cd backend && npm run dev        # Terminal 1: API auf http://127.0.0.1:3000
+cd clients/web && npm run dev    # Terminal 2: Web-UI, Proxy /api → Backend
+```
+Danach http://127.0.0.1:5173 öffnen (Vite bindet nur auf IPv4-Loopback; `localhost` kann auf `::1` zeigen).
 
 ## Architektur – Onion / DDD, feature-sliced
 - **Domain (Kern):** Entities, Value Objects, typisierte Errors, Factories, Repository-Ports.

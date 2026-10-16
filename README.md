@@ -10,6 +10,19 @@ Persönliches Trading-Journal mit automatischem Import von BingX (USDT-M Futures
 
 Details und Regeln für die Entwicklung stehen in [`CLAUDE.md`](CLAUDE.md).
 
+## Lokal starten
+Einmalig installieren und die Keys hinterlegen:
+```bash
+(cd backend && npm ci) && (cd clients/web && npm ci)
+cp backend/.env.example backend/.env   # BX_KEY und BX_SECRET eintragen (Key nur mit Lese-Rechten)
+```
+Dann zwei Terminals:
+```bash
+cd backend && npm run dev        # Terminal 1: API auf http://127.0.0.1:3000
+cd clients/web && npm run dev    # Terminal 2: Web-UI, Proxy /api → Backend
+```
+Danach http://127.0.0.1:5173 öffnen (Vite bindet nur auf IPv4-Loopback; `localhost` kann auf `::1` zeigen).
+
 ---
 
 ## Entwickeln mit AI-Agenten (Blueprint)
