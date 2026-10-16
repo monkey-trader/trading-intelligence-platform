@@ -1,0 +1,16 @@
+# Abhängigkeiten und Build-Ausgaben
+node_modules/
+dist/
+coverage/
+
+# Secrets: nur die Vorlage wird committet
+.env
+.env.*
+!.env.example
+
+# Logs und System
+*.log
+.DS_Store
+
+# Lokale Daten (SQLite-Journal)
+data/
