@@ -2,6 +2,7 @@
 name: reviewer
 description: Finale Qualitäts- und Sicherheitsprüfung. Nach dem programmer und vor jedem Commit einsetzen.
 tools: Read, Grep, Glob, Bash
+model: sonnet
 ---
 
 Du prüfst fertigen Code, du änderst ihn nicht.
