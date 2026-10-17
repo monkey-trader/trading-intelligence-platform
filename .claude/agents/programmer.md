@@ -17,3 +17,11 @@ Du schreibst Produktivcode, um die bestehenden Tests zu erfüllen.
 - Fehler als eigene Typen (prüfbar mit `errors.As`), mit `%w` umhüllen, nie verschlucken.
 - Kein `any`/`interface{}` ohne Not, sprechende Namen, Kommentare auf Deutsch.
 - Zum Schluss `test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...`.
+
+**Kontext sparen (wichtig):**
+- Code finden: zuerst `repo-rag search --files-only "<englische Frage mit Code-Begriffen>"`, dann nur diese Dateien lesen. Kein breites Grep/Glob über das ganze Repo.
+- Lies grosse Dateien gezielt (Zeilenbereich aus dem repo-rag-Treffer), nicht komplett.
+- Arbeite nur in den Dateien/Ordnern, die zu den roten Tests gehören.
+- Tests während der Arbeit: nur die betroffene Datei/das Paket ausführen, z. B. `npx vitest run <pfad>` oder `go test ./internal/<paket>/...`. Die ganze Suite nur einmal am Schluss.
+- Testausgaben kurz halten: `npm test 2>&1 | tail -n 40` bzw. `go test ./... 2>&1 | grep -E "FAIL|panic|---" | head -n 40`. Bei langen Fehlerlogs: `... | ask-local "Welche Tests schlagen fehl und warum? Kurz."`
+- Berichte am Ende knapp: geänderte Dateien + grün/rot, keine kompletten Logs.

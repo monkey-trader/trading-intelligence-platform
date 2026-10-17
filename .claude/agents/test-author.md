@@ -22,3 +22,11 @@ Du schreibst ausschließlich Tests, niemals Produktivcode.
 - Rot bestätigen mit `go test -race ./...`. Damit es kompiliert, dürfen minimale Stubs mit den
   vereinbarten Signaturen und `// TODO(programmer)` angelegt werden, ohne echtes Verhalten.
 - Domain-Fehler mit `errors.As` bzw. `errors.Is` prüfen.
+
+**Kontext sparen (wichtig):**
+- Rot bestätigen nur für die neue Datei/das Paket: `npx vitest run <datei>` bzw.
+  `go test ./internal/<paket>/...` (ohne `-race`, ohne ganze Suite).
+- Testausgaben kürzen: `2>&1 | tail -n 30`.
+- Bestehende Tests als Vorlage: per `repo-rag search --files-only "<englische Frage> test"` einen
+  passenden Test finden und nur diesen lesen, nicht ganze Ordner.
+- BingX-Fixtures in `fixtures/bingx/` nur auszugsweise lesen (`head -n 60`), nicht komplett.
