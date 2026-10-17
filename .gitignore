@@ -21,3 +21,6 @@ data/
 
 # Go-Binary aus `go build -o tip-server ./cmd/tip-server`
 /backend-go/tip-server
+
+# Screenshots des designer-Agenten
+clients/web/screenshots/
