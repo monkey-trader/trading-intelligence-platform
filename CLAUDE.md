@@ -154,3 +154,25 @@ Nach grösseren Änderungen: `repo-rag index`.
 - **ask-local nur für EINE Quelle** (ein Log, ein Diff, eine Datei). Nicht für Vergleiche mehrerer Quellen oder Status-Fragen (z. B. Plan vs. Commits) – das machst du selbst, `git log --oneline -20` ist billig.
 - Für Kleinkram (Commit-Messages, kurze Logs) `ask-local --fast` nutzen (schnelleres 7b-Modell).
 - Erscheint `[ask-local] WARNUNG: Eingabe zu lang`, Ergebnis nicht trauen: Eingabe eingrenzen und neu fragen.
+
+## Agenten-Orchestrierung (Token-Regeln für den Lead)
+
+**Starten und Übergeben**
+- Subagenten **immer neu starten, nie resumen** (ein Resume schleppt den ganzen Verlauf mit).
+- Jedem Agenten eine kurze Übergabe mitgeben: betroffene Dateien/Pakete, betroffene Tests, genaue Aufgabe,
+  was er NICHT anfassen darf. Er soll nicht selbst das Repo durchsuchen müssen.
+- Agenten berichten in höchstens 15 Zeilen: geänderte Dateien, Ergebnis (grün/rot), offene Punkte. Keine Logs.
+
+**Wann welcher Agent**
+- `architect`: nur bei neuen Features/Phasen oder Schichtfragen, nicht bei Nachziehern oder Bugfixes.
+- `test-author` → `programmer`: je eine Runde. Bleiben Tests rot, meldet der programmer den Grund,
+  statt dass die Kette erneut läuft.
+- `reviewer`: **genau einmal, ganz am Ende**, vor dem Commit.
+- `designer`: nur bei sichtbaren UI-Änderungen.
+- Kleine Nachzieher (Review-Punkte, Kommentare, Konstanten, einzelne Tests) erledigt der Lead bzw.
+  ein einzelner programmer direkt, ohne die ganze Kette.
+
+**Session klein halten**
+- Vor dem reviewer `/compact` vorschlagen, wenn die Session lang ist.
+- Nach jedem Commit den Abschnitt „Aktueller Stand“ in `docs/migration/go-wails.md` aktualisieren
+  und dem Nutzer `/clear` empfehlen.
