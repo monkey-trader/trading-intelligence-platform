@@ -20,6 +20,7 @@ export function OpenPositionsHeader({
   const formattedTotal = formatDecimal(totalUnrealizedProfit, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
+    signDisplay: 'exceptZero',
   });
   const positionCountLabel = positionCount === 1 ? '1 Position' : `${positionCount} Positionen`;
 

@@ -28,26 +28,42 @@ describe('OpenPositionsHeader', () => {
   it('zeigt die Summe des unrealisierten PnL mit zwei Nachkommastellen', () => {
     renderHeader({ totalUnrealizedProfit: '18.745' });
 
-    expect(screen.getByText(/18\.75/)).toBeInTheDocument();
+    expect(screen.getByText(/^\+18\.75$/)).toBeInTheDocument();
   });
 
   it('tönt eine positive Summe positiv', () => {
     renderHeader({ totalUnrealizedProfit: '18.75' });
 
-    expect(screen.getByText(/18\.75/)).toHaveClass('positive');
+    expect(screen.getByText(/^\+18\.75$/)).toHaveClass('positive');
   });
 
   it('tönt eine negative Summe negativ', () => {
     renderHeader({ totalUnrealizedProfit: '-6.25' });
 
-    expect(screen.getByText(/[-−]6\.25/)).toHaveClass('negative');
+    expect(screen.getByText(/^[-−]6\.25$/)).toHaveClass('negative');
   });
 
   it('tönt eine Summe von 0 neutral', () => {
     renderHeader({ totalUnrealizedProfit: '0' });
 
-    expect(screen.getByText(/0\.00/)).toHaveClass('neutral');
+    expect(screen.getByText(/^0\.00$/)).toHaveClass('neutral');
   });
+
+  it('zeigt eine positive Summe mit explizitem "+" und de-CH-Tausendertrennung', () => {
+    renderHeader({ totalUnrealizedProfit: '1234.5' });
+
+    expect(screen.getByText(/^\+1['’]234\.50$/)).toBeInTheDocument();
+  });
+
+  it.each(['0.004', '-0.004', '-0'])(
+    'zeigt eine Summe %s, die gerundet 0 ist, ohne Vorzeichen als 0.00',
+    (totalUnrealizedProfit) => {
+      renderHeader({ totalUnrealizedProfit });
+
+      expect(screen.getByText(/^0\.00$/)).toHaveClass('neutral');
+      expect(screen.queryByText(/[+\-−]0\.00/)).not.toBeInTheDocument();
+    },
+  );
 
   it('zeigt die Anzahl der offenen Positionen', () => {
     renderHeader({ positionCount: 2 });

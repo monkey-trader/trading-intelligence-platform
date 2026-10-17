@@ -67,6 +67,7 @@
   color: var(--color-text);
 }
 
+/* Breakpoint = --breakpoint-table (768px), steht wegen CSS direkt hier. */
 @media (min-width: 768px) {
   .header {
     flex-direction: row;

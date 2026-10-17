@@ -8,6 +8,11 @@ const MAX_FRACTION_DIGITS = 100;
 export type DecimalFormatOptions = Readonly<{
   minimumFractionDigits?: number;
   maximumFractionDigits?: number;
+  /**
+   * 'negative' (Standard): nur negative Werte mit Vorzeichen.
+   * 'exceptZero': zusätzlich "+" für positive Werte (PnL), gerundet 0 bleibt ohne Vorzeichen.
+   */
+  signDisplay?: 'negative' | 'exceptZero';
 }>;
 
 /**
@@ -25,7 +30,7 @@ export function formatDecimal(value: string, options: DecimalFormatOptions = {})
     minimumFractionDigits,
     maximumFractionDigits,
     roundingMode: 'halfExpand',
-    // Vorzeichen nur, wenn der gerundete Wert nicht 0 ist: kein "-0.00".
-    signDisplay: 'negative',
+    // Vorzeichen nur, wenn der gerundete Wert nicht 0 ist: kein "-0.00" und kein "+0.00".
+    signDisplay: options.signDisplay ?? 'negative',
   }).format(value);
 }

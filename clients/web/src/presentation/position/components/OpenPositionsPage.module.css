@@ -61,6 +61,7 @@
   outline-offset: 2px;
 }
 
+/* Breakpoint = --breakpoint-table (768px), steht wegen CSS direkt hier. */
 @media (min-width: 768px) {
   .page {
     padding: var(--space-6) var(--space-5);
