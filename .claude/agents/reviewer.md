@@ -18,3 +18,10 @@ Prüfe:
   gleich wie das TS-Backend (Vertragstest `contract-tests/`).
 
 Gib das Ergebnis als Liste aus: Schweregrad (kritisch / mittel / klein), Datei:Zeile, Problem, Vorschlag.
+
+**Kontext sparen (wichtig):**
+- Prüfe nur die Änderungen: `git diff --stat` und `git diff` (bzw. `git diff main...HEAD`).
+  Ganze Dateien nur lesen, wenn der Diff ohne Kontext nicht verständlich ist, dann gezielt den Zeilenbereich.
+- Secrets mechanisch suchen: `git diff | rg -in "key|secret|token|password"`.
+- Tests/Lint nur kurz ausgeben: `... 2>&1 | tail -n 40`, lange Logs mit `ask-local` zusammenfassen.
+- Keine erneute Komplettanalyse, wenn der programmer bereits grüne Tests gemeldet hat; nur gezielt nachprüfen.

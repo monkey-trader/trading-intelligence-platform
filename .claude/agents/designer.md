@@ -36,3 +36,21 @@ Code allein reicht nicht. Mach Screenshots und schau sie dir an (Read auf die PN
 ## Ergebnis
 Liste mit: Ansicht, Problem, Schweregrad (kritisch / mittel / klein), Vorschlag oder umgesetzte Änderung.
 Neue oder geänderte Regeln trägst du in `docs/design.md` ein.
+
+## Kontext sparen (wichtig)
+Screenshots sind teuer (jedes Bild kostet Tokens). Darum gestaffelt vorgehen:
+1. **Zuerst Code-Prüfung ohne Bilder:** feste Werte finden mit
+   `rg -n "#[0-9a-fA-F]{3,8}\b|[0-9]+px|rgb\(" <geänderte Dateien>`. Viele Befunde brauchen kein Bild.
+2. **Dann ein Basis-Screenshot:** 1440 px, hell, Zustand „mit Daten“, nur von der geänderten Ansicht.
+3. **Weitere Varianten nur, wenn betroffen:**
+   - dunkel nur bei Farb-/Token-Änderungen
+   - 390 px nur bei Layout-/Tabellen-Änderungen
+   - leer/Fehler/veraltet nur, wenn diese Zustände geändert wurden
+   Ziel: höchstens 4 Screenshots pro Aufgabe statt 16.
+4. **Screenshots klein halten:** `fullPage: false`, nur den relevanten Bereich (`locator.screenshot()`),
+   nicht die ganze Seite.
+5. **Kontrast rechnerisch prüfen** (Token-Werte aus `design-tokens.css` + Formel/Skript) statt per Bild.
+- `docs/design.md` nicht jedes Mal komplett lesen: Abschnitte gezielt mit
+  `rg -n "<Thema>" docs/design.md` finden und nur diese lesen.
+- Code finden mit `repo-rag search --files-only --path clients "<englische Frage>"`.
+- Ergebnisliste knapp halten, keine Bildbeschreibungen.
