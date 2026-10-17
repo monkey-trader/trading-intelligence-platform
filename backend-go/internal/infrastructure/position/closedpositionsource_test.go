@@ -33,7 +33,7 @@ type fakeGetClient struct {
 	errors    map[string]error
 }
 
-func (f *fakeGetClient) Get(ctx context.Context, path string, params []bingx.QueryParam) (json.RawMessage, error) {
+func (f *fakeGetClient) Get(_ context.Context, path string, params []bingx.QueryParam) (json.RawMessage, error) {
 	key := path + "|" + encodeParamSlice(params)
 	if f.errors != nil && f.errors[key] != nil {
 		return nil, f.errors[key]
@@ -115,7 +115,7 @@ func TestBingXClosedPositionSource_RangeTooBig_Error(t *testing.T) {
 	to := from + 100*24*60*60*1000 // 100 Tage > 89
 
 	fakeClient := &fakeGetClientWithCapture{
-		fn: func(ctx context.Context, path string, params []bingx.QueryParam) (json.RawMessage, error) {
+		fn: func(_ context.Context, _ string, _ []bingx.QueryParam) (json.RawMessage, error) {
 			t.Errorf("Client darf bei zu großem Bereich nicht aufgerufen werden")
 			return nil, nil
 		},
@@ -134,7 +134,7 @@ func TestBingXClosedPositionSource_FromAfterTo_ErrorWithoutClientCall(t *testing
 	to := int64(1780000000000)
 
 	fakeClient := &fakeGetClientWithCapture{
-		fn: func(ctx context.Context, path string, params []bingx.QueryParam) (json.RawMessage, error) {
+		fn: func(_ context.Context, _ string, _ []bingx.QueryParam) (json.RawMessage, error) {
 			t.Errorf("Client darf bei from > to nicht aufgerufen werden")
 			return nil, nil
 		},
@@ -409,7 +409,7 @@ func TestBingXClosedPositionSource_ContextCancelled_NoClientCall(t *testing.T) {
 
 	callCount := 0
 	fakeClient := &fakeGetClientWithCapture{
-		fn: func(ctx context.Context, path string, params []bingx.QueryParam) (json.RawMessage, error) {
+		fn: func(_ context.Context, _ string, _ []bingx.QueryParam) (json.RawMessage, error) {
 			callCount++
 			return nil, nil
 		},
@@ -445,7 +445,7 @@ func TestBingXClosedPositionSource_PagingUpperLimit(t *testing.T) {
 
 	pageCallCount := 0
 	fakeClient := &fakeGetClientWithCapture{
-		fn: func(ctx context.Context, path string, params []bingx.QueryParam) (json.RawMessage, error) {
+		fn: func(_ context.Context, _ string, _ []bingx.QueryParam) (json.RawMessage, error) {
 			pageCallCount++
 
 			// Der Fake bricht NIE selbst mit Fehler ab. Nur Schutz des Testlaufs:
@@ -501,7 +501,7 @@ func TestBingXClosedPositionSource_PageIndexStartsFromZero(t *testing.T) {
 	// Capture the call to verify pageIndex=0 is used, not pageIndex=1.
 	callCount := 0
 	fakeClient := &fakeGetClientWithCapture{
-		fn: func(ctx context.Context, path string, params []bingx.QueryParam) (json.RawMessage, error) {
+		fn: func(_ context.Context, _ string, params []bingx.QueryParam) (json.RawMessage, error) {
 			callCount++
 			for _, p := range params {
 				if p.Name == "pageIndex" && p.Value != "0" {

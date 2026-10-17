@@ -58,7 +58,7 @@ func TestOpen_DateiNutztWAL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	var mode string
 	if err := db.QueryRow(`PRAGMA journal_mode`).Scan(&mode); err != nil || mode != "wal" {
 		t.Fatalf("journal_mode = %q, err %v", mode, err)
@@ -76,18 +76,18 @@ func TestOpen_PragmasGeltenFuerJedeVerbindung(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	ctx := context.Background()
 	first, err := db.Conn(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer first.Close()
+	defer func() { _ = first.Close() }()
 	second, err := db.Conn(ctx) // erzwingt eine zweite Pool-Verbindung
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer second.Close()
+	defer func() { _ = second.Close() }()
 	for name, conn := range map[string]*sql.Conn{"erste": first, "zweite": second} {
 		var enabled int
 		if err := conn.QueryRowContext(ctx, `PRAGMA foreign_keys`).Scan(&enabled); err != nil || enabled != 1 {
@@ -102,7 +102,7 @@ func TestOpen_DateiHatNurBesitzerRechte(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	info, err := os.Stat(path)
 	if err != nil {
 		t.Fatal(err)

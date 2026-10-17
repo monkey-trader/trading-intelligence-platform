@@ -34,7 +34,7 @@ var (
 // Stelle sicher, dass fakeClosedPositionSource interfaces.ClosedPositionSource implementiert.
 var _ interfaces.ClosedPositionSource = (*fakeClosedPositionSource)(nil)
 
-func (f *fakeClosedPositionSource) FetchClosedPositions(ctx context.Context, symbol string, from, to int64) ([]domainposition.ClosedPosition, error) {
+func (f *fakeClosedPositionSource) FetchClosedPositions(_ context.Context, symbol string, from, to int64) ([]domainposition.ClosedPosition, error) {
 	f.calls = append(f.calls, struct {
 		symbol string
 		from   int64
@@ -63,7 +63,7 @@ type fakePositionRepository struct {
 // Stelle sicher, dass fakePositionRepository interfaces.PositionRepository implementiert.
 var _ interfaces.PositionRepository = (*fakePositionRepository)(nil)
 
-func (f *fakePositionRepository) UpsertClosedPosition(ctx context.Context, p domainposition.ClosedPosition) error {
+func (f *fakePositionRepository) UpsertClosedPosition(_ context.Context, p domainposition.ClosedPosition) error {
 	if f.errors != nil && f.errors[p.PositionID] != nil {
 		return f.errors[p.PositionID]
 	}
@@ -85,7 +85,7 @@ type fakeIncomeLookup struct {
 // Stelle sicher, dass fakeIncomeLookup interfaces.IncomeLookup implementiert.
 var _ interfaces.IncomeLookup = (*fakeIncomeLookup)(nil)
 
-func (f *fakeIncomeLookup) HasIncomeForSymbol(ctx context.Context, symbol string, from, to int64) (bool, error) {
+func (f *fakeIncomeLookup) HasIncomeForSymbol(_ context.Context, symbol string, from, to int64) (bool, error) {
 	f.calls = append(f.calls, struct {
 		symbol string
 		from   int64
