@@ -131,9 +131,11 @@ Konsequenz für dieses Projekt:
 - `architect` – prüft Schichtengrenzen und den API-Vertrag
 - `test-author` – schreibt Tests zuerst
 - `programmer` – macht Tests grün, ohne sie zu ändern
+- `designer` – Gestaltung und Konsistenz des UI in `clients/` (Quelle: `docs/design.md`)
 - `reviewer` – Qualität und Sicherheit am Schluss
 
 Ablauf pro Feature: architect (Schnitt) → test-author → programmer → reviewer.
+Bei sichtbaren UI-Änderungen: … → programmer → designer → reviewer.
 
 ## Planung (vor größeren Änderungen lesen)
 - `docs/migration/go-wails.md` – Migration des Backends auf Go, Desktop-App mit Wails,

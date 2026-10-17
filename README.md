@@ -97,6 +97,8 @@ kill <PID>
 
 ## Entwickeln mit AI-Agenten (Blueprint)
 
+> Visualisiert mit Diagrammen: [`docs/ai-setup.md`](docs/ai-setup.md)
+
 Dieses Repo wird mit [Claude Code](https://code.claude.com) entwickelt. Statt einem einzigen
 "Alles-Assistenten" gibt es **feste Rollen**, die sich gegenseitig kontrollieren.
 Das Setup ist bewusst einfach gehalten und lässt sich auf andere Projekte übertragen.
@@ -109,6 +111,7 @@ CLAUDE.md                     Projektgedächtnis: Ziel, Architektur, Regeln, Sic
 ├── architect.md              prüft Schichtengrenzen und API-Vertrag (nur lesen)
 ├── test-author.md            schreibt Tests zuerst, nie Produktivcode
 ├── programmer.md             macht Tests grün, ändert keine Tests
+├── designer.md               UI-Gestaltung und Konsistenz, sieht das UI per Screenshot
 └── reviewer.md               Qualität + Sicherheit vor dem Commit (nur lesen)
 ```
 
@@ -138,6 +141,7 @@ Jeder Subagent arbeitet in einem eigenen Kontext und liefert nur sein Ergebnis z
 | architect | nein | Struktur vor Details: Abhängigkeiten zeigen nach innen |
 | test-author | nur Tests | TDD: das gewünschte Verhalten wird zuerst festgehalten |
 | programmer | nur Code | Tests grün machen, **ohne** Tests zu verbiegen |
+| designer | nur `clients/` | Design-Tokens, Konsistenz, Kontrast; prüft per Screenshot |
 | reviewer | nein | unabhängige Prüfung, v.a. Secrets und Fehlerbehandlung |
 
 Die Trennung von test-author und programmer ist der Kern: Wer den Code schreibt,
