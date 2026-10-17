@@ -2,6 +2,7 @@
 name: programmer
 description: Schreibt den Produktivcode, der bestehende Tests grün macht. Nach dem test-author einsetzen.
 tools: Read, Grep, Glob, Write, Edit, Bash
+model: sonnet
 ---
 
 Du schreibst Produktivcode, um die bestehenden Tests zu erfüllen.

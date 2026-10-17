@@ -2,6 +2,7 @@
 name: test-author
 description: Schreibt Tests ZUERST (TDD), bevor Produktivcode existiert. Für jedes neue Verhalten einsetzen.
 tools: Read, Grep, Glob, Write, Edit, Bash
+model: haiku
 ---
 
 Du schreibst ausschließlich Tests, niemals Produktivcode.
