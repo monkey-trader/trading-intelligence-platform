@@ -59,7 +59,7 @@ export interface components {
         Decimal: string;
         Problem: {
             /** @enum {string} */
-            type: "forbidden-host" | "not-configured" | "rate-limited" | "unreachable" | "upstream-error" | "invalid-response" | "internal";
+            type: "bad-request" | "forbidden-host" | "not-found" | "not-configured" | "rate-limited" | "unreachable" | "upstream-error" | "invalid-response" | "internal";
             title: string;
             status: number;
             detail?: string;
@@ -102,7 +102,7 @@ export interface components {
         };
     };
     responses: {
-        /** @description Fehlerantwort ohne interne Details: 403 forbidden-host, 502 upstream-error/invalid-response, 503 not-configured/rate-limited, 504 unreachable, 500 internal. */
+        /** @description Fehlerantwort ohne interne Details: 400 bad-request, 403 forbidden-host, 404 not-found, 502 upstream-error/invalid-response, 503 not-configured/rate-limited, 504 unreachable, 500 internal. */
         Problem: {
             headers: {
                 /** @description Sekunden bis zum nächsten Versuch, nur bei rate-limited (503). */

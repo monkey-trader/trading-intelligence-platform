@@ -18,8 +18,9 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@fixtures/*": ["../fixtures/*"]
     }
   },
-  "include": ["src", "*.config.ts"]
+  "include": ["src", "*.config.ts", "../fixtures/**/*.json"]
 }

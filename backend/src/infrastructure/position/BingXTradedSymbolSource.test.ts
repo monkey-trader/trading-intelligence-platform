@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BingXTradedSymbolSource } from '@/infrastructure/position/BingXTradedSymbolSource';
-import incomePageFixture from '@/infrastructure/position/bingx/fixtures/income.page.json';
+import incomePageFixture from '@fixtures/bingx/income.page.json';
 
 const INCOME_PATH = '/openApi/swap/v2/user/income';
 const DAY_MS = 86_400_000;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { UnexpectedBingXResponseError } from '@/infrastructure/bingx/errors';
 import { BingXContractSymbolSource } from '@/infrastructure/position/BingXContractSymbolSource';
-import contractsFixture from '@/infrastructure/position/bingx/fixtures/contracts.sample.json';
+import contractsFixture from '@fixtures/bingx/contracts.sample.json';
 
 const CONTRACTS_PATH = '/openApi/swap/v2/quote/contracts';
 

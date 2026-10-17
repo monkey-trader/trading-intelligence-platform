@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 import { createProblem, PROBLEM_CONTENT_TYPE } from '@/presentation/http/problem';
 
 /**
@@ -27,6 +27,14 @@ export function registerHostGuard(
 ): void {
   server.addHook('onRequest', async (request, reply) => {
     if (isAllowedHost(request.headers.host, allowedHosts)) return;
-    return reply.code(403).type(PROBLEM_CONTENT_TYPE).send(createProblem('forbidden-host'));
+    return sendForbiddenHost(reply);
   });
+}
+
+/**
+ * Sendet 403 forbidden-host als application/problem+json. Gemeinsam genutzt vom onRequest-Hook
+ * und von Fastifys `frameworkErrors` (Fehler vor dem Routing, z.B. ungültige Prozent-Kodierung).
+ */
+export function sendForbiddenHost(reply: FastifyReply): FastifyReply {
+  return reply.code(403).type(PROBLEM_CONTENT_TYPE).send(createProblem('forbidden-host'));
 }

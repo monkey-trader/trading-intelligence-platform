@@ -1,10 +1,24 @@
 openapi: 3.1.0
 info:
   title: Trading Intelligence Platform API
-  version: 0.3.0
-  description: >-
+  version: 0.4.0
+  description: |-
     HTTP/JSON-API des Backends. Diese Spezifikation ist der Vertrag zwischen Backend
-    und Clients: erst hier anpassen, dann implementieren.
+    und Clients: erst hier anpassen, dann implementieren. Jedes Backend (TypeScript, später Go)
+    muss den Vertragstest in `contract-tests/` bestehen.
+
+    Allgemeine Regeln, die für alle Pfade gelten:
+    - Die Host-Prüfung läuft vor dem Routing: Ein nicht erlaubter Host-Header ergibt immer
+      403 `forbidden-host`, auch für unbekannte oder ungültige Pfade. Erlaubt sind mindestens
+      `127.0.0.1:<port>`, `localhost:<port>` und `[::1]:<port>` sowie ausdrücklich konfigurierte
+      Hosts; der Vergleich ignoriert Groß-/Kleinschreibung.
+    - Unbekannte Pfade und nicht beschriebene Methoden (auch `HEAD`, `OPTIONS`, `DELETE`) ergeben
+      404 `not-found`, unabhängig von einem mitgeschickten Body.
+    - Formal fehlerhafte Anfragen (z.B. ungültige Prozent-Kodierung im Pfad) ergeben
+      400 `bad-request`.
+    - Alle Fehler kommen als `application/problem+json` (Schema `Problem`) ohne interne Details;
+      unerwartete Fehler als 500 `internal`.
+    - Der Header `Retry-After` kommt nur bei 503 `rate-limited`.
   license:
     name: Proprietär
     identifier: LicenseRef-Proprietary
@@ -69,8 +83,9 @@ components:
   responses:
     Problem:
       description: >-
-        Fehlerantwort ohne interne Details: 403 forbidden-host, 502 upstream-error/invalid-response,
-        503 not-configured/rate-limited, 504 unreachable, 500 internal.
+        Fehlerantwort ohne interne Details: 400 bad-request, 403 forbidden-host, 404 not-found,
+        502 upstream-error/invalid-response, 503 not-configured/rate-limited, 504 unreachable,
+        500 internal.
       headers:
         Retry-After:
           description: Sekunden bis zum nächsten Versuch, nur bei rate-limited (503).
@@ -107,7 +122,9 @@ components:
         type:
           type: string
           enum:
+            - bad-request
             - forbidden-host
+            - not-found
             - not-configured
             - rate-limited
             - unreachable

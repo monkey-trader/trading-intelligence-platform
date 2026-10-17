@@ -13,8 +13,8 @@ import type { OpenPositionsUnavailableReason } from '@/domain/position/errors/Op
 import { PositionDomainError } from '@/domain/position/errors/PositionDomainError';
 import type { Clock } from '@/domain/shared/interfaces/Clock';
 import { InvalidPositionIdError } from '@/domain/position/errors/InvalidPositionIdError';
-import openPositionsFixture from '@/infrastructure/position/bingx/fixtures/openPositions.json';
-import openPositionsEmptyFixture from '@/infrastructure/position/bingx/fixtures/openPositions.empty.json';
+import openPositionsFixture from '@fixtures/bingx/openPositions.json';
+import openPositionsEmptyFixture from '@fixtures/bingx/openPositions.empty.json';
 
 const OPEN_POSITIONS_PATH = '/openApi/swap/v2/user/positions';
 const REQUEST_START_MS = 1_791_800_000_000;
