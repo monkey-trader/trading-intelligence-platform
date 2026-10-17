@@ -141,3 +141,11 @@ Bei sichtbaren UI-Änderungen: … → programmer → designer → reviewer.
 - `docs/migration/go-wails.md` – Migration des Backends auf Go, Desktop-App mit Wails,
   Auslieferung über Homebrew. Go-Backend entsteht parallel in `backend-go/` (Strangler-Pattern).
 - `docs/features/chart-journal.md` – Feature: Chart mit Entry, SL, TP (Stufen 1–3, read-only).
+
+
+## Code finden (repo-rag)
+Bevor du Ordner durchsuchst oder Dateien breit liest:
+`repo-rag search --files-only "<konkrete englische Frage mit Code-Begriffen>"`
+Beispiel: `repo-rag search --files-only "fetch open positions from bingx api"`
+Lies danach nur die gefundenen Dateien/Zeilen. Optional `--path backend-go` zum Eingrenzen.
+Nach grösseren Änderungen: `repo-rag index`.
