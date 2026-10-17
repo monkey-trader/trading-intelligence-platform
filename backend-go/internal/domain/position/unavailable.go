@@ -26,3 +26,18 @@ func (err *OpenPositionsUnavailableError) Error() string {
 func (err *OpenPositionsUnavailableError) Unwrap() error {
 	return err.Cause
 }
+
+// ClosedPositionsUnavailableError meldet: Geschlossene Positionen sind gerade nicht lieferbar.
+type ClosedPositionsUnavailableError struct {
+	Reason UnavailableReason
+	Cause  error
+}
+
+func (err *ClosedPositionsUnavailableError) Error() string {
+	return "Geschlossene Positionen nicht verfügbar: " + string(err.Reason)
+}
+
+// Unwrap liefert die Ursache.
+func (err *ClosedPositionsUnavailableError) Unwrap() error {
+	return err.Cause
+}

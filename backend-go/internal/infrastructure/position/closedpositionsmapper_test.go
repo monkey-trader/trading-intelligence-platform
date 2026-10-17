@@ -70,10 +70,14 @@ func dataWithRawClosedEntry(t *testing.T, fieldName, rawValue string) json.RawMe
 	return json.RawMessage(strings.Replace(encoded, `"PLATZHALTER"`, rawValue, 1))
 }
 
-func isMappingErrorClosed(err error) bool {
+func isUnexpectedResponseError(err error) bool {
 	var unexpected *bingx.UnexpectedResponseError
+	return errors.As(err, &unexpected)
+}
+
+func isPositionDomainError(err error) bool {
 	var domainError domainposition.PositionDomainError
-	return errors.As(err, &unexpected) || errors.As(err, &domainError)
+	return errors.As(err, &domainError)
 }
 
 // Tests
@@ -177,7 +181,7 @@ func TestMapClosedPositionsResponse_UnerwarteteForm(t *testing.T) {
 			if err == nil {
 				t.Fatalf("Fehler erwartet, aber keiner geliefert")
 			}
-			if !isMappingErrorClosed(err) {
+			if !isUnexpectedResponseError(err) || isPositionDomainError(err) {
 				t.Errorf("Fehler sollte UnexpectedResponseError sein, aber: %T", err)
 			}
 			if positions != nil {
@@ -198,7 +202,7 @@ func TestMapClosedPositionsResponse_FehlendeFelderZeroBehavior(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Fehler erwartet (fehlendes symbol), aber keiner geliefert")
 	}
-	if !isMappingErrorClosed(err) {
+	if !isUnexpectedResponseError(err) {
 		t.Errorf("Fehler sollte UnexpectedResponseError sein, aber: %T", err)
 	}
 	if positions != nil {
@@ -215,8 +219,8 @@ func TestMapClosedPositionsResponse_InvalidLeverage_Error(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Fehler erwartet (leverage ist String), aber keiner geliefert")
 	}
-	if !isMappingErrorClosed(err) {
-		t.Errorf("Fehler sollte UnexpectedResponseError oder PositionDomainError sein, aber: %T", err)
+	if !isUnexpectedResponseError(err) {
+		t.Errorf("Fehler sollte UnexpectedResponseError sein (leverage ist kein Zahlenwert), aber: %T", err)
 	}
 	if positions != nil {
 		t.Errorf("positions sollte nil sein")
@@ -232,7 +236,7 @@ func TestMapClosedPositionsResponse_InvalidTimestamp_Error(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Fehler erwartet (openTime=0), aber keiner geliefert")
 	}
-	if !isMappingErrorClosed(err) {
+	if !isPositionDomainError(err) || isUnexpectedResponseError(err) {
 		t.Errorf("Fehler sollte PositionDomainError sein, aber: %T", err)
 	}
 	if positions != nil {
@@ -269,5 +273,21 @@ func TestMapClosedPositionsResponse_UpdateTimeAsCloseTime(t *testing.T) {
 		if p.CloseTime != 1780018017000 {
 			t.Errorf("Position[0].CloseTime = %d, erwartet 1780018017000 (from updateTime)", p.CloseTime)
 		}
+	}
+}
+
+func TestMapClosedPositionsResponse_FieldError_NamesPositionHistoryEndpoint(t *testing.T) {
+	data := dataWithClosedEntry(t, map[string]string{"symbol": ""})
+
+	_, err := mapClosedPositionsResponse(data)
+
+	if err == nil {
+		t.Fatalf("Fehler erwartet, aber keiner geliefert")
+	}
+	if !strings.Contains(err.Error(), "positionHistory") {
+		t.Errorf("Fehler = %q, sollte positionHistory nennen", err.Error())
+	}
+	if strings.Contains(err.Error(), "user/positions") {
+		t.Errorf("Fehler = %q, darf den Endpunkt der offenen Positionen nicht nennen", err.Error())
 	}
 }

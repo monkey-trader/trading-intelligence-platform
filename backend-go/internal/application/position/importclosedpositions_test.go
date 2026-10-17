@@ -21,7 +21,15 @@ type fakeClosedPositionSource struct {
 	}
 	responses map[string]map[string][]domainposition.ClosedPosition
 	errors    map[string]map[string]error
+	// afterCall wird nach jeder Anfrage mit der Anzahl bisheriger Anfragen aufgerufen.
+	afterCall func(callCount int)
 }
+
+var (
+	errSourceFailure       = errors.New("source failure")
+	errRepositoryFailure   = errors.New("repository failure")
+	errIncomeLookupFailure = errors.New("income lookup failure")
+)
 
 // Stelle sicher, dass fakeClosedPositionSource interfaces.ClosedPositionSource implementiert.
 var _ interfaces.ClosedPositionSource = (*fakeClosedPositionSource)(nil)
@@ -32,6 +40,10 @@ func (f *fakeClosedPositionSource) FetchClosedPositions(ctx context.Context, sym
 		from   int64
 		to     int64
 	}{symbol, from, to})
+
+	if f.afterCall != nil {
+		defer f.afterCall(len(f.calls))
+	}
 
 	key := keyForRange(from, to)
 	if f.errors != nil && f.errors[symbol] != nil && f.errors[symbol][key] != nil {
@@ -379,30 +391,24 @@ func TestImportClosedPositions_SourceError_BreaksImport(t *testing.T) {
 
 	from := int64(1780000000000)
 	to := from + 180*24*60*60*1000
-
 	window1End := from + 89*24*60*60*1000
 
 	source := &fakeClosedPositionSource{
 		errors: map[string]map[string]error{
-			"ETH-USDT": {
-				keyForRange(from, window1End): errors.New("network error"),
-			},
+			"ETH-USDT": {keyForRange(from, window1End): errSourceFailure},
 		},
 	}
-	repository := &fakePositionRepository{}
-	incomeLookup := &fakeIncomeLookup{}
-
-	useCase := appposition.NewImportClosedPositionsUseCase(source, repository, incomeLookup)
+	useCase := appposition.NewImportClosedPositionsUseCase(source, &fakePositionRepository{}, &fakeIncomeLookup{})
 	result, err := useCase.Execute(ctx, "ETH-USDT", from, to)
 
-	if err == nil {
-		t.Fatalf("Fehler erwartet, aber keiner geliefert")
+	if !errors.Is(err, errSourceFailure) {
+		t.Fatalf("Fehler = %v, erwartet errSourceFailure", err)
 	}
 	if result.Imported != 0 {
 		t.Errorf("Nach Fehler sollte Imported = 0, bekam %d", result.Imported)
 	}
-	if !errors.Is(err, errors.New("network error")) && err.Error() != "network error" {
-		t.Errorf("Fehler = %v, erwartet 'network error'", err)
+	if len(source.calls) != 1 {
+		t.Errorf("source.calls.len = %d, erwartet 1 (Abbruch nach erstem Fehler)", len(source.calls))
 	}
 }
 
@@ -411,45 +417,102 @@ func TestImportClosedPositions_RepositoryError_BreaksImport(t *testing.T) {
 
 	from := int64(1780000000000)
 	to := from + 50*24*60*60*1000
-
-	position := domainposition.ClosedPosition{
+	failingPosition := domainposition.ClosedPosition{
 		PositionID:     "9000000000000000000",
 		Symbol:         "SOL-USDT",
 		Side:           domainposition.Long,
-		OpenTime:       from + 1000,
-		CloseTime:      from + 2000,
-		AvgOpenPrice:   "100",
-		AvgClosePrice:  "105",
-		RealisedProfit: "10",
-		NetProfit:      "8",
+		OpenTime:       from + 0 + 1000,
+		CloseTime:      from + 0 + 2000,
+		AvgOpenPrice:   "1",
+		AvgClosePrice:  "2",
+		RealisedProfit: "1",
+		NetProfit:      "1",
 		PositionAmount: "1",
 		ClosedAmount:   "1",
-		Leverage:       5,
+		Leverage:       2,
 		Raw:            `{}`,
 	}
 
 	source := &fakeClosedPositionSource{
 		responses: map[string]map[string][]domainposition.ClosedPosition{
-			"SOL-USDT": {
-				keyForRange(from, to): {position},
+			"SOL-USDT": {keyForRange(from, to): {failingPosition}},
+		},
+	}
+	repository := &fakePositionRepository{
+		errors: map[string]error{"9000000000000000000": errRepositoryFailure},
+	}
+	useCase := appposition.NewImportClosedPositionsUseCase(source, repository, &fakeIncomeLookup{})
+	result, err := useCase.Execute(ctx, "SOL-USDT", from, to)
+
+	if !errors.Is(err, errRepositoryFailure) {
+		t.Fatalf("Fehler = %v, erwartet errRepositoryFailure", err)
+	}
+	if result.Imported != 0 {
+		t.Errorf("Nach Fehler sollte Imported = 0, bekam %d", result.Imported)
+	}
+}
+
+func TestImportClosedPositions_RepositoryErrorInSecondWindow_KeepsFirstWindowCount(t *testing.T) {
+	ctx := context.Background()
+
+	from := int64(1780000000000)
+	to := from + 180*24*60*60*1000
+	window1End := from + 89*24*60*60*1000
+	window2End := from + 178*24*60*60*1000
+
+	firstWindowPosition := domainposition.ClosedPosition{
+		PositionID:     "9000000000060000001",
+		Symbol:         "BNB-USDT",
+		Side:           domainposition.Long,
+		OpenTime:       from + 1000 + 1000,
+		CloseTime:      from + 1000 + 2000,
+		AvgOpenPrice:   "1",
+		AvgClosePrice:  "2",
+		RealisedProfit: "1",
+		NetProfit:      "1",
+		PositionAmount: "1",
+		ClosedAmount:   "1",
+		Leverage:       2,
+		Raw:            `{}`,
+	}
+	secondWindowPosition := domainposition.ClosedPosition{
+		PositionID:     "9000000000060000002",
+		Symbol:         "BNB-USDT",
+		Side:           domainposition.Long,
+		OpenTime:       from + 7776000000 + 1000,
+		CloseTime:      from + 7776000000 + 2000,
+		AvgOpenPrice:   "1",
+		AvgClosePrice:  "2",
+		RealisedProfit: "1",
+		NetProfit:      "1",
+		PositionAmount: "1",
+		ClosedAmount:   "1",
+		Leverage:       2,
+		Raw:            `{}`,
+	}
+
+	source := &fakeClosedPositionSource{
+		responses: map[string]map[string][]domainposition.ClosedPosition{
+			"BNB-USDT": {
+				keyForRange(from, window1End):       {firstWindowPosition},
+				keyForRange(window1End, window2End): {secondWindowPosition},
 			},
 		},
 	}
 	repository := &fakePositionRepository{
-		errors: map[string]error{
-			"9000000000000000000": errors.New("db error"),
-		},
+		errors: map[string]error{"9000000000060000002": errRepositoryFailure},
 	}
-	incomeLookup := &fakeIncomeLookup{}
+	useCase := appposition.NewImportClosedPositionsUseCase(source, repository, &fakeIncomeLookup{})
+	result, err := useCase.Execute(ctx, "BNB-USDT", from, to)
 
-	useCase := appposition.NewImportClosedPositionsUseCase(source, repository, incomeLookup)
-	result, err := useCase.Execute(ctx, "SOL-USDT", from, to)
-
-	if err == nil {
-		t.Fatalf("Fehler erwartet, aber keiner geliefert")
+	if !errors.Is(err, errRepositoryFailure) {
+		t.Fatalf("Fehler = %v, erwartet errRepositoryFailure", err)
 	}
-	if result.Imported != 0 {
-		t.Errorf("Nach Fehler sollte Imported = 0, bekam %d", result.Imported)
+	if result.Imported != 1 {
+		t.Errorf("Imported = %d, erwartet 1 (Fenster 1 bleibt gezählt)", result.Imported)
+	}
+	if len(source.calls) != 2 {
+		t.Errorf("source.calls.len = %d, erwartet 2 (kein drittes Fenster)", len(source.calls))
 	}
 }
 
@@ -459,27 +522,17 @@ func TestImportClosedPositions_IncomeLookupError_BreaksImport(t *testing.T) {
 	from := int64(1780000000000)
 	to := from + 50*24*60*60*1000
 
-	source := &fakeClosedPositionSource{
-		responses: map[string]map[string][]domainposition.ClosedPosition{
-			"ADA-USDT": {
-				keyForRange(from, to): {},
-			},
-		},
-	}
-	repository := &fakePositionRepository{}
+	source := &fakeClosedPositionSource{}
 	incomeLookup := &fakeIncomeLookup{
 		errors: map[string]map[string]error{
-			"ADA-USDT": {
-				keyForRange(from, to): errors.New("lookup error"),
-			},
+			"ADA-USDT": {keyForRange(from, to): errIncomeLookupFailure},
 		},
 	}
-
-	useCase := appposition.NewImportClosedPositionsUseCase(source, repository, incomeLookup)
+	useCase := appposition.NewImportClosedPositionsUseCase(source, &fakePositionRepository{}, incomeLookup)
 	result, err := useCase.Execute(ctx, "ADA-USDT", from, to)
 
-	if err == nil {
-		t.Fatalf("Fehler erwartet, aber keiner geliefert")
+	if !errors.Is(err, errIncomeLookupFailure) {
+		t.Fatalf("Fehler = %v, erwartet errIncomeLookupFailure", err)
 	}
 	if result.Imported != 0 {
 		t.Errorf("Nach Fehler sollte Imported = 0, bekam %d", result.Imported)
@@ -487,65 +540,77 @@ func TestImportClosedPositions_IncomeLookupError_BreaksImport(t *testing.T) {
 }
 
 func TestImportClosedPositions_ContextCancelled_BetweenWindows(t *testing.T) {
-	// Context wird WÄHREND des Imports abgebrochen (bevor 2. Fenster abgerufen wird).
-	// → Error mit context.Canceled oder ähnlich, result.Imported enthält Positionen bis zum Abbruch.
 	from := int64(1780000000000)
 	to := from + 180*24*60*60*1000 // 3 Fenster
-
 	window1End := from + 89*24*60*60*1000
-	window2End := from + 178*24*60*60*1000
 
-	pos1 := domainposition.ClosedPosition{
+	firstWindowPosition := domainposition.ClosedPosition{
 		PositionID:     "9000000000050000001",
 		Symbol:         "DOGE-USDT",
 		Side:           domainposition.Long,
-		OpenTime:       from + 1000,
-		CloseTime:      from + 2000,
-		AvgOpenPrice:   "0.15",
-		AvgClosePrice:  "0.20",
-		RealisedProfit: "5",
-		NetProfit:      "4",
-		PositionAmount: "100",
-		ClosedAmount:   "100",
+		OpenTime:       from + 1000 + 1000,
+		CloseTime:      from + 1000 + 2000,
+		AvgOpenPrice:   "1",
+		AvgClosePrice:  "2",
+		RealisedProfit: "1",
+		NetProfit:      "1",
+		PositionAmount: "1",
+		ClosedAmount:   "1",
 		Leverage:       2,
 		Raw:            `{}`,
 	}
 
-	// Source mit Fehler bei 2. Fenster (simuliert Context-Abbruch).
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	source := &fakeClosedPositionSource{
 		responses: map[string]map[string][]domainposition.ClosedPosition{
-			"DOGE-USDT": {
-				keyForRange(from, window1End): {pos1},
-			},
+			"DOGE-USDT": {keyForRange(from, window1End): {firstWindowPosition}},
 		},
-		errors: map[string]map[string]error{
-			"DOGE-USDT": {
-				keyForRange(window1End, window2End): context.Canceled,
-			},
+		afterCall: func(callCount int) {
+			if callCount == 1 {
+				cancel()
+			}
 		},
 	}
-
-	repository := &fakePositionRepository{}
-	incomeLookup := &fakeIncomeLookup{}
-
-	// Use-Case führt aus und bricht bei 2. Fenster ab.
-	useCase := appposition.NewImportClosedPositionsUseCase(source, repository, incomeLookup)
-	ctx := context.Background()
+	useCase := appposition.NewImportClosedPositionsUseCase(source, &fakePositionRepository{}, &fakeIncomeLookup{})
 	result, err := useCase.Execute(ctx, "DOGE-USDT", from, to)
 
-	if err == nil {
-		t.Fatalf("Fehler erwartet für abgebrochenen Import")
-	}
-
-	// Fehler sollte context.Canceled oder ähnlich sein.
 	if !errors.Is(err, context.Canceled) {
-		// Auch OK wenn Fehler durchgereicht wird.
-		t.Logf("Fehler beim Abbruch: %v", err)
+		t.Fatalf("Fehler = %v, erwartet context.Canceled", err)
 	}
-
-	// Imported sollte = 1 sein (nur das 1. Fenster, dann Abbruch).
 	if result.Imported != 1 {
-		t.Errorf("result.Imported = %d, erwartet 1 (abgebrochen nach Fenster 1)", result.Imported)
+		t.Errorf("Imported = %d, erwartet 1 (Fenster 1)", result.Imported)
+	}
+	if len(source.calls) != 1 {
+		t.Errorf("source.calls.len = %d, erwartet 1 (keine Anfrage nach Abbruch)", len(source.calls))
+	}
+}
+
+func TestImportClosedPositions_FromAfterTo_Error(t *testing.T) {
+	from := int64(1780000000001)
+	to := int64(1780000000000)
+
+	source := &fakeClosedPositionSource{}
+	incomeLookup := &fakeIncomeLookup{}
+	useCase := appposition.NewImportClosedPositionsUseCase(source, &fakePositionRepository{}, incomeLookup)
+	result, err := useCase.Execute(context.Background(), "BTC-USDT", from, to)
+
+	var rangeErr *domainposition.InvalidQueryRangeError
+	if !errors.As(err, &rangeErr) {
+		t.Fatalf("Fehler = %v (%T), erwartet *InvalidQueryRangeError", err, err)
+	}
+	if rangeErr.From != from || rangeErr.To != to {
+		t.Errorf("Fehler = (%d, %d), erwartet (%d, %d)", rangeErr.From, rangeErr.To, from, to)
+	}
+	if result.Imported != 0 {
+		t.Errorf("Imported = %d, erwartet 0", result.Imported)
+	}
+	if len(source.calls) != 0 {
+		t.Errorf("source.calls.len = %d, erwartet 0", len(source.calls))
+	}
+	if len(incomeLookup.calls) != 0 {
+		t.Errorf("incomeLookup.calls.len = %d, erwartet 0", len(incomeLookup.calls))
 	}
 }
 

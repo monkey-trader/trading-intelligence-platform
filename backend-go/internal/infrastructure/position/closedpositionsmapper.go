@@ -48,7 +48,7 @@ func mapRawClosedPosition(rawPosition json.RawMessage) (domainposition.ClosedPos
 		return domainposition.ClosedPosition{}, unexpected(closedPositionsEndpoint + " enthält einen Eintrag, der kein Objekt ist.")
 	}
 
-	fields := fieldReader{entry: entry}
+	fields := fieldReader{entry: entry, endpoint: closedPositionsEndpoint}
 	input := domainposition.ClosedPositionInput{
 		PositionID:     fields.requireString("positionId"),
 		Symbol:         fields.requireString("symbol"),

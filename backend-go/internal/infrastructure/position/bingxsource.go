@@ -39,6 +39,15 @@ func (source *BingXOpenPositionSource) FetchOpenPositions(ctx context.Context) (
 
 // toUnavailable übersetzt bekannte Fehler in *OpenPositionsUnavailableError; unbekannte gehen unverändert durch.
 func toUnavailable(err error) error {
+	reason, known := classifyUnavailable(err)
+	if !known {
+		return err
+	}
+	return &domainposition.OpenPositionsUnavailableError{Reason: reason, Cause: err}
+}
+
+// classifyUnavailable ordnet einen Quellfehler einem Grund zu; known ist falsch bei unbekannten Fehlern.
+func classifyUnavailable(err error) (reason domainposition.UnavailableReason, known bool) {
 	var (
 		rateLimitError  *bingx.RateLimitError
 		networkError    *bingx.NetworkError
@@ -47,18 +56,15 @@ func toUnavailable(err error) error {
 		unexpectedError *bingx.UnexpectedResponseError
 		domainError     domainposition.PositionDomainError
 	)
-	var reason domainposition.UnavailableReason
 	switch {
 	case errors.As(err, &rateLimitError):
-		reason = domainposition.ReasonRateLimited
+		return domainposition.ReasonRateLimited, true
 	case errors.As(err, &networkError):
-		reason = domainposition.ReasonUnreachable
+		return domainposition.ReasonUnreachable, true
 	case errors.As(err, &apiError), errors.As(err, &httpError):
-		reason = domainposition.ReasonUpstreamError
+		return domainposition.ReasonUpstreamError, true
 	case errors.As(err, &unexpectedError), errors.As(err, &domainError):
-		reason = domainposition.ReasonInvalidResponse
-	default:
-		return err
+		return domainposition.ReasonInvalidResponse, true
 	}
-	return &domainposition.OpenPositionsUnavailableError{Reason: reason, Cause: err}
+	return "", false
 }

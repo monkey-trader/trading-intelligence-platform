@@ -157,12 +157,13 @@ func TestNewClosedPosition_InvalidLeverage_Error(t *testing.T) {
 		{"negative", -1},
 		{"zero", 0},
 		{"Infinity", math.Inf(1)},
+		{"NaN", math.NaN()},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
 			input := validClosedPositionInput()
-			input.Leverage = tc.leverage
+			input.Leverage = testCase.leverage
 
 			_, err := position.NewClosedPosition(input)
 			if err == nil {
@@ -234,5 +235,32 @@ func TestNewClosedPosition_FirstErrorWins(t *testing.T) {
 	var invalidTsErr *position.InvalidTimestampError
 	if !errors.As(err, &invalidTsErr) {
 		t.Errorf("Erwarteter InvalidTimestampError (erster Fehler), aber bekam: %T", err)
+	}
+}
+
+func TestNewClosedPosition_CloseTimeEqualsOpenTime_Valid(t *testing.T) {
+	input := validClosedPositionInput()
+	input.CloseTime = input.OpenTime
+
+	created, err := position.NewClosedPosition(input)
+	if err != nil {
+		t.Fatalf("unerwarteter Fehler bei CloseTime == OpenTime: %v", err)
+	}
+	if created.OpenTime != input.OpenTime || created.CloseTime != input.OpenTime {
+		t.Errorf("OpenTime/CloseTime = %d/%d, erwartet beide %d", created.OpenTime, created.CloseTime, input.OpenTime)
+	}
+}
+
+func TestNewClosedPosition_InvalidCloseTime_Error(t *testing.T) {
+	input := validClosedPositionInput()
+	input.CloseTime = 0
+
+	_, err := position.NewClosedPosition(input)
+	if err == nil {
+		t.Fatalf("Fehler erwartet, aber keiner geliefert")
+	}
+	var invalidTimestampErr *position.InvalidTimestampError
+	if !errors.As(err, &invalidTimestampErr) {
+		t.Errorf("Fehler ist nicht InvalidTimestampError: %T", err)
 	}
 }

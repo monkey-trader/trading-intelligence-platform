@@ -1,6 +1,23 @@
 # Migrationsplan: Backend auf Go, Desktop-App mit Wails, Auslieferung über Homebrew
 
-Status: Phase 0 erledigt, Phase 1 in Arbeit (Branch `feature/go-phase-1-geruest`)
+Status: Phase 0, 1 und 2a erledigt, Phase 2b umgesetzt (Branch `feature/go-phase-2b-geschlossene-positionen`), nächster Schritt 2c
+
+## Aktueller Stand (2026-10-17)
+- **Erledigt:** Phase 0 (Vertrag eingefroren), Phase 1 (Go-Gerüst, `/health`), Phase 2a (offene Positionen
+  live, `GET /positions/open`), Phase 2b (Import geschlossener Positionen ohne DB).
+- **2b im Detail:** `ClosedPosition` mit Factory, `positionHistory`-Source (89-Tage-Grenze, `pageIndex` ab 0,
+  Seitenobergrenze 1000, eigener Fehlertyp `ClosedPositionsUnavailableError`), Use Case mit 89-Tage-Fenstern
+  und Verdachtsprüfung über den Gesamtzeitraum. Alle Tests grün (`go test -race ./...`).
+- **Noch nicht verdrahtet:** Der Import ist nicht in `main.go` eingebunden und hat weder Repository noch
+  echten `IncomeLookup`. Die Verdachtsregel ist deshalb im Betrieb noch wirkungslos, bis 2c/2d sie speisen.
+  `Suspicious` muss der Aufrufer (Scheduler, 2e) auswerten und darf das Fenster nicht als erledigt markieren.
+- **Offen vor 2e:** `golangci-lint` läuft nur in der CI (lokal go1.26-Build gegen go 1.27.2). Die Sentinels
+  `ErrQueryRangeTooLarge`/`ErrPageLimitExceeded` liegen in der Infrastruktur; reagiert die Application darauf,
+  gehören sie in die Domain. `InvalidQueryRangeError` hat noch kein HTTP-Mapping (kein Presentation-Pfad).
+  Ob echte Antworten `positionCommission`/`totalFunding` auslassen können, ist nicht belegt (Mapper verlangt
+  alle 16 Felder).
+- **Nächster Schritt:** 2c (SQLite und State, Treiber `modernc.org/sqlite` ohne cgo), danach 2d (Income-Import)
+  und 2e (Scheduler, Vollimport).
 
 ## Zielbild
 
