@@ -39,7 +39,8 @@
   --font-weight-strong: 600;
   --line-height-base: 1.45;
 
-  /* Breakpoint für die Tabellenansicht (nur als Referenz, Media Queries brauchen den Wert direkt) */
+  /* Breakpoint für die Tabellenansicht (nur als Referenz, Media Queries brauchen den Wert direkt).
+     Jede Media Query mit 768px trägt einen Kommentar "--breakpoint-table": grep findet alle Stellen. */
   --breakpoint-table: 768px;
 
   --shadow-card: 0 1px 3px rgba(15, 23, 32, 0.08);

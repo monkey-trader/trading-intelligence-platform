@@ -18,6 +18,7 @@ const COLUMN_LABELS = [
   'Hebel',
   'Unreal. PnL',
   'PnL %',
+  'Real. PnL',
   'Liq.-Preis',
   'Liq.-Abstand',
   'Eröffnet',
@@ -94,8 +95,9 @@ describe('OpenPositionsTable', () => {
     expect(cellOf(row, 'Einstieg')).toHaveTextContent(/^0\.96$/);
     expect(cellOf(row, 'Mark')).toHaveTextContent(/^1\.01$/);
     expect(cellOf(row, 'Hebel')).toHaveTextContent(/^10\s?[x×]$/);
-    expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^\+?25\.00$/);
-    expect(cellOf(row, 'PnL %')).toHaveTextContent(/^\+?52\.08\s?%$/);
+    expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^\+25\.00$/);
+    expect(cellOf(row, 'PnL %')).toHaveTextContent(/^\+52\.08\s?%$/);
+    expect(cellOf(row, 'Real. PnL')).toHaveTextContent(/^[-−]0\.24$/);
     expect(cellOf(row, 'Liq.-Preis')).toHaveTextContent(/^0\.865$/);
     expect(cellOf(row, 'Liq.-Abstand')).toHaveTextContent(/^14\.36\s?%$/);
     expect(cellOf(row, 'Eröffnet')).toHaveTextContent(formatDateTime(suiLongPosition.openTime));
@@ -112,6 +114,7 @@ describe('OpenPositionsTable', () => {
     expect(cellOf(row, 'Hebel')).toHaveTextContent(/^15\s?[x×]$/);
     expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^[-−]6\.25$/);
     expect(cellOf(row, 'PnL %')).toHaveTextContent(/^[-−]9\.04\s?%$/);
+    expect(cellOf(row, 'Real. PnL')).toHaveTextContent(/^[-−]0\.52$/);
     expect(cellOf(row, 'Liq.-Preis')).toHaveTextContent(/^4['’]410\.5$/);
     expect(cellOf(row, 'Liq.-Abstand')).toHaveTextContent(/^5\.64\s?%$/);
     expect(cellOf(row, 'Eröffnet')).toHaveTextContent(formatDateTime(goldShortPosition.openTime));
@@ -130,6 +133,66 @@ describe('OpenPositionsTable', () => {
     expect(hasTone(cellOf(flat, 'Unreal. PnL'), 'neutral')).toBe(true);
     expect(hasTone(cellOf(flat, 'Unreal. PnL'), 'positive')).toBe(false);
     expect(hasTone(cellOf(flat, 'Unreal. PnL'), 'negative')).toBe(false);
+  });
+
+  it('zeigt positive PnL-Werte mit explizitem "+", Preise und Liq.-Abstand ohne "+"', () => {
+    const profitablePosition: OpenPosition = {
+      ...suiLongPosition,
+      positionId: '9100000000000000004',
+      symbol: 'ETH-USDT',
+      positionAmount: '2',
+      avgOpenPrice: '2500.5',
+      markPrice: '3117.75',
+      unrealizedProfit: '1234.5',
+      realisedProfit: '12.3456',
+      pnlRatio: '0.12345',
+      liquidationPrice: '2100.25',
+      liquidationDistanceRatio: '0.32634',
+    };
+    const table = renderTable([profitablePosition]);
+    const row = rowFor(table, 'ETH-USDT');
+
+    expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^\+1['’]234\.50$/);
+    expect(cellOf(row, 'Real. PnL')).toHaveTextContent(/^\+12\.35$/);
+    expect(cellOf(row, 'PnL %')).toHaveTextContent(/^\+12\.35\s?%$/);
+    expect(cellOf(row, 'Menge')).toHaveTextContent(/^2$/);
+    expect(cellOf(row, 'Einstieg')).toHaveTextContent(/^2['’]500\.5$/);
+    expect(cellOf(row, 'Mark')).toHaveTextContent(/^3['’]117\.75$/);
+    expect(cellOf(row, 'Liq.-Preis')).toHaveTextContent(/^2['’]100\.25$/);
+    expect(cellOf(row, 'Liq.-Abstand')).toHaveTextContent(/^32\.63\s?%$/);
+  });
+
+  it('zeigt PnL-Werte, die gerundet 0 sind, ohne Vorzeichen', () => {
+    const nearlyFlatPosition: OpenPosition = {
+      ...positionWithoutLiquidation,
+      unrealizedProfit: '0.004',
+      realisedProfit: '-0.004',
+      pnlRatio: '-0.00004',
+    };
+    const table = renderTable([nearlyFlatPosition]);
+    const row = rowFor(table, 'BTC-USDT');
+
+    expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^0\.00$/);
+    expect(cellOf(row, 'Real. PnL')).toHaveTextContent(/^0\.00$/);
+    expect(cellOf(row, 'PnL %')).toHaveTextContent(/^0\.00\s?%$/);
+    expect(hasTone(cellOf(row, 'Real. PnL'), 'neutral')).toBe(true);
+  });
+
+  it('zeigt bei PnL genau 0 kein Vorzeichen', () => {
+    const table = renderTable([positionWithoutLiquidation]);
+    const row = rowFor(table, 'BTC-USDT');
+
+    expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^0\.00$/);
+    expect(cellOf(row, 'Real. PnL')).toHaveTextContent(/^0\.00$/);
+    expect(cellOf(row, 'PnL %')).toHaveTextContent(/^0\.00\s?%$/);
+  });
+
+  it('tönt den realisierten PnL nach dem gerundeten Vorzeichen', () => {
+    const realisedWinner: OpenPosition = { ...suiLongPosition, realisedProfit: '3.5' };
+    const table = renderTable([realisedWinner, goldShortPosition]);
+
+    expect(hasTone(cellOf(rowFor(table, 'SUI-USDT'), 'Real. PnL'), 'positive')).toBe(true);
+    expect(hasTone(cellOf(rowFor(table, 'NCCOGOLD2USD-USDT'), 'Real. PnL'), 'negative')).toBe(true);
   });
 
   it('zeigt einen Gedankenstrich ohne Liquidationspreis und ohne Liq.-Abstand', () => {
