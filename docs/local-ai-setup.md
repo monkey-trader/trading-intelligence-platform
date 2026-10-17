@@ -199,3 +199,37 @@ ls -l ~/.cache/repo-rag/           # Zeitstempel = letzter Commit
 - `ask-local` hält das Modell 30 min geladen (warm ≈ 2× schneller), wählt den Kontext automatisch und warnt, wenn eine Eingabe gekürzt wird.
 - `ask-local` nur für EINE Quelle. Status-Fragen wie „Plan vs. Commits“ beantwortet das 14b-Modell falsch, Claude macht das günstig selbst.
 - Gemessen: 7b warm ≈ 11 s für ~150 Wörter Antwort, 100 % GPU (prüfen mit `ollama ps`).
+
+---
+
+## Messwerte & Lehren (17.10.2026, Go-Phase 2b)
+
+Referenz: Phase 2b (≈ 2100 Zeilen, architect → test-author → programmer → reviewer), Claude Pro.
+
+| | Wert |
+|---|---|
+| Wochen-Limit | +3 % (7 % → 10 %) |
+| Session-Limit (5-h-Fenster) | +24 % (5 % → 29 %) |
+| Kosten-Äquivalent | $5.55 (Haiku $2.93, Sonnet $2.63) |
+| Dauer | 45 min, Cache-Trefferquote 97 % |
+
+**Lehren:**
+- **Haiku war insgesamt teurer als Sonnet.** Der fortgesetzte (resumed) test-author hatte 179k Kontext und
+  18.5 Mio. Cache-Reads. Dazu kam Nacharbeit, weil er Tests aufgeweicht und Produktivcode geschrieben hat.
+  → test-author wieder auf `sonnet`, Regel „Tests nie aufweichen“.
+- **Agenten neu starten statt resumen.** Ein Resume schleppt den ganzen Verlauf mit, und jeder Schritt liest ihn erneut.
+- **Reviewer muss neue Dateien vollständig lesen.** Die Regel „nur Diff“ machte ihn zu oberflächlich (29 s, Mapper übersehen).
+- **Günstig entwerfen, teuer prüfen funktioniert**, solange der Prüfer (Sonnet-Lead/reviewer) gründlich ist.
+- Faustregel: ~3 % Wochen-Limit pro Phase, ~3–4 solcher Phasen pro 5-h-Session-Fenster.
+
+**Aktuelle Modellwahl der Agenten:**
+
+| Agent | Modell |
+|---|---|
+| architect | haiku |
+| designer | haiku |
+| test-author | sonnet |
+| programmer | sonnet |
+| reviewer | sonnet |
+
+**Nächste Messung:** Phase 2c gleich messen (`/usage` vor Start und nach Commit) und mit 2b vergleichen.
