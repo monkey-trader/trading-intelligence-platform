@@ -111,23 +111,105 @@ func TestBingXClosedPositionSource_HappyPath_FromFixture(t *testing.T) {
 }
 
 func TestBingXClosedPositionSource_RangeTooBig_Error(t *testing.T) {
-	ctx := context.Background()
-
 	from := int64(1780000000000)
 	to := from + 100*24*60*60*1000 // 100 Tage > 89
 
-	fakeClient := &fakeGetClient{}
+	fakeClient := &fakeGetClientWithCapture{
+		fn: func(ctx context.Context, path string, params []bingx.QueryParam) (json.RawMessage, error) {
+			t.Errorf("Client darf bei zu großem Bereich nicht aufgerufen werden")
+			return nil, nil
+		},
+	}
 	source := NewBingXClosedPositionSource(fakeClient)
 
-	_, err := source.FetchClosedPositions(ctx, "BTC-USDT", from, to)
+	_, err := source.FetchClosedPositions(context.Background(), "BTC-USDT", from, to)
 
-	if err == nil {
-		t.Fatalf("Fehler erwartet, aber keiner geliefert")
+	if !errors.Is(err, ErrQueryRangeTooLarge) {
+		t.Errorf("Fehler = %v, erwartet ErrQueryRangeTooLarge", err)
 	}
+}
 
-	// Fehler sollte erwähnen, dass der Bereich zu groß ist.
-	if !strings.Contains(err.Error(), "89") && !strings.Contains(err.Error(), "Tage") && !strings.Contains(err.Error(), "Bereich") {
-		t.Errorf("Fehler = %v, sollte Bereich/89/Tage erwähnen", err)
+func TestBingXClosedPositionSource_FromAfterTo_ErrorWithoutClientCall(t *testing.T) {
+	from := int64(1780000000001)
+	to := int64(1780000000000)
+
+	fakeClient := &fakeGetClientWithCapture{
+		fn: func(ctx context.Context, path string, params []bingx.QueryParam) (json.RawMessage, error) {
+			t.Errorf("Client darf bei from > to nicht aufgerufen werden")
+			return nil, nil
+		},
+	}
+	source := NewBingXClosedPositionSource(fakeClient)
+
+	_, err := source.FetchClosedPositions(context.Background(), "BTC-USDT", from, to)
+
+	var rangeErr *domainposition.InvalidQueryRangeError
+	if !errors.As(err, &rangeErr) {
+		t.Fatalf("Fehler = %v (%T), erwartet *InvalidQueryRangeError", err, err)
+	}
+	if rangeErr.From != from || rangeErr.To != to {
+		t.Errorf("Fehler = (%d, %d), erwartet (%d, %d)", rangeErr.From, rangeErr.To, from, to)
+	}
+}
+
+func TestBingXClosedPositionSource_SourceErrors_AreClosedPositionsUnavailable(t *testing.T) {
+	from := int64(1780000000000)
+	to := from + 50*24*60*60*1000
+
+	testCases := []struct {
+		name           string
+		clientError    error
+		expectedReason domainposition.UnavailableReason
+	}{
+		{"429", &bingx.RateLimitError{}, domainposition.ReasonRateLimited},
+		{"Netzwerk", &bingx.NetworkError{}, domainposition.ReasonUnreachable},
+		{"code != 0", &bingx.APIError{Code: 109400, Msg: "x"}, domainposition.ReasonUpstreamError},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			fakeClient := &fakeGetClient{
+				errors: map[string]error{buildSourceKey("SOL-USDT", from, to, 0, 100): testCase.clientError},
+			}
+			source := NewBingXClosedPositionSource(fakeClient)
+
+			_, err := source.FetchClosedPositions(context.Background(), "SOL-USDT", from, to)
+
+			var unavailable *domainposition.ClosedPositionsUnavailableError
+			if !errors.As(err, &unavailable) {
+				t.Fatalf("Fehler = %v (%T), erwartet *ClosedPositionsUnavailableError", err, err)
+			}
+			if unavailable.Reason != testCase.expectedReason {
+				t.Errorf("Reason = %s, erwartet %s", unavailable.Reason, testCase.expectedReason)
+			}
+			if !errors.Is(err, testCase.clientError) {
+				t.Errorf("Ursache nicht über Unwrap erreichbar")
+			}
+			var openUnavailable *domainposition.OpenPositionsUnavailableError
+			if errors.As(err, &openUnavailable) {
+				t.Errorf("Fehler darf nicht OpenPositionsUnavailableError sein")
+			}
+		})
+	}
+}
+
+func TestBingXClosedPositionSource_MappingError_IsClosedPositionsUnavailableInvalidResponse(t *testing.T) {
+	from := int64(1780000000000)
+	to := from + 50*24*60*60*1000
+	fakeClient := &fakeGetClient{
+		responses: map[string]json.RawMessage{
+			buildSourceKey("BAD-USDT", from, to, 0, 100): json.RawMessage(`{"positionHistory": [{"positionId": "invalid"}]}`),
+		},
+	}
+	source := NewBingXClosedPositionSource(fakeClient)
+
+	_, err := source.FetchClosedPositions(context.Background(), "BAD-USDT", from, to)
+
+	var unavailable *domainposition.ClosedPositionsUnavailableError
+	if !errors.As(err, &unavailable) {
+		t.Fatalf("Fehler = %v (%T), erwartet *ClosedPositionsUnavailableError", err, err)
+	}
+	if unavailable.Reason != domainposition.ReasonInvalidResponse {
+		t.Errorf("Reason = %s, erwartet %s", unavailable.Reason, domainposition.ReasonInvalidResponse)
 	}
 }
 
@@ -395,6 +477,9 @@ func TestBingXClosedPositionSource_PagingUpperLimit(t *testing.T) {
 		t.Fatalf("Fehler erwartet für endless paging (sollte durch Limit abgebrochen werden)")
 	}
 
+	if !errors.Is(err, ErrPageLimitExceeded) {
+		t.Errorf("Fehler = %v, erwartet ErrPageLimitExceeded", err)
+	}
 	// Der Fehler muss von der Source stammen, nicht vom abgebrochenen Context.
 	if errors.Is(err, context.Canceled) {
 		t.Errorf("Fehler stammt aus Context-Abbruch statt aus Seitenlimit: %v", err)

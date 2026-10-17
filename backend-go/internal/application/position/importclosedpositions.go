@@ -9,6 +9,9 @@ import (
 	"github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/domain/position/interfaces"
 )
 
+// windowMillis ist die maximale Fenstergröße in Millisekunden (aus der Domain-Konstante).
+const windowMillis = int64(position.MaxQueryRange / time.Millisecond)
+
 // ImportClosedPositionsResult ist das Ergebnis eines Imports.
 type ImportClosedPositionsResult struct {
 	Imported   int
@@ -21,7 +24,7 @@ type ImportWindowResult struct {
 	From     int64
 	To       int64
 	RowCount int
-	// Suspicious ist wahr, wenn die Quelle leere Ergebnisse lieferte, obwohl Einkommen vorhanden war.
+	// Suspicious ist wahr, wenn die Quelle leere Ergebnisse lieferte, obwohl Income vorhanden war.
 	Suspicious bool
 }
 
@@ -52,6 +55,9 @@ func NewImportClosedPositionsUseCase(
 // importiert, obwohl Income vorhanden ist, gibt es genau einen Suspicious-Eintrag (kein Fehler).
 // Bei einem Fehler bricht der Import ab; das Ergebnis enthält die bis dahin importierte Anzahl.
 func (uc *ImportClosedPositionsUseCase) Execute(ctx context.Context, symbol string, from, to int64) (ImportClosedPositionsResult, error) {
+	if from > to {
+		return ImportClosedPositionsResult{}, &position.InvalidQueryRangeError{From: from, To: to}
+	}
 	result := ImportClosedPositionsResult{}
 	windowStart := from
 	for {
@@ -100,6 +106,3 @@ func (uc *ImportClosedPositionsUseCase) importWindow(ctx context.Context, symbol
 	}
 	return stored, nil
 }
-
-// windowMillis ist die maximale Fenstergröße in Millisekunden (aus der Domain-Konstante).
-const windowMillis = int64(position.MaxQueryRange / time.Millisecond)

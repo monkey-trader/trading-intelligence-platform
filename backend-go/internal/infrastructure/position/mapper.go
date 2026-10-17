@@ -47,7 +47,7 @@ func mapRawOpenPosition(rawPosition json.RawMessage) (domainposition.OpenPositio
 		return domainposition.OpenPosition{}, unexpected(openPositionsEndpoint + " enthält einen Eintrag, der kein Objekt ist.")
 	}
 
-	fields := fieldReader{entry: entry}
+	fields := fieldReader{entry: entry, endpoint: openPositionsEndpoint}
 	input := domainposition.OpenPositionInput{
 		PositionID:       fields.requireString("positionId"),
 		Symbol:           fields.requireString("symbol"),
@@ -78,6 +78,7 @@ func mapRawOpenPosition(rawPosition json.RawMessage) (domainposition.OpenPositio
 // führen zu *bingx.UnexpectedResponseError, nie zu stillen Standardwerten.
 type fieldReader struct {
 	entry      rawEntry
+	endpoint   string
 	firstError error
 }
 
@@ -96,7 +97,7 @@ func (reader *fieldReader) lookup(fieldName string) json.RawMessage {
 func (reader *fieldReader) fail(fieldName, expectedType string) {
 	if reader.firstError == nil {
 		reader.firstError = unexpected(fmt.Sprintf("%s: Feld %s fehlt oder ist kein %s.",
-			openPositionsEndpoint, fieldName, expectedType))
+			reader.endpoint, fieldName, expectedType))
 	}
 }
 
