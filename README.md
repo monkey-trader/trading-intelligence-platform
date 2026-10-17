@@ -11,17 +11,64 @@ Persönliches Trading-Journal mit automatischem Import von BingX (USDT-M Futures
 Details und Regeln für die Entwicklung stehen in [`CLAUDE.md`](CLAUDE.md).
 
 ## Lokal starten
-Einmalig installieren und die Keys hinterlegen:
+
+### 1. Einmalig: installieren und Keys hinterlegen
 ```bash
-(cd backend && npm ci) && (cd clients/web && npm ci)
+(cd backend && npm ci) && (cd clients/web && npm ci) && (cd contract-tests && npm ci)
 cp backend/.env.example backend/.env   # BX_KEY und BX_SECRET eintragen (Key nur mit Lese-Rechten)
 ```
-Dann zwei Terminals:
+
+### 2. App starten (zwei Terminals, jeweils im Repo-Root)
+
+**Terminal 1: Backend** (API auf http://127.0.0.1:3000)
 ```bash
-cd backend && npm run dev        # Terminal 1: API auf http://127.0.0.1:3000
-cd clients/web && npm run dev    # Terminal 2: Web-UI, Proxy /api → Backend
+cd backend && npm run dev
 ```
+
+**Terminal 2: Web-UI** (Proxy `/api` → Backend)
+```bash
+cd clients/web && npm run dev
+```
+
 Danach http://127.0.0.1:5173 öffnen (Vite bindet nur auf IPv4-Loopback; `localhost` kann auf `::1` zeigen).
+Stoppen: `Ctrl+C` im jeweiligen Terminal.
+
+### 3. Vertragstest gegen das laufende Backend (Terminal 3)
+Prüft die Antworten des Backends gegen `docs/openapi.yaml`. Backend aus Terminal 1 muss laufen.
+```bash
+cd contract-tests && CONTRACT_BASE_URL=http://127.0.0.1:3000 CONTRACT_EXPECT_CONFIGURED=true npm test
+```
+- `CONTRACT_EXPECT_CONFIGURED=true` nur mit Keys in `backend/.env` (erwartet dann 200 für
+  `/positions/open`). Ohne Keys weglassen, dann wird 503 `not-configured` erwartet (wie in CI).
+- Ohne laufenden Server (nur Validator und Abdeckungs-Check): `cd contract-tests && npm run test:unit`
+
+### 4. Positionen von BingX importieren (optional)
+Schreibt geschlossene Positionen nach `backend/data/journal.sqlite`. Der erste Lauf sucht einmalig
+alle Kontrakte ab und kann lange dauern; er ist fortsetzbar (`Ctrl+C` und später neu starten).
+```bash
+cd backend && npm run import:positions
+```
+
+### API von Hand ausprobieren
+```bash
+curl -i http://127.0.0.1:3000/health                           # 200 {"status":"ok"}
+curl -s http://127.0.0.1:3000/positions/open                   # offene Positionen (JSON)
+curl -i http://127.0.0.1:3000/gibtsnicht                       # 404 not-found
+curl -i -H 'Host: evil.example' http://127.0.0.1:3000/health   # 403 forbidden-host
+```
+
+### Prüfungen vor einem Commit
+```bash
+(cd backend && npm run lint && npm run typecheck && npm test)
+(cd clients/web && npm run lint && npm run typecheck && npm test)
+(cd contract-tests && npm run lint && npm run typecheck && npm run test:unit)
+```
+
+### Server hängt im Hintergrund?
+```bash
+lsof -nP -iTCP:3000 -sTCP:LISTEN   # Port 3000 (Backend) bzw. 5173 (UI)
+kill <PID>
+```
 
 ---
 
