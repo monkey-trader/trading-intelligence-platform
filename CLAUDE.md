@@ -149,3 +149,8 @@ Bevor du Ordner durchsuchst oder Dateien breit liest:
 Beispiel: `repo-rag search --files-only "fetch open positions from bingx api"`
 Lies danach nur die gefundenen Dateien/Zeilen. Optional `--path backend-go` zum Eingrenzen.
 Nach grösseren Änderungen: `repo-rag index`.
+
+
+- **ask-local nur für EINE Quelle** (ein Log, ein Diff, eine Datei). Nicht für Vergleiche mehrerer Quellen oder Status-Fragen (z. B. Plan vs. Commits) – das machst du selbst, `git log --oneline -20` ist billig.
+- Für Kleinkram (Commit-Messages, kurze Logs) `ask-local --fast` nutzen (schnelleres 7b-Modell).
+- Erscheint `[ask-local] WARNUNG: Eingabe zu lang`, Ergebnis nicht trauen: Eingabe eingrenzen und neu fragen.
