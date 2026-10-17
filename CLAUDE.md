@@ -17,7 +17,8 @@ sind austauschbar und sprechen nur über die API mit dem Backend.
   (z.B. Summen, Liquidationsabstand) gehören ins Backend.
 
 ## Stack
-- Backend: Node.js + TypeScript
+- Backend: Node.js + TypeScript (`backend/`, produktiv); Go-Backend im Aufbau (`backend-go/`,
+  Migration laut `docs/migration/go-wails.md`, nur Standardbibliothek)
 - Web-Client: Vite + React + TypeScript, CSS Modules
 - Datenbank: SQLite
 - Tests: Vitest
@@ -27,6 +28,9 @@ sind austauschbar und sprechen nur über die API mit dem Backend.
 ## Ordnerstruktur
 ```
 backend/src/{domain,application,infrastructure,presentation}/<feature>/
+backend-go/             Go-Backend (Strangler): cmd/tip-server/, internal/{domain,application,
+                        infrastructure,presentation}/; Befehle: `go test -race ./...`,
+                        `golangci-lint run ./...`, `gofmt -l .` (muss leer sein)
 docs/openapi.yaml       API-Vertrag (Quelle der Wahrheit, es gibt nur diese eine Spec)
 docs/database/schema.md SQLite-Schema und State-Keys
 contract-tests/         Vertragstest gegen eine laufende API (`CONTRACT_BASE_URL=… npm test`),

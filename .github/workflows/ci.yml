@@ -88,9 +88,52 @@ jobs:
       - name: Build
         run: npm run build
 
-  contract:
-    name: Vertragstest (TS-Backend)
+  backend-go:
+    name: Go-Backend (Format + Vet + Lint + Tests + Build)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend-go
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend-go/go.mod
+          # Kein go.sum (nur Standardbibliothek): Cache-Schlüssel aus go.mod.
+          cache-dependency-path: backend-go/go.mod
+
+      - name: Formatierung prüfen
+        run: |
+          unformatted="$(gofmt -l .)"
+          test -z "$unformatted" || {
+            echo "Nicht mit gofmt formatiert:"
+            echo "$unformatted"
+            exit 1
+          }
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.15.0
+          working-directory: backend-go
+
+      - name: Tests
+        run: go test -race ./...
+
+      - name: Build
+        run: go build ./...
+
+  contract:
+    name: Vertragstest (${{ matrix.backend }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [ts, go]
     env:
       SERVER_LOG: ${{ github.workspace }}/backend-server.log
     steps:
@@ -104,30 +147,46 @@ jobs:
             backend/package-lock.json
             contract-tests/package-lock.json
 
-      - name: Backend installieren und bauen
+      - name: TS-Backend installieren und bauen
+        if: matrix.backend == 'ts'
         working-directory: backend
         run: |
           npm ci
           npm run build
 
+      - uses: actions/setup-go@v7
+        if: matrix.backend == 'go'
+        with:
+          go-version-file: backend-go/go.mod
+          cache-dependency-path: backend-go/go.mod
+
+      - name: Go-Backend bauen
+        if: matrix.backend == 'go'
+        working-directory: backend-go
+        run: go build -o tip-server ./cmd/tip-server
+
       - name: Backend ohne BingX-Keys starten
-        working-directory: backend
         env:
+          BACKEND: ${{ matrix.backend }}
           PORT: '3000'
           HOST: 127.0.0.1
           # Explizit leer: GET /positions/open muss 503 not-configured liefern.
           BX_KEY: ''
           BX_SECRET: ''
         run: |
-          nohup node dist/main.js > "$SERVER_LOG" 2>&1 &
+          if [ "$BACKEND" = "ts" ]; then
+            (cd backend && nohup node dist/main.js > "$SERVER_LOG" 2>&1 &)
+          else
+            (cd backend-go && nohup ./tip-server > "$SERVER_LOG" 2>&1 &)
+          fi
           for attempt in $(seq 1 30); do
             if curl -sf http://127.0.0.1:3000/health > /dev/null; then
-              echo "Backend läuft nach ${attempt} Versuch(en)."
+              echo "Backend ($BACKEND) läuft nach ${attempt} Versuch(en)."
               exit 0
             fi
             sleep 1
           done
-          echo "Backend hat /health nicht innerhalb von 30 s beantwortet."
+          echo "Backend ($BACKEND) hat /health nicht innerhalb von 30 s beantwortet."
           cat "$SERVER_LOG"
           exit 1
 

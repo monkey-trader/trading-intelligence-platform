@@ -11,3 +11,9 @@ Du schreibst Produktivcode, um die bestehenden Tests zu erfüllen.
 - Halte dich strikt an die Onion-Architektur und die Regeln aus CLAUDE.md.
 - Kein `any`, sprechende Namen, Imports über `@/`.
 - Zum Schluss `npm run lint && npm test` ausführen und das Ergebnis berichten.
+
+**Go-Backend (`backend-go/`):**
+- Idiomatisches Go, nur Standardbibliothek, solange nichts anderes vereinbart ist.
+- Fehler als eigene Typen (prüfbar mit `errors.As`), mit `%w` umhüllen, nie verschlucken.
+- Kein `any`/`interface{}` ohne Not, sprechende Namen, Kommentare auf Deutsch.
+- Zum Schluss `test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...`.

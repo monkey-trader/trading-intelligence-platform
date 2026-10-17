@@ -49,6 +49,28 @@ alle Kontrakte ab und kann lange dauern; er ist fortsetzbar (`Ctrl+C` und späte
 cd backend && npm run import:positions
 ```
 
+### 5. Go-Backend (im Aufbau, Migration Phase 1)
+Das Go-Backend entsteht parallel zum TS-Backend (`docs/migration/go-wails.md`). Bisher kann es
+`/health` und die allgemeinen Regeln des Vertrags; `/positions/open` liefert bis Phase 2 immer
+503 `not-configured`. Das Web-UI spricht weiterhin mit dem TS-Backend auf Port 3000.
+Voraussetzung: Go 1.27 (`brew install go`), für die Prüfungen zusätzlich golangci-lint v2.15 oder neuer,
+mit Go 1.27 gebaut: `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0`.
+
+**Terminal 4: Go-Backend** auf Port 3001, parallel zum TS-Backend
+```bash
+cd backend-go && PORT=3001 go run ./cmd/tip-server
+```
+
+**Vertragstest gegen das Go-Backend** (ohne `CONTRACT_EXPECT_CONFIGURED`)
+```bash
+cd contract-tests && CONTRACT_BASE_URL=http://127.0.0.1:3001 npm test
+```
+
+**Prüfungen**
+```bash
+cd backend-go && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...
+```
+
 ### API von Hand ausprobieren
 ```bash
 curl -i http://127.0.0.1:3000/health                           # 200 {"status":"ok"}
@@ -62,11 +84,12 @@ curl -i -H 'Host: evil.example' http://127.0.0.1:3000/health   # 403 forbidden-h
 (cd backend && npm run lint && npm run typecheck && npm test)
 (cd clients/web && npm run lint && npm run typecheck && npm test)
 (cd contract-tests && npm run lint && npm run typecheck && npm run test:unit)
+(cd backend-go && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...)
 ```
 
 ### Server hängt im Hintergrund?
 ```bash
-lsof -nP -iTCP:3000 -sTCP:LISTEN   # Port 3000 (Backend) bzw. 5173 (UI)
+lsof -nP -iTCP:3000 -sTCP:LISTEN   # Port 3000 (Backend), 3001 (Go-Backend) bzw. 5173 (UI)
 kill <PID>
 ```
 
