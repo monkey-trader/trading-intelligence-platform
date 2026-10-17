@@ -10,11 +10,22 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+
+	appposition "github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/application/position"
+	"github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/domain/position"
 )
 
 const allowedTestHost = "127.0.0.1:3000"
 
-var testSettings = Settings{AllowedHosts: []string{"127.0.0.1:3000", "localhost:3000", "[::1]:3000"}}
+var testSettings = Settings{
+	AllowedHosts:     []string{"127.0.0.1:3000", "localhost:3000", "[::1]:3000"},
+	GetOpenPositions: notConfiguredOpenPositions,
+}
+
+// notConfiguredOpenPositions verhält sich wie die Unconfigured-Source: immer not-configured.
+func notConfiguredOpenPositions(context.Context) (appposition.OpenPositionsOverview, error) {
+	return appposition.OpenPositionsOverview{}, &position.OpenPositionsUnavailableError{Reason: position.ReasonNotConfigured}
+}
 
 // trackingBody meldet, ob jemand den Request-Body gelesen hat.
 type trackingBody struct {
@@ -55,15 +66,6 @@ func TestHealth(t *testing.T) {
 				t.Errorf("Body = %q, erwartet {\"status\":\"ok\"}", body)
 			}
 		})
-	}
-}
-
-func TestOpenPositions_StubLiefertNotConfigured(t *testing.T) {
-	recorder := serve(NewHandler(testSettings, discardLogger()), newTestRequest(http.MethodGet, "/positions/open", allowedTestHost))
-
-	assertProblem(t, recorder, http.StatusServiceUnavailable, notConfiguredBody)
-	if retryAfter := recorder.Header().Get("Retry-After"); retryAfter != "" {
-		t.Errorf("Retry-After = %q, bei not-configured nicht erlaubt", retryAfter)
 	}
 }
 

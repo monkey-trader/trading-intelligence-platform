@@ -427,7 +427,7 @@ func startServer(t *testing.T, configure func(*http.Server)) *runningServer {
 		t.Fatalf("Listen: %v", err)
 	}
 	address := listener.Addr().String()
-	settings := Settings{AllowedHosts: []string{address}}
+	settings := Settings{AllowedHosts: []string{address}, GetOpenPositions: notConfiguredOpenPositions}
 	server := NewServer(NewHandler(settings, discardLogger()), discardLogger())
 	if configure != nil {
 		configure(server)
@@ -548,7 +548,7 @@ func TestIntegration_RohRequests(t *testing.T) {
 			expectedStatus: http.StatusNotFound, expectedBody: notFoundBody,
 		},
 		{
-			name:           "openPositions-Stub ergibt 503",
+			name:           "openPositions not-configured ergibt 503",
 			rawRequest:     "GET /positions/open HTTP/1.1\r\nHost: " + allowedHost + "\r\n\r\n",
 			expectedStatus: http.StatusServiceUnavailable, expectedBody: notConfiguredBody,
 		},

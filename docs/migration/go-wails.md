@@ -92,8 +92,16 @@ Umsetzung (2026-10-17):
 - Weitere Unterschiede, Go jeweils gleich gut oder besser: `GET /health#x` → 404 (TS 200),
   nacktes LF als Zeilenende wird akzeptiert (TS 400 ohne Problem), Leerzeile vor der Request-Zeile
   → Klartext-400 (TS problem+json), kleingeschriebene Methode → 404 problem+json (TS 400 ohne Problem).
-- Für Phase 2: `WriteTimeout` ist 10 s. BingX-Aufrufe inkl. 429-Backoff brauchen eine Frist darunter
-  (Context-Deadline), sonst wird die Antwort ohne Problem-Body abgeschnitten.
+- Phase 2a (offene Positionen) – bewusste Abweichungen vom TS-Backend:
+  - `BX_BASE` wird geprüft (https immer, http nur für Loopback, keine Zugangsdaten/Query/Fragment in
+    der URL); TS prüft nicht. Nach dem Go-Stand sollte TS angeglichen werden.
+  - Der Go-Client folgt keinen Redirects (sonst ginge `X-BX-APIKEY` ans Ziel) und begrenzt den
+    Antwort-Body auf 10 MiB.
+  - Eine gemeinsame Abfrage im Cache hat zusätzlich eine Gesamtfrist (`FetchTimeout` 8 s, unter
+    dem `WriteTimeout` von 10 s), sonst würde die Antwort ohne Problem-Body abgeschnitten.
+  - `liquidationPrice` als JSON-Zahl: gleiches Ergebnis wie TS (`String(n)`), auch bei Exponent
+    (`1e-7` → `0.0000001`). Als String mit Exponent bleibt es ein Fehler (wie TS).
+  - Zeitfelder (`createTime`/`updateTime`) nur als Ganzzahl.
 
 ## Phase 2 – Domain, BingX-Client, Import
 TDD, Fixtures aus Phase 0.

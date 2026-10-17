@@ -1,14 +1,20 @@
 package httpapi
 
 import (
+	"context"
 	"log/slog"
 	"maps"
 	"net/http"
+
+	appposition "github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/application/position"
 )
 
 // Settings enthält die Einstellungen der HTTP-API.
 type Settings struct {
 	AllowedHosts []string
+	// GetOpenPositions liefert die offenen Positionen (Pflicht). Fehler werden per errors.As auf
+	// *position.OpenPositionsUnavailableError in Problem-Antworten übersetzt.
+	GetOpenPositions func(ctx context.Context) (appposition.OpenPositionsOverview, error)
 }
 
 // NewHandler baut die Kette recover → hostGuard → malformedTarget → router → 404.
@@ -19,9 +25,13 @@ func NewHandler(settings Settings, logger *slog.Logger) http.Handler {
 // newHandlerWithRoutes wie NewHandler, ergänzt aber die Standardrouten um extraRoutes
 // (Schlüssel "METHOD /pfad"). Nur für Tests, z.B. eine Route, die panict.
 func newHandlerWithRoutes(settings Settings, logger *slog.Logger, extraRoutes map[string]http.HandlerFunc) http.Handler {
+	if settings.GetOpenPositions == nil {
+		// Programmierfehler beim Verdrahten: sofort beim Start auffallen statt erst beim ersten Request.
+		panic("httpapi: Settings.GetOpenPositions ist Pflicht")
+	}
 	routes := map[string]http.HandlerFunc{
 		"GET /health":         handleHealth,
-		"GET /positions/open": handleOpenPositions,
+		"GET /positions/open": newOpenPositionsHandler(settings.GetOpenPositions, logger),
 	}
 	maps.Copy(routes, extraRoutes)
 	allowedHosts := append([]string(nil), settings.AllowedHosts...)

@@ -51,6 +51,14 @@ linters:
               desc: Die Präsentation spricht über Use Cases, nicht direkt mit der Infrastruktur.
             - pkg: database/sql
               desc: Datenbankzugriff gehört in die Infrastruktur.
+  exclusions:
+    rules:
+      # Gewollte Fachnamen im Positions-Kern (Zuschnitt Phase 2a): PositionDomainError, PositionID,
+      # PositionSide. Sie entsprechen den TS-Namen und sind ohne Paketpräfix eindeutiger.
+      - path: internal/domain/position/
+        linters:
+          - revive
+        text: "exported: type name will be used as position\\.Position.* by other packages, and that stutters"
 
 formatters:
   enable:
