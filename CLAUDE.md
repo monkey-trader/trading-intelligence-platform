@@ -172,6 +172,11 @@ Nach grösseren Änderungen: `repo-rag index`.
 - Kleine Nachzieher (Review-Punkte, Kommentare, Konstanten, einzelne Tests) erledigt der Lead bzw.
   ein einzelner programmer direkt, ohne die ganze Kette.
 
+**Vor jedem Commit (Pflicht)**
+- Go: `cd backend-go && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...`
+- `golangci-lint` läuft lokal (go install, built with go1.27). „Läuft erst in der CI“ ist kein gültiger Grund mehr.
+  Schlägt Lint fehl, wird vor dem Commit behoben, nicht nachgezogen.
+
 **Session klein halten**
 - Vor dem reviewer `/compact` vorschlagen, wenn die Session lang ist.
 - Nach jedem Commit den Abschnitt „Aktueller Stand“ in `docs/migration/go-wails.md` aktualisieren
