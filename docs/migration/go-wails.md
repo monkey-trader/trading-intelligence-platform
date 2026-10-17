@@ -113,6 +113,29 @@ TDD, Fixtures aus Phase 0.
   State-Tabelle mit 1 h Überlappung, Scheduler alle 5 Min.
 - Leere Positions-Antwort bei vorhandenem Income → loggen, nicht als erledigt markieren.
 
+Aufteilung in Schritte (je eigener Branch, architect → test-author → programmer → reviewer):
+- **2b – Geschlossene Positionen ohne DB:**
+  - Domain: `ClosedPosition` (primitive Felder, `positionId` als String), Factory auf den vorhandenen
+    Value Objects, Fehler `SuspiciousEmptyPositionHistoryError`; Ports `ClosedPositionSource`,
+    `PositionRepository`, `IncomeLookup`.
+  - BingX-Client: `positionHistory` pro Symbol, `pageIndex` ab 0, ein Aufruf deckt höchstens 89 Tage ab
+    (größere Bereiche lehnt der Client ab), Seiten kommen als Liste von Roh-Objekten zurück.
+  - Use Case `ImportClosedPositionsUseCase` fenstert in 89-Tage-Fenster. Pro Fenster meldet er
+    `Imported` oder `Suspicious` (leer trotz Income) und liefert die verdächtigen Fenster zurück; der
+    State wird erst in 2c geschrieben. Ein Fehler bricht den Import ab (Anzahl bisher importierter
+    Positionen bleibt im Ergebnis), Wiederholen entscheidet später der Scheduler.
+  - Infrastruktur: In-Memory-Repository und ein `IncomeLookup` mit festem `false`. Die Verdachtsregel ist
+    damit im Betrieb noch wirkungslos, bis 2c/2d den echten Lookup liefern.
+  - Als Erstes prüft der test-author Feldnamen, Antwortschlüssel und Zeitregeln (`updateTime`/`closeTime`,
+    Leverage, `closeTime >= openTime`) gegen `fixtures/bingx/` und `docs/database/schema.md`.
+- **2c – SQLite und State:** Schema mit `schema_version`, Repositories für `positions`, `income`, `state`,
+  `balance`; `notes` wird nie vom Import beschrieben. Offen: SQLite-Treiber (Empfehlung `modernc.org/sqlite`,
+  ohne cgo).
+- **2d – Income-Import:** 7-Tage-Fenster, max. 1000 pro Seite, Deduplizierung über `tranId`, Fortschritt
+  mit 1 h Überlappung.
+- **2e – Scheduler und Vollimport:** Lauf alle 5 Min mit Überlappungsschutz, fortsetzbare Symbolsuche über
+  `/quote/contracts`, Verdrahtung in `main.go` nur mit gültigen Keys.
+
 ## Phase 3 – HTTP-API und Umschalten
 - Alle Endpunkte aus Phase 0 in Go.
 - Vertragstest grün gegen **beide** Backends.

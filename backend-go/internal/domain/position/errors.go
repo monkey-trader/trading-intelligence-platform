@@ -35,6 +35,13 @@ type UpdateBeforeOpenError struct {
 	UpdateTime int64
 }
 
+// SuspiciousEmptyPositionHistoryError meldet: Income-Einträge gefunden, aber positionHistory ist leer.
+type SuspiciousEmptyPositionHistoryError struct {
+	Symbol string
+	From   int64
+	To     int64
+}
+
 func (err *InvalidDecimalAmountError) Error() string {
 	return fmt.Sprintf("Ungültiger Betrag: %q", err.Value)
 }
@@ -64,10 +71,16 @@ func (err *UpdateBeforeOpenError) Error() string {
 		err.UpdateTime, err.OpenTime, err.PositionID)
 }
 
-func (*InvalidDecimalAmountError) positionDomainError() {}
-func (*InvalidTimestampError) positionDomainError()     {}
-func (*InvalidLeverageError) positionDomainError()      {}
-func (*InvalidPositionIDError) positionDomainError()    {}
-func (*InvalidPositionSideError) positionDomainError()  {}
-func (*InvalidTradingSymbolError) positionDomainError() {}
-func (*UpdateBeforeOpenError) positionDomainError()     {}
+func (err *SuspiciousEmptyPositionHistoryError) Error() string {
+	return fmt.Sprintf("Verdächtig: Income vorhanden für %s, aber positionHistory ist leer (%d–%d).",
+		err.Symbol, err.From, err.To)
+}
+
+func (*InvalidDecimalAmountError) positionDomainError()           {}
+func (*InvalidTimestampError) positionDomainError()               {}
+func (*InvalidLeverageError) positionDomainError()                {}
+func (*InvalidPositionIDError) positionDomainError()              {}
+func (*InvalidPositionSideError) positionDomainError()            {}
+func (*InvalidTradingSymbolError) positionDomainError()           {}
+func (*UpdateBeforeOpenError) positionDomainError()               {}
+func (*SuspiciousEmptyPositionHistoryError) positionDomainError() {}
