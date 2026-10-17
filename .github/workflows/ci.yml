@@ -87,3 +87,72 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  contract:
+    name: Vertragstest (TS-Backend)
+    runs-on: ubuntu-latest
+    env:
+      SERVER_LOG: ${{ github.workspace }}/backend-server.log
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            contract-tests/package-lock.json
+
+      - name: Backend installieren und bauen
+        working-directory: backend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Backend ohne BingX-Keys starten
+        working-directory: backend
+        env:
+          PORT: '3000'
+          HOST: 127.0.0.1
+          # Explizit leer: GET /positions/open muss 503 not-configured liefern.
+          BX_KEY: ''
+          BX_SECRET: ''
+        run: |
+          nohup node dist/main.js > "$SERVER_LOG" 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:3000/health > /dev/null; then
+              echo "Backend läuft nach ${attempt} Versuch(en)."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Backend hat /health nicht innerhalb von 30 s beantwortet."
+          cat "$SERVER_LOG"
+          exit 1
+
+      - name: Vertragstest-Abhängigkeiten installieren
+        working-directory: contract-tests
+        run: npm ci
+
+      - name: Lint
+        working-directory: contract-tests
+        run: npm run lint
+
+      - name: Typecheck
+        working-directory: contract-tests
+        run: npm run typecheck
+
+      - name: Formatierung prüfen
+        working-directory: contract-tests
+        run: npm run format:check
+
+      - name: Vertragstest
+        working-directory: contract-tests
+        env:
+          CONTRACT_BASE_URL: http://127.0.0.1:3000
+        run: npm test
+
+      - name: Server-Log ausgeben
+        if: failure()
+        run: cat "$SERVER_LOG" || true

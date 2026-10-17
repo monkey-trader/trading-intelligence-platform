@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { BingXPositionHistorySource } from '@/infrastructure/position/BingXPositionHistorySource';
 import { UnexpectedBingXResponseError } from '@/infrastructure/bingx/errors';
-import page0Fixture from '@/infrastructure/position/bingx/fixtures/positionHistory.page0.json';
-import shortFixture from '@/infrastructure/position/bingx/fixtures/positionHistory.short.json';
-import emptyFixture from '@/infrastructure/position/bingx/fixtures/positionHistory.empty.json';
+import page0Fixture from '@fixtures/bingx/positionHistory.page0.json';
+import shortFixture from '@fixtures/bingx/positionHistory.short.json';
+import emptyFixture from '@fixtures/bingx/positionHistory.empty.json';
 
 const POSITION_HISTORY_PATH = '/openApi/swap/v1/trade/positionHistory';
 const PAGE_SIZE = 100;

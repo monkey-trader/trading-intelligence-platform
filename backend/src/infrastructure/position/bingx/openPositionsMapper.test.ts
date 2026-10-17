@@ -3,8 +3,8 @@ import { mapOpenPositionsResponse } from '@/infrastructure/position/bingx/openPo
 import { UnexpectedBingXResponseError } from '@/infrastructure/bingx/errors';
 import { PositionDomainError } from '@/domain/position/errors/PositionDomainError';
 import type { OpenPosition } from '@/domain/position/entities/OpenPosition';
-import openPositionsFixture from '@/infrastructure/position/bingx/fixtures/openPositions.json';
-import openPositionsEmptyFixture from '@/infrastructure/position/bingx/fixtures/openPositions.empty.json';
+import openPositionsFixture from '@fixtures/bingx/openPositions.json';
+import openPositionsEmptyFixture from '@fixtures/bingx/openPositions.empty.json';
 
 function captureError(action: () => unknown): unknown {
   try {

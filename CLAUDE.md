@@ -27,7 +27,11 @@ sind austauschbar und sprechen nur über die API mit dem Backend.
 ## Ordnerstruktur
 ```
 backend/src/{domain,application,infrastructure,presentation}/<feature>/
-docs/openapi.yaml
+docs/openapi.yaml       API-Vertrag (Quelle der Wahrheit, es gibt nur diese eine Spec)
+docs/database/schema.md SQLite-Schema und State-Keys
+contract-tests/         Vertragstest gegen eine laufende API (`CONTRACT_BASE_URL=… npm test`),
+                        backend-unabhängig; gilt für das TS- und später das Go-Backend
+fixtures/bingx/         anonymisierte BingX-Antworten, sprachneutral (Backend: Alias `@fixtures/*`)
 clients/web/    Web-Client (Vite + React), spricht nur über die HTTP-API
                 API-Typen per `npm run generate:api` aus docs/openapi.yaml (openapi-typescript 7.13.0
                 verlangt TS ^5, läuft mit TS 6 über `overrides` in package.json, getestet)
@@ -102,13 +106,13 @@ Konsequenz für dieses Projekt:
   geloggt, nicht stillschweigend als "erledigt" markiert. Geprüft wird über den ganzen
   Zeitraum, nicht pro Fenster: Ein `REALIZED_PNL` aus einem Teilschluss kann in einem Fenster
   liegen, dessen Position erst später erscheint.
-- Tests mit echten (anonymisierten) BingX-Antwortbeispielen als Fixtures.
+- Tests mit echten (anonymisierten) BingX-Antwortbeispielen als Fixtures (`fixtures/bingx/`).
 
 ## Vorgehen
 - **TDD:** erst Test, dann Code. Tests liegen neben dem Code (`Foo.ts` → `Foo.test.ts`).
 - Kein `any`; `unknown` plus Narrowing verwenden.
 - Sprechende Variablennamen.
-- Vor Commit: `npm run lint && npm test`.
+- Vor Commit: `npm run lint && npm test` (in `contract-tests/` ohne laufenden Server `npm run test:unit`).
 - Commits nur auf ausdrücklichen Wunsch. Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`),
   Branches `feature/<beschreibung>`.
 
@@ -126,3 +130,8 @@ Konsequenz für dieses Projekt:
 - `reviewer` – Qualität und Sicherheit am Schluss
 
 Ablauf pro Feature: architect (Schnitt) → test-author → programmer → reviewer.
+
+## Planung (vor größeren Änderungen lesen)
+- `docs/migration/go-wails.md` – Migration des Backends auf Go, Desktop-App mit Wails,
+  Auslieferung über Homebrew. Go-Backend entsteht parallel in `backend-go/` (Strangler-Pattern).
+- `docs/features/chart-journal.md` – Feature: Chart mit Entry, SL, TP (Stufen 1–3, read-only).

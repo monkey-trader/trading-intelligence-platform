@@ -3,9 +3,9 @@ import { mapPositionHistoryResponse } from '@/infrastructure/position/bingx/posi
 import { UnexpectedBingXResponseError } from '@/infrastructure/bingx/errors';
 import { PositionDomainError } from '@/domain/position/errors/PositionDomainError';
 import type { Position } from '@/domain/position/entities/Position';
-import page0Fixture from '@/infrastructure/position/bingx/fixtures/positionHistory.page0.json';
-import shortFixture from '@/infrastructure/position/bingx/fixtures/positionHistory.short.json';
-import emptyFixture from '@/infrastructure/position/bingx/fixtures/positionHistory.empty.json';
+import page0Fixture from '@fixtures/bingx/positionHistory.page0.json';
+import shortFixture from '@fixtures/bingx/positionHistory.short.json';
+import emptyFixture from '@fixtures/bingx/positionHistory.empty.json';
 
 function captureError(action: () => unknown): unknown {
   try {

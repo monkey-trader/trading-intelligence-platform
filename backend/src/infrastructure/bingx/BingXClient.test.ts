@@ -2,8 +2,8 @@ import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { BingXClient } from '@/infrastructure/bingx/BingXClient';
 import { BingXApiError, BingXHttpError, BingXRateLimitError } from '@/infrastructure/bingx/errors';
-import rangeTooLargeFixture from '@/infrastructure/position/bingx/fixtures/positionHistory.error.rangeTooLarge.json';
-import page0Fixture from '@/infrastructure/position/bingx/fixtures/positionHistory.page0.json';
+import rangeTooLargeFixture from '@fixtures/bingx/positionHistory.error.rangeTooLarge.json';
+import page0Fixture from '@fixtures/bingx/positionHistory.page0.json';
 
 const API_KEY = 'TEST-API-KEY-1234567890';
 const API_SECRET = 'TEST-API-SECRET-0987654321';
