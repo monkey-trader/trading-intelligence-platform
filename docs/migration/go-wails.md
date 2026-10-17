@@ -1,6 +1,6 @@
 # Migrationsplan: Backend auf Go, Desktop-App mit Wails, Auslieferung über Homebrew
 
-Status: Phase 0 in Arbeit (Branch `feature/go-phase-0-vertrag`)
+Status: Phase 0 erledigt, Phase 1 in Arbeit (Branch `feature/go-phase-1-geruest`)
 
 ## Zielbild
 
@@ -71,6 +71,29 @@ Umsetzung (2026-10-17):
   (z.B. oapi-codegen) – architect entscheidet.
 - GitHub Actions: zusätzlicher Job für `backend-go` (lint + test).
 - `GET /health` implementiert, Vertragstest dafür grün.
+
+Umsetzung (2026-10-17):
+- Nur Standardbibliothek (`net/http`, `log/slog`), kein oapi-codegen: zwei Endpunkte, volle Kontrolle
+  über 404/HEAD/Host-Prüfung. HTTP-Paket `internal/presentation/httpapi`.
+- Eigener Router statt `ServeMux`-Methodenabgleich (der beantwortet HEAD automatisch und liefert 405).
+- Ungültige Request-Ziele (`/%zz`) lehnt `net/http` vor jedem Handler als Klartext ab. Lösung:
+  Listener-Wrapper liest die erste Zeile jeder Verbindung, ersetzt ein ungültiges Ziel durch `/` und
+  setzt ein Flag (`atomic.Bool` über `ConnContext`); der Handler prüft zuerst den Host und liefert
+  dann 400 `bad-request`. Dafür ist Keep-Alive aus (eine Anfrage pro Verbindung, auf Loopback vertretbar).
+- `/positions/open` ist bis Phase 2 ein Stub mit 503 `not-configured`; der Vertragstest läuft ohne
+  Keys daher vollständig grün. Muss in Phase 2 ersetzt werden.
+- `go.mod`: `go 1.27.0`, `toolchain go1.27.2`. golangci-lint muss mit mindestens derselben Go-Version
+  gebaut sein (CI: v2.15.0); ein älteres lokales golangci-lint bricht mit einer Versionsmeldung ab.
+- CI: Job `backend-go`, Vertragstest als Matrix gegen TS- und Go-Backend.
+- Bekannte Abweichungen vom TS-Backend (Go antwortet selbst, vor jedem Handler, als Klartext):
+  HTTP/1.1 ohne Host, doppelter oder ungültiger Host-Header, kaputte Header (400), zu große Header (431).
+  Strenger als TS: absolute-form-Ziele (`GET http://host/x`) ergeben 403. `PORT` nur als ganze
+  Dezimalzahl (TS akzeptiert über `Number()` auch `1e3`, `0x10`, `3000.0`).
+- Weitere Unterschiede, Go jeweils gleich gut oder besser: `GET /health#x` → 404 (TS 200),
+  nacktes LF als Zeilenende wird akzeptiert (TS 400 ohne Problem), Leerzeile vor der Request-Zeile
+  → Klartext-400 (TS problem+json), kleingeschriebene Methode → 404 problem+json (TS 400 ohne Problem).
+- Für Phase 2: `WriteTimeout` ist 10 s. BingX-Aufrufe inkl. 429-Backoff brauchen eine Frist darunter
+  (Context-Deadline), sonst wird die Antwort ohne Problem-Body abgeschnitten.
 
 ## Phase 2 – Domain, BingX-Client, Import
 TDD, Fixtures aus Phase 0.

@@ -13,5 +13,8 @@ Prüfe:
 - Import überschreibt keine Nutzer-Notizen; Deduplizierung ist abgesichert.
 - Lesbarkeit, Namen, kein `any`, Architektur eingehalten.
 - Tests decken das neue Verhalten wirklich ab.
+- **Go (`backend-go/`):** idiomatisch (Fehlerbehandlung, `context`, keine Goroutine-Lecks,
+  Datenrennen mit `go test -race`), Schichtregeln laut `.golangci.yml` (depguard), Verhalten
+  gleich wie das TS-Backend (Vertragstest `contract-tests/`).
 
 Gib das Ergebnis als Liste aus: Schweregrad (kritisch / mittel / klein), Datei:Zeile, Problem, Vorschlag.
