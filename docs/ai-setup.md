@@ -161,6 +161,7 @@ CLAUDE.md                     Projektgedächtnis (immer geladen)
 └── reviewer.md
 docs/
 ├── ai-setup.md               dieses Dokument
+├── local-ai-setup.md         Ollama + Qdrant + repo-rag
 ├── design.md                 Design-System (designer)
 ├── openapi.yaml              API-Vertrag (architect)
 ├── features/                 Feature-Spezifikationen
@@ -174,3 +175,8 @@ minimalen Rechten, Tests als Vertrag, den der Programmierer nicht ändern darf, 
 Review, und der Mensch koordiniert.
 
 Claude-Code-spezifisch sind nur die Dateinamen und Formate (`CLAUDE.md`, `.claude/agents/`).
+
+## 8. Lokales Setup zum Token-Sparen
+
+Ollama, Qdrant, `repo-rag` und `ask-local` entlasten Claude bei Suche und Fleissarbeit.
+Architektur-Grafik, Installation und TODOs: [local-ai-setup.md](local-ai-setup.md).
