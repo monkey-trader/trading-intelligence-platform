@@ -14,7 +14,9 @@ Status: Phase 0, 1 und 2a erledigt, Phase 2b umgesetzt (Branch `feature/go-phase
   State nicht; ihn liest und schreibt der Scheduler (2e). Es gibt noch keinen echten `IncomeLookup` (2d), die
   Verdachtsregel ist im Betrieb wirkungslos, bis 2d sie speist. `Suspicious` muss der Aufrufer (2e) auswerten
   und darf das Fenster nicht als erledigt markieren.
-- **Offen vor 2e:** `golangci-lint` läuft nur in der CI (lokal go1.26-Build gegen go 1.27.2). Die Sentinels
+- **Lint:** `golangci-lint` läuft jetzt lokal (go1.27) und ist sauber (0 Befunde, 2026-10-17). Die CI-Fehler in
+  PR #2 (errcheck bei `defer Close`, revive unused-parameter in Tests) sind behoben.
+- **Offen vor 2e:** Die Sentinels
   `ErrQueryRangeTooLarge`/`ErrPageLimitExceeded` liegen in der Infrastruktur; reagiert die Application darauf,
   gehören sie in die Domain. `InvalidQueryRangeError` hat noch kein HTTP-Mapping (kein Presentation-Pfad).
   Ob echte Antworten `positionCommission`/`totalFunding` auslassen können, ist nicht belegt (Mapper verlangt
