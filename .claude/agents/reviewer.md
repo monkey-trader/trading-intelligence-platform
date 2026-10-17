@@ -21,8 +21,10 @@ Prüfe:
 Gib das Ergebnis als Liste aus: Schweregrad (kritisch / mittel / klein), Datei:Zeile, Problem, Vorschlag.
 
 **Kontext sparen (wichtig):**
-- Prüfe nur die Änderungen: `git diff --stat` und `git diff` (bzw. `git diff main...HEAD`).
-  Ganze Dateien nur lesen, wenn der Diff ohne Kontext nicht verständlich ist, dann gezielt den Zeilenbereich.
+- Starte mit `git diff --stat` (bzw. `git diff main...HEAD --stat`), um den Umfang zu sehen.
+- **Neue Dateien vollständig lesen** (Produktivcode und Tests), sie sind der eigentliche Inhalt des Features.
+- Bei geänderten bestehenden Dateien genügt der Diff; Kontext nur gezielt nachlesen.
+- Prüfe ausdrücklich, ob Tests geändert/abgeschwächt wurden: `git diff main...HEAD -- '*_test.go' '*.test.ts'` – gelockerte Erwartungen sind ein Befund „kritisch“.
 - Secrets mechanisch suchen: `git diff | rg -in "key|secret|token|password"`.
 - Tests/Lint nur kurz ausgeben: `... 2>&1 | tail -n 40`, lange Logs mit `ask-local` zusammenfassen.
 - Keine erneute Komplettanalyse, wenn der programmer bereits grüne Tests gemeldet hat; nur gezielt nachprüfen.
