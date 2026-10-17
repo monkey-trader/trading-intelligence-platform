@@ -14,3 +14,7 @@ coverage/
 
 # Lokale Daten (SQLite-Journal)
 data/
+
+# Lokale Editor- und Werkzeug-Einstellungen
+.idea/
+.claude/settings.local.json
