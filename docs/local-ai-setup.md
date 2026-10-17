@@ -98,6 +98,7 @@ Rechner: MacBook Air M2, 24 GB RAM
 brew install ollama
 brew services start ollama
 ollama pull qwen2.5-coder:14b
+ollama pull qwen2.5-coder:7b      # für ask-local --fast
 ollama pull nomic-embed-text
 
 # 2. Qdrant (startet mit Docker automatisch neu)
@@ -155,6 +156,7 @@ repo-rag stats
 
 # Lokales Modell
 ask-local "Regex für ISO-Datum"
+git log --oneline -20 | ask-local --fast "In 1 Satz zusammenfassen"
 git diff --staged | ask-local "Commit-Message"
 ask-local -f datei.go "Erklär in 5 Punkten"
 ```
@@ -194,3 +196,6 @@ ls -l ~/.cache/repo-rag/           # Zeitstempel = letzter Commit
 - Für die Suche zählen Begriffe, die im Code vorkommen, mehr als die Sprache (Deutsch oder Englisch).
 - Claude Code (Sonnet 5.5) nutzt `repo-rag` von selbst, sobald es in der `CLAUDE.md` steht. Das wurde am 17.10.2026 bestätigt.
 - Auf dem Air nicht mehrere lokale Agenten parallel laufen lassen.
+- `ask-local` hält das Modell 30 min geladen (warm ≈ 2× schneller), wählt den Kontext automatisch und warnt, wenn eine Eingabe gekürzt wird.
+- `ask-local` nur für EINE Quelle. Status-Fragen wie „Plan vs. Commits“ beantwortet das 14b-Modell falsch, Claude macht das günstig selbst.
+- Gemessen: 7b warm ≈ 11 s für ~150 Wörter Antwort, 100 % GPU (prüfen mit `ollama ps`).
