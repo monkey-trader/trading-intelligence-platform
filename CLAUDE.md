@@ -119,7 +119,7 @@ Konsequenz für dieses Projekt:
 - Vor Commit: `npm run lint && npm test` (in `contract-tests/` ohne laufenden Server `npm run test:unit`).
 - Commits nur auf ausdrücklichen Wunsch. Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`),
   Branches `feature/<beschreibung>`.
-- **Releases sind automatisch:** Nur ein Push auf `main` löst über `.github/workflows/release.yml` (semantic-release, `.releaserc.json`) einen Release aus; die Version ergibt sich aus den Commit-Präfixen (`feat` → minor, `fix`/`perf`/`chore`/`docs`/`refactor`/`test`/`ci`/`style` → patch, `!` oder `BREAKING CHANGE:` bei jedem Typ → major). Tags nie von Hand setzen. Squash-Merge-Titel müssen Conventional Commits sein.
+- **Releases sind automatisch:** Nur ein Push auf `main` löst über `.github/workflows/release.yml` (semantic-release, `.releaserc.json`) einen Release aus; die Version ergibt sich aus den Commit-Präfixen (`feat` → minor, `fix`/`perf` → patch, `!` oder `BREAKING CHANGE:` bei jedem Typ → major; `docs`/`chore`/`test`/`ci`/`refactor`/`style` lösen **keinen** Release aus). Tags nie von Hand setzen. Squash-Merge-Titel müssen Conventional Commits sein.
 
 ## Sicherheit
 - BingX-API-Key **nur mit Lese-Rechten**; der Code macht nur signierte GET-Requests.

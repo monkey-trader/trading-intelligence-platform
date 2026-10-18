@@ -27,27 +27,27 @@
           },
           {
             "type": "chore",
-            "release": "patch"
+            "release": false
           },
           {
             "type": "docs",
-            "release": "patch"
+            "release": false
           },
           {
             "type": "refactor",
-            "release": "patch"
+            "release": false
           },
           {
             "type": "test",
-            "release": "patch"
+            "release": false
           },
           {
             "type": "ci",
-            "release": "patch"
+            "release": false
           },
           {
             "type": "style",
-            "release": "patch"
+            "release": false
           }
         ]
       }
