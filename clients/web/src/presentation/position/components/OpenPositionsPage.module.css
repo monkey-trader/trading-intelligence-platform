@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: 1280px;
+  max-width: var(--layout-max-width);
   margin: 0 auto;
   padding: var(--space-4) var(--space-3);
 }
@@ -48,7 +48,7 @@
 
 .retryButton {
   padding: var(--space-2) var(--space-4);
-  color: var(--color-surface);
+  color: var(--color-on-accent);
   background: var(--color-accent);
   border: none;
   border-radius: var(--radius-small);
