@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -75,8 +76,8 @@ func backupIfMigrationNeeded(path string, clock interfaces.Clock) error {
 	if err != nil {
 		return fmt.Errorf("sqlite öffnen: %w", err)
 	}
+	defer func() { _ = probe.Close() }()
 	version, err := readVersion(probe)
-	_ = probe.Close()
 	if err != nil {
 		return err
 	}
@@ -85,6 +86,10 @@ func backupIfMigrationNeeded(path string, clock interfaces.Clock) error {
 	}
 	if version == CurrentSchemaVersion {
 		return nil
+	}
+	// Im WAL-Modus stehen committete Daten evtl. nur in <db>-wal: vor der Kopie in die Hauptdatei übernehmen.
+	if _, err := probe.Exec(`PRAGMA wal_checkpoint(TRUNCATE)`); err != nil {
+		return &BackupError{Path: path, Err: fmt.Errorf("wal-checkpoint: %w", err)}
 	}
 	backupPath := fmt.Sprintf("%s.bak-v%d-%s", path, version, clock.Now().UTC().Format(backupTimeStamp))
 	if err := copyExclusive(path, backupPath); err != nil {
@@ -113,10 +118,16 @@ func copyExclusive(source, target string) (err error) {
 	return err
 }
 
+// rowQuerier ist die gemeinsame Teilmenge von *sql.DB und *sql.Conn für Einzelzeilen-Abfragen.
+type rowQuerier interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
 // readVersion liefert die höchste Version; ohne Tabelle schema_version (TS-DB, leer) ist es 0.
-func readVersion(db *sql.DB) (int, error) {
+func readVersion(querier rowQuerier) (int, error) {
+	ctx := context.Background()
 	var tableName string
-	err := db.QueryRow(`SELECT name FROM sqlite_master WHERE type='table' AND name='schema_version'`).Scan(&tableName)
+	err := querier.QueryRowContext(ctx, `SELECT name FROM sqlite_master WHERE type='table' AND name='schema_version'`).Scan(&tableName)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, nil
 	}
@@ -124,40 +135,55 @@ func readVersion(db *sql.DB) (int, error) {
 		return 0, fmt.Errorf("schema_version prüfen: %w", err)
 	}
 	var version sql.NullInt64
-	if err := db.QueryRow(`SELECT MAX(version) FROM schema_version`).Scan(&version); err != nil {
+	if err := querier.QueryRowContext(ctx, `SELECT MAX(version) FROM schema_version`).Scan(&version); err != nil {
 		return 0, fmt.Errorf("schema_version lesen: %w", err)
 	}
 	return int(version.Int64), nil
 }
 
 // migrate legt das Schema idempotent an und setzt schema_version auf die aktuelle Version.
-func migrate(db *sql.DB) error {
-	version, err := readVersion(db)
+// Die Version wird innerhalb von BEGIN IMMEDIATE gelesen, damit zwei Prozesse nicht gleichzeitig migrieren.
+func migrate(db *sql.DB) (err error) {
+	ctx := context.Background()
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("sqlite einrichten: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+	if _, err := conn.ExecContext(ctx, `BEGIN IMMEDIATE`); err != nil {
+		return fmt.Errorf("sqlite einrichten: %w", err)
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_, _ = conn.ExecContext(ctx, `ROLLBACK`)
+		}
+	}()
+	version, err := readVersion(conn)
 	if err != nil {
 		return err
 	}
 	if version > CurrentSchemaVersion {
 		return &SchemaTooNewError{Found: version, Supported: CurrentSchemaVersion}
 	}
-	transaction, err := db.Begin()
-	if err != nil {
-		return fmt.Errorf("sqlite einrichten: %w", err)
-	}
-	defer func() { _ = transaction.Rollback() }()
 	statements := append([]string{}, schemaStatements...)
 	statements = append(statements, `CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL)`)
 	for _, statement := range statements {
-		if _, err := transaction.Exec(statement); err != nil {
+		if _, err := conn.ExecContext(ctx, statement); err != nil {
 			return fmt.Errorf("sqlite einrichten: %w", err)
 		}
 	}
 	if version < CurrentSchemaVersion {
-		if _, err := transaction.Exec(`DELETE FROM schema_version`); err != nil {
+		if _, err := conn.ExecContext(ctx, `DELETE FROM schema_version`); err != nil {
 			return fmt.Errorf("schema_version setzen: %w", err)
 		}
-		if _, err := transaction.Exec(`INSERT INTO schema_version (version) VALUES (?)`, CurrentSchemaVersion); err != nil {
+		if _, err := conn.ExecContext(ctx, `INSERT INTO schema_version (version) VALUES (?)`, CurrentSchemaVersion); err != nil {
 			return fmt.Errorf("schema_version setzen: %w", err)
 		}
 	}
-	return transaction.Commit()
+	if _, err := conn.ExecContext(ctx, `COMMIT`); err != nil {
+		return fmt.Errorf("sqlite einrichten: %w", err)
+	}
+	committed = true
+	return nil
 }
