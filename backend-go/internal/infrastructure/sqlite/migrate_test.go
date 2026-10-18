@@ -305,3 +305,42 @@ func equalStrings(left, right []string) bool {
 	}
 	return true
 }
+
+func TestOpenWithClock_SicherungEnthaeltDatenAusWAL(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "journal.db")
+	holder, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = holder.Close() }()
+	holder.SetMaxOpenConns(1)
+	for _, statement := range append([]string{
+		`PRAGMA journal_mode=WAL`,
+		`PRAGMA wal_autocheckpoint=0`,
+	}, append(append([]string{}, schemaStatements...),
+		`INSERT INTO notes VALUES ('42','NurImWal',3,'','x',1)`)...) {
+		if _, err := holder.Exec(statement); err != nil {
+			t.Fatalf("%s: %v", statement, err)
+		}
+	}
+	if info, err := os.Stat(path + "-wal"); err != nil || info.Size() == 0 {
+		t.Fatalf("WAL sollte Daten enthalten: %v", err)
+	}
+	db, err := OpenWithClock(path, migrationClock{now: backupTime})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	found := backups(t, path)
+	if len(found) != 1 {
+		t.Fatalf("erwartet 1 Sicherung, got %v", found)
+	}
+	backupDB, err := sql.Open("sqlite", found[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = backupDB.Close() }()
+	if rows := count(t, backupDB, "notes"); rows != 1 {
+		t.Fatalf("Sicherung ohne WAL-Daten: %d Notizen", rows)
+	}
+}

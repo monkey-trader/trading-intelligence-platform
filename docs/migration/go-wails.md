@@ -10,6 +10,8 @@ Status: Phase 0, 1 und 2a erledigt, Phase 2b umgesetzt (Branch `feature/go-phase
   Ablehnung zu neuer DBs (`SchemaTooNewError`), Standardpfad `<UserConfigDir>/tip/journal.db` über
   `config.ReadDatabasePath` (`JOURNAL_DB` überschreibt). Details in `docs/database/schema.md`.
 - **Offen:** Binary-Größe messen, Sortierung der Income-Antwort gegen die echte API belegen, Homebrew/Wails (Phase 5+).
+- **Offen:** Die Vollsuche läuft parallel zum Scheduler; bei `database is locked` wird sie erst beim nächsten Neustart wiederholt.
+- **Offen:** Der Vollimport-Start ist fest "jetzt minus 365 Tage"; `positions_full_search_done:<symbol>` gilt nur für das damalige Fenster.
 
 ## Zielbild
 

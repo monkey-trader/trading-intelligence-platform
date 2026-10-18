@@ -166,6 +166,8 @@ func (uc *ScheduledImportUseCase) importSymbol(ctx context.Context, symbol strin
 	if err != nil {
 		return err
 	}
+	// Nur die Vollsuche merkt sich "erledigt" dauerhaft; ein Abbruch mittendrin darf sie nicht
+	// fälschlich abschliessen. Der inkrementelle Lauf wird ohnehin mit Überlappung wiederholt.
 	if err := ctx.Err(); err != nil && fullSearch {
 		return err // Vollsuche: abgebrochenes Symbol nicht als erledigt markieren
 	}
