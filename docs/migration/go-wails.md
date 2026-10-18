@@ -1,6 +1,6 @@
 # Migrationsplan: Backend auf Go, Desktop-App mit Wails, Auslieferung über Homebrew
 
-Status: Phase 0, 1 und 2a erledigt, Phase 2b umgesetzt (Branch `feature/go-phase-2b-geschlossene-positionen`), nächster Schritt 2c
+Status: Phase 0 bis 4 und 7 (Server) erledigt, Release automatisch über semantic-release; offen: Phase 5 (zurückgestellt) und Phase 6 (Wails)
 
 ## Aktueller Stand (2026-10-18)
 - **Erledigt:** Phase 0 bis 2d (Vertrag, Gerüst, offene Positionen, Positions-Import, SQLite/State, Income-Import).
@@ -11,7 +11,7 @@ Status: Phase 0, 1 und 2a erledigt, Phase 2b umgesetzt (Branch `feature/go-phase
   `config.ReadDatabasePath` (`JOURNAL_DB` überschreibt). Details in `docs/database/schema.md`.
 - **Phase 7 (Server):** `.goreleaser.yaml` + `.github/workflows/release.yml` (Push auf `main` → semantic-release berechnet die Version aus Conventional Commits, `feat` → minor, `fix`/`perf`/`chore`/`docs`/`refactor`/`test`/`ci`/`style` → patch, `!` oder `BREAKING CHANGE:` (bei jedem Typ, auch `chore!:`) → major; legt Tag + GitHub Release an, danach Build im selben Workflow + Formula im Tap `monkey-trader/homebrew-tap`, Secret `TAP_GITHUB_TOKEN`; Konfiguration `.releaserc.json`; Build eines bestehenden Tags erneut per `workflow_dispatch`). Keys für den Dienst in `~/.config/tip/env`. Cask `tip-app` folgt mit Phase 6.
 - **Web-UI:** wird per `go:embed` im Go-Server unter `/` ausgeliefert (Release-Build baut `clients/web` mit `VITE_API_BASE=''`); `/health`, `/positions`, `/api` bleiben API.
-- **Release v0.1.1 (2026-10-18):** erste Version mit eingebettetem Web-UI (#7) auf Basis von v0.1.0 (Release-Pipeline, #6).
+- **Release (2026-10-18):** Aktuell `v0.1.5`, installiert per `brew upgrade tip-server && brew services restart tip-server` (Health-Check `http://127.0.0.1:3000/health`). Releases entstehen nur noch automatisch auf `main` (semantic-release per `npx`, Node aus `.nvmrc`, Preset `conventional-changelog-conventionalcommits@8`, weil neuere Presets Writer 9 brauchen). Regeln in `.releaserc.json`: Breaking → major, `feat` → minor, `fix`/`perf`/`chore`/`docs`/`refactor`/`test`/`ci`/`style` → patch. Tag, Build und Tap-Update laufen im selben Workflow (Tags vom `GITHUB_TOKEN` lösen keinen zweiten aus); Runner `ubuntu-24.04`. Fehlgeschlagenen Build eines Tags wiederholen: `workflow_dispatch` mit Tag.
 - **Offen:** Binary-Größe messen, Sortierung der Income-Antwort gegen die echte API belegen, Homebrew/Wails (Phase 5+).
 - **Importbeginn:** Der Import startet ab dem ersten Serverstart (State `import_started_at`, `ResolveImportStart`), keine Historie, keine Vollsuche über alle Kontrakte. Bei jedem Lauf (also auch beim Start) werden die aktuell offenen Positionen als Zeile in `positions` angelegt (`close_time` 0, `fully_closed` 0), damit sie im Journal verwaltet werden können; ihre Symbole gehen in den Closed-Import. Schließt eine Position, überschreibt der Upsert dieselbe Zeile, Notizen bleiben.
 - **Zurückgestellt:** `RunFullSearch`/`RunFullSearchUntilDone` (Historie nachladen) existieren, sind aber nicht verdrahtet; später als Nutzeraktion.
