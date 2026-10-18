@@ -1,5 +1,5 @@
 # Release des Go-Backends (tip-server) als Homebrew-Formula.
-# Ausgelöst von .github/workflows/release.yml bei Tag v*.
+# Ausgelöst von .github/workflows/release.yml, nachdem semantic-release Tag + Release angelegt hat.
 version: 2
 project_name: tip-server
 
@@ -22,10 +22,12 @@ archives:
 checksum:
   name_template: checksums.txt
 
+# Release und Changelog legt semantic-release an; GoReleaser hängt nur die Assets an.
+release:
+  mode: keep-existing
+
 changelog:
-  use: github
-  filters:
-    exclude: ["^docs:", "^chore:"]
+  disable: true
 
 brews:
   - name: tip-server
