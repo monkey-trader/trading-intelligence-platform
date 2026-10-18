@@ -35,13 +35,27 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - id: semrel
-        uses: cycjimmy/semantic-release-action@v4
+      - uses: actions/setup-node@v7
         with:
-          extra_plugins: |
-            conventional-changelog-conventionalcommits@8
+          node-version-file: .nvmrc
+
+      # semantic-release direkt per npx statt über die Action (die läuft noch auf Node 20).
+      - name: semantic-release
+        run: >-
+          npx --yes
+          -p semantic-release@25
+          -p conventional-changelog-conventionalcommits@8
+          semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # semantic-release setzt den Tag auf HEAD, nur wenn ein Release entstand.
+      - id: semrel
+        run: |
+          git fetch --tags --force
+          tag="$(git tag --points-at HEAD --list 'v*' | head -n1)"
+          echo "new_release_git_tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "new_release_published=$([ -n "$tag" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
   release:
     name: tip-server bauen und Homebrew-Formula veröffentlichen
