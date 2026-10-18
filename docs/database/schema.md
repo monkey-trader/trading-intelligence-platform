@@ -36,6 +36,8 @@ Geschlossene Positionen aus `positionHistory`. Eine Zeile pro BingX-Position.
 | `raw` | TEXT | Unveränderte Rohantwort von BingX für diese Position (JSON) |
 | `imported_at` | INTEGER | Zeitpunkt des letzten Imports dieser Zeile |
 
+**Offene Positionen** (Go-Backend) stehen als Platzhalter-Zeile in derselben Tabelle: `close_time = 0`, `fully_closed = 0`, `avg_close_price`/`net_profit` etc. `'0'`, `raw` = JSON der offenen Position. Angelegt wird nur, was noch fehlt (`ON CONFLICT DO NOTHING`); der Closed-Import überschreibt die Zeile später per Upsert. Abfragen nach `close_time` müssen `close_time > 0` bzw. `fully_closed = 1` berücksichtigen.
+
 Index `positions_symbol_close_time` auf `(symbol, close_time)`.
 
 **Schreiben nur per Upsert** `INSERT … ON CONFLICT(position_id) DO UPDATE SET …`, alle Spalten außer
@@ -81,6 +83,7 @@ Schreiben per `INSERT … ON CONFLICT(key) DO UPDATE`. Präfix-Suche über `subs
 
 | Schlüssel | Wert | Bedeutung |
 |---|---|---|
+| `import_started_at` | Zeitpunkt | Erster Serverstart des Go-Backends; Beginn des Imports, wird nie überschrieben. |
 | `income_scan_until` | Zeitpunkt | Income ist bis hier nach gehandelten Symbolen durchsucht. Wird erst am Ende eines Laufs geschrieben. |
 | `position_history_until:<SYMBOL>` | Zeitpunkt | Positionen dieses Symbols sind bis hier importiert. Nächster Lauf beginnt mit 1 h Überlappung. Verdächtige oder fehlgeschlagene Symbole rücken nicht vor; ohne bisherigen Eintrag bekommen sie den Beginn des Suchbereichs. |
 | `position_suspicious:<SYMBOL>` | Zeitpunkt (erstmals gesehen) | Verdacht: Income vorhanden, aber `positionHistory` leer. Bleibt über Läufe bestehen, bis Positionen gefunden werden. |

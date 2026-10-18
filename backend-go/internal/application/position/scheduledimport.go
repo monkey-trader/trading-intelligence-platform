@@ -3,6 +3,7 @@ package position
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -70,6 +71,8 @@ type ScheduledImportDeps struct {
 	Positions       ClosedImporter
 	Symbols         interfaces.IncomeSymbolLister
 	Contracts       interfaces.ContractSource
+	OpenSource      interfaces.OpenPositionSource
+	OpenRecorder    interfaces.OpenPositionRecorder
 	State           interfaces.ImportStateRepository
 	Now             func() time.Time
 	FullImportStart int64
@@ -86,8 +89,16 @@ func NewScheduledImportUseCase(deps ScheduledImportDeps) *ScheduledImportUseCase
 // overlapMillis ist die Überlappung beim inkrementellen Lauf (1 h).
 const overlapMillis = int64(time.Hour / time.Millisecond)
 
-// RunIncremental führt aus: Income, dann Positionen für alle Income-Symbole aus der DB.
+// RunIncremental führt aus: offene Positionen anlegen, Income, dann Positionen für alle Income-Symbole
+// aus der DB sowie die Symbole der offenen Positionen (damit ihr Schließen sicher erfasst wird).
 func (uc *ScheduledImportUseCase) RunIncremental(ctx context.Context) (ScheduledImportResult, error) {
+	snapshot, err := uc.deps.OpenSource.FetchOpenPositions(ctx)
+	if err != nil {
+		return ScheduledImportResult{}, fmt.Errorf("offene positionen laden: %w", err)
+	}
+	if err := uc.deps.OpenRecorder.RecordOpenPositions(ctx, snapshot.Positions); err != nil {
+		return ScheduledImportResult{}, fmt.Errorf("offene positionen anlegen: %w", err)
+	}
 	if _, err := uc.deps.Income.Execute(ctx, uc.deps.FullImportStart); err != nil {
 		return ScheduledImportResult{}, fmt.Errorf("income importieren: %w", err)
 	}
@@ -95,7 +106,11 @@ func (uc *ScheduledImportUseCase) RunIncremental(ctx context.Context) (Scheduled
 	if err != nil {
 		return ScheduledImportResult{}, fmt.Errorf("income-symbole lesen: %w", err)
 	}
-	return uc.importSymbols(ctx, symbols, false)
+	for _, open := range snapshot.Positions {
+		symbols = append(symbols, open.Symbol)
+	}
+	slices.Sort(symbols)
+	return uc.importSymbols(ctx, slices.Compact(symbols), false)
 }
 
 // RunFullSearch führt aus: Positionen für alle USDT-Kontrakte, fortsetzbar (State pro Symbol).
@@ -115,6 +130,32 @@ func (uc *ScheduledImportUseCase) RunFullSearch(ctx context.Context) (ScheduledI
 		}
 	}
 	return uc.importSymbols(ctx, pending, true)
+}
+
+// RunFullSearchUntilDone wiederholt RunFullSearch nach retryDelay, bis kein Symbol mehr offen ist
+// (z.B. nach "database is locked" oder Netzfehlern). Erledigte Symbole bleiben dank State außen vor.
+// onFailure bekommt jeden fehlgeschlagenen Lauf. Endet mit nil bei Erfolg, sonst mit dem Kontextfehler.
+func (uc *ScheduledImportUseCase) RunFullSearchUntilDone(ctx context.Context, retryDelay time.Duration, onFailure func(error)) error {
+	for {
+		_, err := uc.RunFullSearch(ctx)
+		if err == nil {
+			return nil
+		}
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return ctxErr
+		}
+		onFailure(err)
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return ctxErr
+		}
+		timer := time.NewTimer(retryDelay)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return ctx.Err()
+		case <-timer.C:
+		}
+	}
 }
 
 // importSymbols importiert Symbol für Symbol. Fehler eines Symbols brechen die anderen nicht ab;

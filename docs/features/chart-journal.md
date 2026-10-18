@@ -12,7 +12,8 @@ abgeschlossene Trades zur Auswertung im Journal.
 ## Nicht im Umfang (bewusst)
 - SL/TP im Chart verschieben oder Orders ändern/anlegen/stornieren.
   → Bräuchte Handelsrechte am API-Key und widerspricht der Sicherheitsregel "nur lesen".
-- Zeichenwerkzeuge (Trendlinien, Fibonacci) und eingebaute Indikatoren.
+- Zeichenwerkzeuge (Trendlinien, Fibonacci) und eingebaute Indikatoren. Eigene Analysen zeichnet
+  der Nutzer bei TradingView und hinterlegt nur den Link (siehe "TradingView-Link").
 - Die lizenzpflichtige TradingView-Charting-Library.
 
 ## Technik
@@ -28,6 +29,15 @@ abgeschlossene Trades zur Auswertung im Journal.
 > Exakte BingX-Endpunkte, Parameter und Feldnamen vor der Umsetzung in der aktuellen
 > BingX-API-Doku prüfen und echte Antworten als Fixtures ablegen
 > (Lehre aus dem Positions-Bug im Prototyp `../bingx-journal`).
+
+---
+
+## TradingView-Link (Journal-Notiz)
+Pro Position kann der Nutzer einen TradingView-Link einfügen (geteilter Chart/Snapshot mit der
+eigenen Analyse). Das Journal zeigt ihn als Link, ohne ihn einzubetten oder abzurufen.
+- Feld an der Journal-Notiz (`chartUrl`), nur `https://` und Host `tradingview.com`/Subdomains,
+  sonst Validierungsfehler (kein `javascript:`), Link mit `rel="noopener noreferrer"`.
+- Kommt mit der Notiz-API, nicht mit Stufe 1.
 
 ---
 

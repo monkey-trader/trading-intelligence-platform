@@ -9,6 +9,7 @@ import (
 	"time"
 
 	appposition "github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/application/position"
+	domain "github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/domain/position"
 )
 
 const (
@@ -106,7 +107,28 @@ func (state *memoryState) Delete(_ context.Context, key string) error {
 }
 func (state *memoryState) ListKeys(context.Context, string) ([]string, error) { return nil, nil }
 
+type fakeOpenSource struct {
+	positions []domain.OpenPosition
+	err       error
+}
+
+func (fake *fakeOpenSource) FetchOpenPositions(context.Context) (domain.OpenPositionsSnapshot, error) {
+	return domain.OpenPositionsSnapshot{Positions: fake.positions}, fake.err
+}
+
+type fakeRecorder struct {
+	recorded [][]domain.OpenPosition
+	err      error
+}
+
+func (fake *fakeRecorder) RecordOpenPositions(_ context.Context, positions []domain.OpenPosition) error {
+	fake.recorded = append(fake.recorded, positions)
+	return fake.err
+}
+
 type scheduledFixture struct {
+	open      *fakeOpenSource
+	recorder  *fakeRecorder
 	log       *callLog
 	income    *fakeIncomeImporter
 	lister    *fakeSymbolLister
@@ -125,10 +147,12 @@ func newScheduledFixture(dbSymbols, contractSymbols []string) *scheduledFixture 
 		contracts: &fakeContracts{symbols: contractSymbols},
 		positions: &fakePositionImporter{log: log},
 		state:     &memoryState{values: map[string]int64{}},
+		open:      &fakeOpenSource{},
+		recorder:  &fakeRecorder{},
 	}
 	fixture.useCase = appposition.NewScheduledImportUseCase(appposition.ScheduledImportDeps{
 		Income: fixture.income, Positions: fixture.positions, Symbols: fixture.lister, Contracts: fixture.contracts,
-		State: fixture.state, Now: func() time.Time { return time.UnixMilli(nowMillis) }, FullImportStart: fullStart,
+		State: fixture.state, OpenSource: fixture.open, OpenRecorder: fixture.recorder, Now: func() time.Time { return time.UnixMilli(nowMillis) }, FullImportStart: fullStart,
 	})
 	return fixture
 }
@@ -433,5 +457,101 @@ func TestScheduledFullSearch_KontraktFehlerOhneAufrufe(t *testing.T) {
 
 	if !errors.Is(err, errBoom) || len(fixture.positions.calls) != 0 {
 		t.Errorf("err = %v, Aufrufe = %v", err, fixture.positions.calls)
+	}
+}
+
+func TestScheduledFullSearch_WiederholtFehlgeschlageneSymboleBisAlleErledigtSind(t *testing.T) {
+	fixture := newScheduledFixture(nil, []string{"A-USDT", "BAD-USDT"})
+	fixture.positions.errs = map[string]error{"BAD-USDT": errBoom}
+	var failuresSeen []int
+
+	err := fixture.useCase.RunFullSearchUntilDone(context.Background(), time.Millisecond, func(failed error) {
+		var failures *appposition.ImportFailuresError
+		if errors.As(failed, &failures) {
+			failuresSeen = append(failuresSeen, len(failures.Failures))
+		}
+		delete(fixture.positions.errs, "BAD-USDT") // beim nächsten Versuch ist die Sperre weg
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(failuresSeen, []int{1}) {
+		t.Errorf("gemeldete Fehlschläge = %v, erwartet [1]", failuresSeen)
+	}
+	for _, symbol := range []string{"A-USDT", "BAD-USDT"} {
+		if _, done := fixture.state.values[appposition.PositionsFullSearchKeyPrefix+symbol]; !done {
+			t.Errorf("Vollsuche-State für %s fehlt", symbol)
+		}
+	}
+	aCalls := 0
+	for _, call := range fixture.positions.calls {
+		if call.symbol == "A-USDT" {
+			aCalls++
+		}
+	}
+	if aCalls != 1 {
+		t.Errorf("A-USDT wurde %d-mal abgefragt, erledigte Symbole dürfen nicht wiederholt werden", aCalls)
+	}
+}
+
+func TestScheduledFullSearch_WiederholungEndetMitAbgebrochenemKontext(t *testing.T) {
+	fixture := newScheduledFixture(nil, []string{"BAD-USDT"})
+	fixture.positions.errs = map[string]error{"BAD-USDT": errBoom}
+	ctx, cancel := context.WithCancel(context.Background())
+	attempts := 0
+	err := fixture.useCase.RunFullSearchUntilDone(ctx, time.Hour, func(error) {
+		attempts++
+		cancel()
+	})
+
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v, erwartet context.Canceled", err)
+	}
+	if attempts != 1 {
+		t.Errorf("Versuche = %d", attempts)
+	}
+}
+
+func TestScheduledIncremental_OffenePositionenWerdenAngelegtUndIhreSymboleImportiert(t *testing.T) {
+	fixture := newScheduledFixture([]string{"BTC-USDT"}, nil)
+	fixture.open.positions = []domain.OpenPosition{
+		{PositionID: "1", Symbol: "ONDO-USDT"}, {PositionID: "2", Symbol: "BTC-USDT"}, {PositionID: "3", Symbol: "ONDO-USDT"},
+	}
+
+	result, err := fixture.useCase.RunIncremental(context.Background())
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fixture.recorder.recorded) != 1 || len(fixture.recorder.recorded[0]) != 3 {
+		t.Errorf("angelegt = %+v", fixture.recorder.recorded)
+	}
+	if !reflect.DeepEqual(result.Symbols, []string{"BTC-USDT", "ONDO-USDT"}) {
+		t.Errorf("Symbole = %v, erwartet Vereinigung ohne Duplikate, sortiert", result.Symbols)
+	}
+}
+
+func TestScheduledIncremental_OffenePositionenFehlerStopptVorDemImport(t *testing.T) {
+	fixture := newScheduledFixture([]string{"BTC-USDT"}, nil)
+	fixture.open.err = errBoom
+
+	_, err := fixture.useCase.RunIncremental(context.Background())
+
+	if !errors.Is(err, errBoom) {
+		t.Fatalf("err = %v", err)
+	}
+	if len(fixture.log.entries) != 0 {
+		t.Errorf("Import lief trotz Fehler: %v", fixture.log.entries)
+	}
+}
+
+func TestScheduledIncremental_RecorderFehlerWirdGemeldet(t *testing.T) {
+	fixture := newScheduledFixture(nil, nil)
+	fixture.open.positions = []domain.OpenPosition{{PositionID: "1", Symbol: "ONDO-USDT"}}
+	fixture.recorder.err = errBoom
+
+	if _, err := fixture.useCase.RunIncremental(context.Background()); !errors.Is(err, errBoom) {
+		t.Fatalf("err = %v", err)
 	}
 }

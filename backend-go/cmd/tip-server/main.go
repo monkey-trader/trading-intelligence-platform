@@ -114,13 +114,11 @@ const (
 	importRequestTimeout = 15 * time.Second
 	importRequestPause   = 200 * time.Millisecond
 	importMaxRetries     = 3
-	defaultFullImportDay = 365
 	databaseDirMode      = 0o700
-	hoursPerDay          = 24
 )
 
-// startImport startet mit gültigen BingX-Keys den 5-Minuten-Scheduler und einmalig die Vollsuche
-// im Hintergrund. Ohne Keys passiert nichts. Die zurückgegebene Funktion wartet auf das Ende
+// startImport startet mit gültigen BingX-Keys den 5-Minuten-Scheduler. Importiert wird ab dem ersten
+// Serverstart (`import_started_at`), keine Historie und keine Vollsuche. Ohne Keys passiert nichts. Die zurückgegebene Funktion wartet auf das Ende
 // aller Hintergrundläufe (bricht sie vorher ab) und schließt die Datenbank.
 func startImport(ctx context.Context, logger *slog.Logger, lookupEnv func(string) string) (func(), error) {
 	bingXConfig, configured, err := config.ReadBingXConfig(lookupEnv)
@@ -153,25 +151,33 @@ func startImport(ctx context.Context, logger *slog.Logger, lookupEnv func(string
 	})
 	incomeRepository := sqlite.NewIncomeRepository(database, time.Now)
 	state := sqlite.NewImportStateRepository(database)
+	positionRepository := sqlite.NewPositionRepository(database, time.Now)
 	positionImporter := appposition.NewImportClosedPositionsUseCase(
 		infraposition.NewBingXClosedPositionSource(client),
-		sqlite.NewPositionRepository(database, time.Now),
+		positionRepository,
 		sqlite.NewIncomeLookup(database))
+	importStart, err := appposition.ResolveImportStart(ctx, state, time.Now())
+	if err != nil {
+		_ = database.Close()
+		return nil, err
+	}
 	useCase := appposition.NewScheduledImportUseCase(appposition.ScheduledImportDeps{
 		Income:          appposition.NewImportIncomeUseCase(infraposition.NewBingXIncomeSource(client), incomeRepository, state, time.Now),
 		Positions:       positionImporter,
 		Symbols:         incomeRepository,
 		Contracts:       infraposition.NewBingXContractSource(client),
+		OpenSource:      infraposition.NewBingXOpenPositionSource(client, clock.SystemClock{}),
+		OpenRecorder:    positionRepository,
 		State:           state,
 		Now:             time.Now,
-		FullImportStart: time.Now().Add(-defaultFullImportDay * hoursPerDay * time.Hour).UnixMilli(),
+		FullImportStart: importStart,
 	})
 
 	ctx, cancel := context.WithCancel(ctx)
 	ticker := time.NewTicker(importInterval)
 	ticks := make(chan struct{})
 	var background sync.WaitGroup
-	background.Add(3)
+	background.Add(2)
 	go func() { // Brücke time.Ticker -> chan struct{}
 		defer background.Done()
 		for {
@@ -199,14 +205,8 @@ func startImport(ctx context.Context, logger *slog.Logger, lookupEnv func(string
 			OnSkip:  func() { logger.Warn("Import-Tick übersprungen, vorheriger Lauf läuft noch") },
 		}).Run(ctx)
 	}()
-	go func() {
-		defer background.Done()
-		if _, err := useCase.RunFullSearch(ctx); err != nil && ctx.Err() == nil {
-			logger.Error("Vollsuche fehlgeschlagen", slog.String("error", err.Error()))
-		}
-	}()
 
-	logger.Info("Import aktiv", slog.Duration("interval", importInterval))
+	logger.Info("Import aktiv", slog.Duration("interval", importInterval), slog.Time("seit", time.UnixMilli(importStart)))
 	return func() {
 		cancel()
 		ticker.Stop()
