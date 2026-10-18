@@ -3,36 +3,13 @@
 Status: Phase 0, 1 und 2a erledigt, Phase 2b umgesetzt (Branch `feature/go-phase-2b-geschlossene-positionen`), nächster Schritt 2c
 
 ## Aktueller Stand (2026-10-18)
-- **Erledigt:** Phase 0 (Vertrag eingefroren), Phase 1 (Go-Gerüst, `/health`), Phase 2a (offene Positionen
-  live, `GET /positions/open`), Phase 2b (Import geschlossener Positionen ohne DB), Phase 2c (SQLite und State),
-  Phase 2d (Income-Import).
-- **2c im Detail:** `infrastructure/sqlite` mit `Open` (Schema idempotent nach `docs/database/schema.md`,
-  Pragmas `foreign_keys`, `busy_timeout`, bei Dateien WAL im DSN, damit sie für jede Pool-Verbindung gelten;
-  Datei mit Rechten 0600, Verzeichnis muss existieren), `PositionRepository` (Upsert per `ON CONFLICT`,
-  `notes` bleibt unberührt) und `ImportStateRepository` (Port in `domain/position/interfaces`; Präfix-Suche
-  per `substr`). Treiber `modernc.org/sqlite` ohne cgo. Alle Tests grün (`go test -race ./...`).
-- **Noch nicht verdrahtet:** Weder Import noch SQLite sind in `main.go` eingebunden. Der Use Case kennt den
-  State nicht; ihn liest und schreibt der Scheduler (2e). Es gibt noch keinen echten `IncomeLookup` (2d), die
-  Verdachtsregel ist im Betrieb wirkungslos, bis 2d sie speist. `Suspicious` muss der Aufrufer (2e) auswerten
-  und darf das Fenster nicht als erledigt markieren.
-- **Lint:** `golangci-lint` läuft jetzt lokal (go1.27) und ist sauber (0 Befunde, 2026-10-17). Die CI-Fehler in
-  PR #2 (errcheck bei `defer Close`, revive unused-parameter in Tests) sind behoben.
-- **Offen vor 2e:** Die Sentinels
-  `ErrQueryRangeTooLarge`/`ErrPageLimitExceeded` liegen in der Infrastruktur; reagiert die Application darauf,
-  gehören sie in die Domain. `InvalidQueryRangeError` hat noch kein HTTP-Mapping (kein Presentation-Pfad).
-  Ob echte Antworten `positionCommission`/`totalFunding` auslassen können, ist nicht belegt (Mapper verlangt
-  alle 16 Felder).
-  Außerdem für 2e: `PositionRepository` schreibt einzeln (autocommit); `schema.md` verlangt eine Transaktion
-  pro Batch, dafür braucht es dann eine Batch-Methode. `main.go` legt das DB-Verzeichnis vor `Open` an.
-  Die Binary-Größe mit Treiber ist noch nicht gemessen (erst nach der Verdrahtung aussagekräftig).
-- **2d im Detail:** `ImportIncomeUseCase` (7-Tage-Fenster, 1 h Überlappung, ein Batch pro Fenster, State
-  `income_scan_until` nur nach Erfolg), `BingXIncomeSource` (kontoweit, ohne Symbol und `pageIndex`; blättert
-  mit `limit=1000` und inklusivem `startTime=max(time)`, dedupliziert über `tranId`, volle Seite ohne
-  Fortschritt = Fehler), SQLite `IncomeRepository` und echter `IncomeLookup`, Tabelle `income`.
-- **Offen aus dem Review 2d:** Die Sortierung der Income-Antwort (auf- oder absteigend bei `limit`) ist nicht
-  gegen die echte API belegt. `Symbols` eines abgebrochenen Laufs sind unvollständig; 2e sollte Symbole aus
-  der DB lesen. `tranId` wird strikt als String erwartet (gegen Realantwort bestätigen).
-- **Nächster Schritt:** 2e (Scheduler, Vollimport, Verdrahtung in `main.go`; `IncomeLookup` einhängen).
+- **Erledigt:** Phase 0 bis 2d (Vertrag, Gerüst, offene Positionen, Positions-Import, SQLite/State, Income-Import).
+- **2e:** Scheduler (5 Minuten) und einmaliger Vollimport sind in `main.go` verdrahtet, nur mit gültigen Keys.
+- **3:** Vertragstest läuft grün gegen das Go-Backend, der UI-Proxy ist umschaltbar.
+- **4:** `schema_version` (Version 1), Sicherung `<datei>.bak-v<alt>-<UTC>` vor Migration (0600, `O_EXCL`),
+  Ablehnung zu neuer DBs (`SchemaTooNewError`), Standardpfad `<UserConfigDir>/tip/journal.db` über
+  `config.ReadDatabasePath` (`JOURNAL_DB` überschreibt). Details in `docs/database/schema.md`.
+- **Offen:** Binary-Größe messen, Sortierung der Income-Antwort gegen die echte API belegen, Homebrew/Wails (Phase 5+).
 
 ## Zielbild
 
