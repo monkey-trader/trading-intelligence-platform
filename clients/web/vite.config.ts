@@ -2,7 +2,8 @@ import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
-const BACKEND_URL = 'http://127.0.0.1:3000';
+// BACKEND_URL stellt den Dev-Proxy auf ein anderes Backend um (z.B. Go auf Port 3100).
+const BACKEND_URL = process.env.BACKEND_URL ?? 'http://127.0.0.1:3000';
 
 export default defineConfig({
   plugins: [react()],

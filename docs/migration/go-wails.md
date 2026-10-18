@@ -169,9 +169,11 @@ Aufteilung in Schritte (je eigener Branch, architect → test-author → program
   `/quote/contracts`, Verdrahtung in `main.go` nur mit gültigen Keys.
 
 ## Phase 3 – HTTP-API und Umschalten
-- Alle Endpunkte aus Phase 0 in Go.
-- Vertragstest grün gegen **beide** Backends.
-- UI testweise auf das Go-Backend umstellen (`API_BASE_URL`), eine Woche parallel nutzen.
+- Alle Endpunkte aus Phase 0 in Go. Das TS-Backend hat nur `/health` und `/positions/open`, beide sind in Go
+  vorhanden; es gibt keine weiteren Endpunkte nachzuziehen.
+- Vertragstest grün gegen **beide** Backends (Go am 2026-10-18: 101/101, Start ohne Keys, Port 3100).
+- UI testweise auf das Go-Backend umstellen: `BACKEND_URL=http://127.0.0.1:3100 npm run dev` in `clients/web`,
+  eine Woche parallel nutzen.
 
 ## Phase 4 – Daten übernehmen
 - Gleiches SQLite-Schema oder Migrationsskript von der bestehenden DB-Datei.
