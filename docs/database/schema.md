@@ -62,6 +62,21 @@ Kontoweite Einträge von BingX (Gebühren, Funding, realisierter PnL), Quelle de
 Index `income_symbol_time` auf `(symbol, time)`. Schreiben per Upsert über `transaction_id`
 (`ON CONFLICT … DO UPDATE`), ein Batch pro 7-Tage-Fenster in einer Transaktion. Fortschritt: `income_scan_until`.
 
+## Tabelle `candles`
+Zwischenspeicher für Kerzen des Charts (öffentlicher BingX-Klines-Endpunkt, Feature `docs/features/chart-journal.md`).
+Reiner Cache: kann gelöscht werden, wird beim nächsten Chart-Aufruf neu gefüllt.
+
+| Spalte | Typ | Bedeutung |
+|---|---|---|
+| `symbol` | TEXT, PK | z. B. `BTC-USDT` |
+| `interval` | TEXT, PK | `5m`, `15m`, `1h`, `4h` oder `1d` |
+| `open_time` | INTEGER, PK | Beginn der Kerze (Epoch-ms) |
+| `open`, `high`, `low`, `close`, `volume` | TEXT | Dezimal-Strings (exakt, kein REAL) |
+
+Schreiben per Upsert über `(symbol, interval, open_time)`, die laufende Kerze wird dadurch aktualisiert
+statt dupliziert. Lesen: die neuesten `limit` Kerzen, aufsteigend sortiert. Keine Schema-Version-Erhöhung,
+die Tabelle entsteht per `CREATE TABLE IF NOT EXISTS`.
+
 ## Tabelle `notes`
 Journal-Einträge des Nutzers. **Der Import schreibt hier nie**, und es gibt kein `ON DELETE CASCADE`.
 
