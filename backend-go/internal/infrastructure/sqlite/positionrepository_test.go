@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -212,5 +213,91 @@ func TestUpsertBatch_AbgebrochenerKontext(t *testing.T) {
 	cancel()
 	if err := repo.UpsertClosedPositionBatch(ctx, []position.ClosedPosition{samplePosition()}); err == nil {
 		t.Error("Fehler erwartet")
+	}
+}
+
+var _ interfaces.OpenPositionRecorder = (*PositionRepository)(nil)
+
+func sampleOpenPosition() position.OpenPosition {
+	return position.OpenPosition{
+		PositionID: "9876543210987654321", Symbol: "ONDO-USDT", Side: position.Short, Isolated: false,
+		PositionAmount: "250.5", AvgOpenPrice: "0.98765432109876", Leverage: 5, OpenTime: 1_790_000_000_000,
+	}
+}
+
+func TestRecordOpenPositions_LegtOffeneZeileOhneSchlusszeitAn(t *testing.T) {
+	db := openMemory(t)
+	now := time.UnixMilli(1_800_000_000_000)
+	repo := NewPositionRepository(db, fixedClock(&now))
+	input := sampleOpenPosition()
+
+	if err := repo.RecordOpenPositions(context.Background(), []position.OpenPosition{input}); err != nil {
+		t.Fatal(err)
+	}
+
+	var symbol, side, avgOpen, amount, raw string
+	var closeTime, openTime, importedAt int64
+	var fullyClosed int
+	err := db.QueryRow(`SELECT symbol, side, avg_open_price, position_amount, close_time, open_time, fully_closed, raw, imported_at
+		FROM positions WHERE position_id = ?`, input.PositionID).
+		Scan(&symbol, &side, &avgOpen, &amount, &closeTime, &openTime, &fullyClosed, &raw, &importedAt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if symbol != "ONDO-USDT" || side != "SHORT" || avgOpen != input.AvgOpenPrice || amount != "250.5" ||
+		closeTime != 0 || openTime != input.OpenTime || fullyClosed != 0 || importedAt != 1_800_000_000_000 {
+		t.Errorf("Zeile = %s %s %s %s close=%d open=%d fully=%d imported=%d", symbol, side, avgOpen, amount, closeTime, openTime, fullyClosed, importedAt)
+	}
+	if !strings.Contains(raw, input.PositionID) {
+		t.Errorf("raw enthält die Position nicht: %s", raw)
+	}
+}
+
+func TestRecordOpenPositions_UeberschreibtKeineBereitsGeschlosseneZeile(t *testing.T) {
+	db := openMemory(t)
+	now := time.UnixMilli(1_800_000_000_000)
+	repo := NewPositionRepository(db, fixedClock(&now))
+	closed := samplePosition()
+	if err := repo.UpsertClosedPosition(context.Background(), closed); err != nil {
+		t.Fatal(err)
+	}
+	stillOpen := sampleOpenPosition()
+	stillOpen.PositionID = closed.PositionID
+
+	if err := repo.RecordOpenPositions(context.Background(), []position.OpenPosition{stillOpen}); err != nil {
+		t.Fatal(err)
+	}
+
+	var closeTime int64
+	_ = db.QueryRow(`SELECT close_time FROM positions WHERE position_id = ?`, closed.PositionID).Scan(&closeTime)
+	if closeTime != closed.CloseTime {
+		t.Errorf("close_time = %d, geschlossene Zeile darf nicht überschrieben werden", closeTime)
+	}
+}
+
+func TestRecordOpenPositions_SchliessenAktualisiertDieselbeZeileUndBehaeltNotizen(t *testing.T) {
+	db := openMemory(t)
+	now := time.UnixMilli(1_800_000_000_000)
+	repo := NewPositionRepository(db, fixedClock(&now))
+	open := sampleOpenPosition()
+	if err := repo.RecordOpenPositions(context.Background(), []position.OpenPosition{open}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO notes (position_id, notes) VALUES (?, 'mein Setup')`, open.PositionID); err != nil {
+		t.Fatal(err)
+	}
+	closed := samplePosition()
+	closed.PositionID = open.PositionID
+
+	if err := repo.UpsertClosedPosition(context.Background(), closed); err != nil {
+		t.Fatal(err)
+	}
+
+	var rows, fullyClosed int
+	_ = db.QueryRow(`SELECT COUNT(*), MAX(fully_closed) FROM positions`).Scan(&rows, &fullyClosed)
+	var note string
+	_ = db.QueryRow(`SELECT notes FROM notes WHERE position_id = ?`, open.PositionID).Scan(&note)
+	if rows != 1 || fullyClosed != 1 || note != "mein Setup" {
+		t.Errorf("rows=%d fullyClosed=%d note=%q", rows, fullyClosed, note)
 	}
 }
