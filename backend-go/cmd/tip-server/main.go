@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"io/fs"
 	"log/slog"
@@ -16,9 +17,12 @@ import (
 	"syscall"
 	"time"
 
+	appchart "github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/application/chart"
 	appposition "github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/application/position"
+	domainposition "github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/domain/position"
 	"github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/domain/position/interfaces"
 	"github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/infrastructure/bingx"
+	infrachart "github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/infrastructure/chart"
 	"github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/infrastructure/clock"
 	"github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/infrastructure/config"
 	infraposition "github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/infrastructure/position"
@@ -62,6 +66,18 @@ func run(logger *slog.Logger) error {
 	}
 	getOpenPositions := appposition.NewGetOpenPositionsUseCase(openPositionSource)
 
+	database, err := openDatabaseIfConfigured(os.Getenv)
+	if err != nil {
+		return err
+	}
+	if database != nil {
+		defer closeDatabase(logger, database)
+	}
+	getPositionChart, err := newGetPositionChart(logger, os.Getenv, openPositionSource, database)
+	if err != nil {
+		return err
+	}
+
 	listener, err := net.Listen("tcp", net.JoinHostPort(serverConfig.Host, strconv.Itoa(serverConfig.Port)))
 	if err != nil {
 		return err
@@ -70,6 +86,7 @@ func run(logger *slog.Logger) error {
 	handler := httpapi.NewHandler(httpapi.Settings{
 		AllowedHosts:     serverConfig.AllowedHosts,
 		GetOpenPositions: getOpenPositions.Execute,
+		GetPositionChart: getPositionChart,
 		WebUI:            newWebUI(),
 	}, logger)
 	server := httpapi.NewServer(handler, logger)
@@ -77,7 +94,7 @@ func run(logger *slog.Logger) error {
 	signalContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
 
-	waitForImport, err := startImport(signalContext, logger, os.Getenv)
+	waitForImport, err := startImport(signalContext, logger, os.Getenv, database)
 	if err != nil {
 		return err
 	}
@@ -122,25 +139,14 @@ const (
 
 // startImport startet mit gültigen BingX-Keys den 5-Minuten-Scheduler. Importiert wird ab dem ersten
 // Serverstart (`import_started_at`), keine Historie und keine Vollsuche. Ohne Keys passiert nichts. Die zurückgegebene Funktion wartet auf das Ende
-// aller Hintergrundläufe (bricht sie vorher ab) und schließt die Datenbank.
-func startImport(ctx context.Context, logger *slog.Logger, lookupEnv func(string) string) (func(), error) {
+// aller Hintergrundläufe (bricht sie vorher ab). Die Datenbank gehört dem Aufrufer (nil = nicht konfiguriert).
+func startImport(ctx context.Context, logger *slog.Logger, lookupEnv func(string) string, database *sql.DB) (func(), error) {
 	bingXConfig, configured, err := config.ReadBingXConfig(lookupEnv)
 	if err != nil {
 		return nil, err
 	}
-	if !configured {
+	if !configured || database == nil {
 		return func() {}, nil
-	}
-	databasePath, err := config.ReadDatabasePath(lookupEnv, os.UserConfigDir)
-	if err != nil {
-		return nil, err
-	}
-	if err := os.MkdirAll(filepath.Dir(databasePath), databaseDirMode); err != nil {
-		return nil, err
-	}
-	database, err := sqlite.OpenWithClock(databasePath, clock.SystemClock{})
-	if err != nil {
-		return nil, err
 	}
 
 	client := bingx.NewClient(bingx.ClientOptions{
@@ -161,7 +167,6 @@ func startImport(ctx context.Context, logger *slog.Logger, lookupEnv func(string
 		sqlite.NewIncomeLookup(database))
 	importStart, err := appposition.ResolveImportStart(ctx, state, time.Now())
 	if err != nil {
-		_ = database.Close()
 		return nil, err
 	}
 	useCase := appposition.NewScheduledImportUseCase(appposition.ScheduledImportDeps{
@@ -214,10 +219,64 @@ func startImport(ctx context.Context, logger *slog.Logger, lookupEnv func(string
 		cancel()
 		ticker.Stop()
 		background.Wait()
-		if err := database.Close(); err != nil {
-			logger.Error("Datenbank schließen fehlgeschlagen", slog.String("error", err.Error()))
-		}
 	}, nil
+}
+
+// openDatabaseIfConfigured öffnet die Datenbank nur mit gültigen BingX-Keys; sonst nil.
+func openDatabaseIfConfigured(lookupEnv func(string) string) (*sql.DB, error) {
+	_, configured, err := config.ReadBingXConfig(lookupEnv)
+	if err != nil || !configured {
+		return nil, err
+	}
+	databasePath, err := config.ReadDatabasePath(lookupEnv, os.UserConfigDir)
+	if err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(filepath.Dir(databasePath), databaseDirMode); err != nil {
+		return nil, err
+	}
+	return sqlite.OpenWithClock(databasePath, clock.SystemClock{})
+}
+
+func closeDatabase(logger *slog.Logger, database *sql.DB) {
+	if err := database.Close(); err != nil {
+		logger.Error("Datenbank schließen fehlgeschlagen", slog.String("error", err.Error()))
+	}
+}
+
+// newGetPositionChart verdrahtet den Chart-Use-Case. Ohne Keys (database == nil) liefert die Funktion
+// immer not-configured, damit die Route wie GET /positions/open mit 503 antwortet.
+func newGetPositionChart(
+	logger *slog.Logger,
+	lookupEnv func(string) string,
+	openPositionSource interfaces.OpenPositionSource,
+	database *sql.DB,
+) (func(context.Context, appchart.Query) (appchart.PositionChart, error), error) {
+	bingXConfig, configured, err := config.ReadBingXConfig(lookupEnv)
+	if err != nil {
+		return nil, err
+	}
+	if !configured || database == nil {
+		return func(context.Context, appchart.Query) (appchart.PositionChart, error) {
+			return appchart.PositionChart{}, &domainposition.OpenPositionsUnavailableError{Reason: domainposition.ReasonNotConfigured}
+		}, nil
+	}
+	client := bingx.NewClient(bingx.ClientOptions{
+		APIKey:         bingXConfig.APIKey,
+		APISecret:      bingXConfig.APISecret,
+		BaseURL:        bingXConfig.BaseURL,
+		MaxRetries:     bingXMaxRetries,
+		RequestTimeout: bingXRequestTimeout,
+		RequestPause:   bingXRequestPause,
+		InitialBackoff: bingXInitialBackoff,
+	})
+	useCase := appchart.NewGetPositionChartUseCase(
+		openPositionSource,
+		infrachart.NewBingXProtectiveOrderSource(client, clock.SystemClock{}),
+		infrachart.NewBingXCandleSource(client),
+		sqlite.NewCandleRepository(database),
+		logger)
+	return useCase.Execute, nil
 }
 
 // newOpenPositionSource baut mit Keys BingX-Client → BingX-Source → Cache, ohne Keys die

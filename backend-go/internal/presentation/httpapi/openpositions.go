@@ -59,7 +59,12 @@ func problemTypeFor(err error) ProblemType {
 	if !errors.As(err, &unavailable) {
 		return ProblemInternal
 	}
-	switch unavailable.Reason {
+	return problemTypeForReason(unavailable.Reason)
+}
+
+// problemTypeForReason übersetzt den Nicht-Verfügbar-Grund in den Problem-Typ.
+func problemTypeForReason(reason position.UnavailableReason) ProblemType {
+	switch reason {
 	case position.ReasonNotConfigured:
 		return ProblemNotConfigured
 	case position.ReasonRateLimited:

@@ -8,6 +8,7 @@ import (
 	"path"
 	"strings"
 
+	appchart "github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/application/chart"
 	appposition "github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/application/position"
 )
 
@@ -17,6 +18,8 @@ type Settings struct {
 	// GetOpenPositions liefert die offenen Positionen (Pflicht). Fehler werden per errors.As auf
 	// *position.OpenPositionsUnavailableError in Problem-Antworten übersetzt.
 	GetOpenPositions func(ctx context.Context) (appposition.OpenPositionsOverview, error)
+	// GetPositionChart liefert den Chart einer offenen Position (optional; nil = Route nicht registriert).
+	GetPositionChart func(ctx context.Context, query appchart.Query) (appchart.PositionChart, error)
 	// WebUI bedient alle Pfade, die die API nicht kennt (optional; nil = 404 not-found).
 	WebUI http.Handler
 }
@@ -38,16 +41,24 @@ func newHandlerWithRoutes(settings Settings, logger *slog.Logger, extraRoutes ma
 		"GET /positions/open": newOpenPositionsHandler(settings.GetOpenPositions, logger),
 	}
 	maps.Copy(routes, extraRoutes)
+	var chartRoute http.HandlerFunc
+	if settings.GetPositionChart != nil {
+		chartRoute = newPositionChartHandler(settings.GetPositionChart, logger)
+	}
 	allowedHosts := append([]string(nil), settings.AllowedHosts...)
 
-	return withRecover(logger, withHostGuard(allowedHosts, withMalformedTarget(newRouter(routes, settings.WebUI))))
+	return withRecover(logger, withHostGuard(allowedHosts, withMalformedTarget(newRouter(routes, chartRoute, settings.WebUI))))
 }
 
 // newRouter sucht die Route exakt über "METHOD /pfad". Alles andere ergibt 404 not-found;
 // der Request-Body wird dabei nie gelesen.
-func newRouter(routes map[string]http.HandlerFunc, webUI http.Handler) http.Handler {
+// chartRoute (optional) bedient GET /positions/{positionId}/chart per Pfad-Matching.
+func newRouter(routes map[string]http.HandlerFunc, chartRoute http.HandlerFunc, webUI http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		route, found := routes[r.Method+" "+r.URL.Path]
+		if _, isChartPath := chartPathSegment(r.URL.Path); !found && chartRoute != nil && r.Method == http.MethodGet && isChartPath {
+			route, found = chartRoute, true
+		}
 		if !found {
 			if webUI != nil && wantsWebUI(r) {
 				webUI.ServeHTTP(w, r)

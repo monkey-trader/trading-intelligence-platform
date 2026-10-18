@@ -6,4 +6,5 @@
 export const OPERATION_TEST_NAMES = {
   getHealth: 'GET /health (getHealth)',
   getOpenPositions: 'GET /positions/open (getOpenPositions)',
+  getPositionChart: 'GET /positions/{positionId}/chart (getPositionChart)',
 } as const satisfies Readonly<Record<string, string>>;
