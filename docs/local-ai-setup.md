@@ -90,7 +90,7 @@ Rechner: MacBook Air M2, 24 GB RAM
 | `qwen2.5-coder:14b` | Ollama | Code-Modell für `ask-local` |
 | `nomic-embed-text` | Ollama | Embeddings für Qdrant |
 | Qdrant | Docker, `localhost:6333` | Vector-DB, Dashboard: http://localhost:6333/dashboard |
-| `ask-local` | `~/.dotfiles/bin/ask-local` | Frage/Pipe an das lokale Modell (7b, `--deep` = 14b) |
+| `ask-local` | `~/.dotfiles/bin/ask-local` | Frage/Pipe an das lokale Modell (deepseek-coder-v2:16b, `--deep` = qwen2.5-coder:14b) |
 | `repo-rag` | `~/.dotfiles/bin/repo-rag` | Repo indexieren und semantisch suchen |
 | `bench-local` | `~/.dotfiles/bin/bench-local` | lokale Modelle mit Repo-Aufgaben messen |
 | Index-Status | `~/.cache/repo-rag/<collection>.json` | welche Dateien indexiert sind |
@@ -104,7 +104,7 @@ Rechner: MacBook Air M2, 24 GB RAM
 brew install ollama
 brew services start ollama
 ollama pull qwen2.5-coder:14b     # für ask-local --deep
-ollama pull qwen2.5-coder:7b      # Standard für ask-local
+ollama pull deepseek-coder-v2:16b # Standard für ask-local (MoE, ~40 tok/s)
 ollama pull nomic-embed-text
 
 # 2. Qdrant (startet mit Docker automatisch neu)
@@ -262,5 +262,8 @@ Referenz: Phase 2b (≈ 2100 Zeilen, architect → test-author → programmer �
 | qwen2.5-coder:7b | ~17 tok/s | ❌ älteste statt neueste Commits | ✅ alle Typen korrekt |
 | qwen2.5-coder:14b | ~8 tok/s | ✅ richtig gewichtet | ⚠️ 1 Typfehler |
 | mistral | ~9 tok/s | ❌ | ❌ 4 Fehler |
+| deepseek-coder-v2:16b (MoE) | **~40 tok/s** | ❌ älteste statt neueste | ✅ korrekt (etwas ausschweifend) |
+| gpt-oss:20b (MoE, denkt mit) | ~15 tok/s, bis 85 s | ❌ | ✅ |
 
-→ `ask-local` nutzt standardmässig das **7b** (schnell, gut im Herauslesen), `--deep` das **14b** (Verständnis/Gewichtung). Mistral nicht verwenden.
+→ `ask-local` nutzt standardmässig **deepseek-coder-v2:16b** (2× schneller als das 7b, gleich genau), `--deep` das **qwen2.5-coder:14b** (Verständnis/Gewichtung). Mistral, gpt-oss, qwen 7b entfernt.
+→ Qwen 3.6/3.8 (Okt. 2026): das MoE `qwen3.6:35b` braucht ~21–22 GB und passt nicht neben macOS/Docker auf 24 GB; die 27B-Varianten sind dicht und langsam.
