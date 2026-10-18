@@ -57,11 +57,12 @@ type IncomeLookup struct{ db *sql.DB }
 // NewIncomeLookup baut den Lookup.
 func NewIncomeLookup(db *sql.DB) *IncomeLookup { return &IncomeLookup{db: db} }
 
-// HasIncomeForSymbol prüft, ob für das Symbol (exakt) ein Eintrag in [from, to] liegt.
+// HasIncomeForSymbol prüft, ob für das Symbol (exakt) ein REALIZED_PNL in [from, to] liegt.
+// Gebühren und Funding gehören auch zu noch offenen Positionen und belegen keine Schließung.
 func (lookup *IncomeLookup) HasIncomeForSymbol(ctx context.Context, symbol string, from, to int64) (bool, error) {
 	var exists bool
 	err := lookup.db.QueryRowContext(ctx,
-		`SELECT EXISTS (SELECT 1 FROM income WHERE symbol = ? AND time >= ? AND time <= ?)`, symbol, from, to).Scan(&exists)
+		`SELECT EXISTS (SELECT 1 FROM income WHERE symbol = ? AND income_type = 'REALIZED_PNL' AND time >= ? AND time <= ?)`, symbol, from, to).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("income für %s prüfen: %w", symbol, err)
 	}

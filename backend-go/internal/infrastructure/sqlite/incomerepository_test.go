@@ -199,3 +199,26 @@ func TestListIncomeSymbols(t *testing.T) {
 		t.Errorf("Symbole = %v, erwartet [BTC-USDT ONDO-USDT]", got)
 	}
 }
+
+func TestIncomeLookup_NurRealizedPnlGiltAlsBeleg(t *testing.T) {
+	db := openMemory(t)
+	now := time.UnixMilli(1)
+	repo := NewIncomeRepository(db, fixedClock(&now))
+	fee := sampleIncome("1", "ALGO-USDT", 1000)
+	fee.IncomeType = "TRADING_FEE"
+	funding := sampleIncome("2", "ALGO-USDT", 2000)
+	funding.IncomeType = "FUNDING_FEE"
+	if err := repo.UpsertIncomeBatch(context.Background(), []position.Income{fee, funding}); err != nil {
+		t.Fatal(err)
+	}
+	lookup := NewIncomeLookup(db)
+	if got, err := lookup.HasIncomeForSymbol(context.Background(), "ALGO-USDT", 0, 9000); err != nil || got {
+		t.Errorf("Gebühren und Funding offener Positionen sind kein Beleg: got=%v err=%v", got, err)
+	}
+	if err := repo.UpsertIncomeBatch(context.Background(), []position.Income{sampleIncome("3", "ALGO-USDT", 3000)}); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := lookup.HasIncomeForSymbol(context.Background(), "ALGO-USDT", 0, 9000); err != nil || !got {
+		t.Errorf("REALIZED_PNL ist ein Beleg: got=%v err=%v", got, err)
+	}
+}
