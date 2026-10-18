@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 import type { OpenPosition } from '@/domain/position/OpenPosition';
 import {
   goldShortPosition,
@@ -203,5 +204,49 @@ describe('OpenPositionsTable', () => {
 
     expect(cellOf(row, 'Liq.-Abstand')).toHaveTextContent(/^–$/);
     expect(cellOf(row, 'Liq.-Preis')).toHaveTextContent(/^–$/);
+  });
+});
+
+describe('OpenPositionsTable: Chart-Auswahl', () => {
+  it('hat pro Zeile einen Chart-Button mit Symbol im Namen, ohne die Spalten zu ändern', () => {
+    const table = renderTable([suiLongPosition, goldShortPosition]);
+
+    expect(screen.getByRole('button', { name: /chart.*SUI-USDT/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /chart.*NCCOGOLD2USD-USDT/i })).toBeInTheDocument();
+    expect(within(table).getAllByRole('columnheader')).toHaveLength(COLUMN_LABELS.length);
+  });
+
+  it('meldet die positionId beim Klick auf den Chart-Button', async () => {
+    const user = userEvent.setup();
+    const onSelectPosition = vi.fn();
+    render(
+      <OpenPositionsTable
+        positions={[suiLongPosition, goldShortPosition]}
+        onSelectPosition={onSelectPosition}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /chart.*NCCOGOLD2USD-USDT/i }));
+
+    expect(onSelectPosition).toHaveBeenCalledWith(goldShortPosition.positionId);
+  });
+
+  it('markiert die gewählte Zeile per aria-expanded', () => {
+    render(
+      <OpenPositionsTable
+        positions={[suiLongPosition, goldShortPosition]}
+        selectedPositionId={suiLongPosition.positionId}
+        onSelectPosition={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /chart.*SUI-USDT/i })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: /chart.*NCCOGOLD2USD-USDT/i })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
   });
 });
