@@ -24,6 +24,7 @@ import (
 	"github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/infrastructure/scheduler"
 	"github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/infrastructure/sqlite"
 	"github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/presentation/httpapi"
+	"github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/presentation/webui"
 )
 
 // shutdownTimeout begrenzt, wie lange laufende Anfragen beim Beenden noch abgeschlossen werden.
@@ -68,6 +69,7 @@ func run(logger *slog.Logger) error {
 	handler := httpapi.NewHandler(httpapi.Settings{
 		AllowedHosts:     serverConfig.AllowedHosts,
 		GetOpenPositions: getOpenPositions.Execute,
+		WebUI:            webui.NewHandler(webui.EmbeddedFiles()),
 	}, logger)
 	server := httpapi.NewServer(handler, logger)
 

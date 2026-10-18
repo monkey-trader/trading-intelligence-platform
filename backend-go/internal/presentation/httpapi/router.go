@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"maps"
 	"net/http"
+	"strings"
 
 	appposition "github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/application/position"
 )
@@ -15,6 +16,8 @@ type Settings struct {
 	// GetOpenPositions liefert die offenen Positionen (Pflicht). Fehler werden per errors.As auf
 	// *position.OpenPositionsUnavailableError in Problem-Antworten übersetzt.
 	GetOpenPositions func(ctx context.Context) (appposition.OpenPositionsOverview, error)
+	// WebUI bedient alle Pfade, die die API nicht kennt (optional; nil = 404 not-found).
+	WebUI http.Handler
 }
 
 // NewHandler baut die Kette recover → hostGuard → malformedTarget → router → 404.
@@ -36,18 +39,34 @@ func newHandlerWithRoutes(settings Settings, logger *slog.Logger, extraRoutes ma
 	maps.Copy(routes, extraRoutes)
 	allowedHosts := append([]string(nil), settings.AllowedHosts...)
 
-	return withRecover(logger, withHostGuard(allowedHosts, withMalformedTarget(newRouter(routes))))
+	return withRecover(logger, withHostGuard(allowedHosts, withMalformedTarget(newRouter(routes, settings.WebUI))))
 }
 
 // newRouter sucht die Route exakt über "METHOD /pfad". Alles andere ergibt 404 not-found;
 // der Request-Body wird dabei nie gelesen.
-func newRouter(routes map[string]http.HandlerFunc) http.Handler {
+func newRouter(routes map[string]http.HandlerFunc, webUI http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		route, found := routes[r.Method+" "+r.URL.Path]
 		if !found {
+			if webUI != nil && !isAPIPath(r.URL.Path) {
+				webUI.ServeHTTP(w, r)
+				return
+			}
 			writeProblem(w, ProblemNotFound)
 			return
 		}
 		route(w, r)
 	})
+}
+
+// apiPathPrefixes sind Pfade, die nie vom Web-UI bedient werden (immer 404 not-found).
+var apiPathPrefixes = []string{"/health", "/positions", "/api"}
+
+func isAPIPath(urlPath string) bool {
+	for _, prefix := range apiPathPrefixes {
+		if urlPath == prefix || strings.HasPrefix(urlPath, prefix+"/") {
+			return true
+		}
+	}
+	return false
 }

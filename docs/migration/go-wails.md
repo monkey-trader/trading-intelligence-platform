@@ -10,6 +10,7 @@ Status: Phase 0, 1 und 2a erledigt, Phase 2b umgesetzt (Branch `feature/go-phase
   Ablehnung zu neuer DBs (`SchemaTooNewError`), Standardpfad `<UserConfigDir>/tip/journal.db` über
   `config.ReadDatabasePath` (`JOURNAL_DB` überschreibt). Details in `docs/database/schema.md`.
 - **Phase 7 (Server):** `.goreleaser.yaml` + `.github/workflows/release.yml` (Tag `v*` → Release + Formula im Tap `monkey-trader/homebrew-tap`, Secret `TAP_GITHUB_TOKEN`). Keys für den Dienst in `~/.config/tip/env`. Cask `tip-app` folgt mit Phase 6.
+- **Web-UI:** wird per `go:embed` im Go-Server unter `/` ausgeliefert (Release-Build baut `clients/web` mit `VITE_API_BASE=''`); `/health`, `/positions`, `/api` bleiben API.
 - **Offen:** Binary-Größe messen, Sortierung der Income-Antwort gegen die echte API belegen, Homebrew/Wails (Phase 5+).
 - **Importbeginn:** Der Import startet ab dem ersten Serverstart (State `import_started_at`, `ResolveImportStart`), keine Historie, keine Vollsuche über alle Kontrakte. Bei jedem Lauf (also auch beim Start) werden die aktuell offenen Positionen als Zeile in `positions` angelegt (`close_time` 0, `fully_closed` 0), damit sie im Journal verwaltet werden können; ihre Symbole gehen in den Closed-Import. Schließt eine Position, überschreibt der Upsert dieselbe Zeile, Notizen bleiben.
 - **Zurückgestellt:** `RunFullSearch`/`RunFullSearchUntilDone` (Historie nachladen) existieren, sind aber nicht verdrahtet; später als Nutzeraktion.

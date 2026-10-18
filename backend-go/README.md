@@ -139,7 +139,14 @@ cmd/tip-server/main.go          Composition Root: Konfiguration, Server, Gracefu
 internal/domain/                Domain-Kern (ab Phase 2)
 internal/application/           Use Cases (ab Phase 2)
 internal/infrastructure/config/ Umgebungsvariablen lesen und prüfen
+internal/presentation/webui/    eingebettetes Web-UI (dist, im Release vom CI-Build befüllt)
 internal/presentation/httpapi/  HTTP: Router, Host-Prüfung, Problem-Antworten, Listener-Wrapper
 .golangci.yml                   Lint-Regeln inkl. Schichtgrenzen (depguard)
 ```
 Abhängigkeiten zeigen immer nach innen. Die Verdrahtung passiert nur in `cmd/`.
+
+## Web-UI
+
+`internal/presentation/webui/dist` wird per `go:embed` eingebettet und unter `/` ausgeliefert
+(SPA-Fallback auf `index.html`). Im Quellbaum liegt dort nur `.gitkeep`; dann antwortet `/` mit 404
+"Web-UI nicht eingebettet". Der Release-Build baut `clients/web` mit `VITE_API_BASE=''` und kopiert `dist` hierher.
