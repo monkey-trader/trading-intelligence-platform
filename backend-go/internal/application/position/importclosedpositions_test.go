@@ -71,6 +71,15 @@ func (f *fakePositionRepository) UpsertClosedPosition(_ context.Context, p domai
 	return nil
 }
 
+func (f *fakePositionRepository) UpsertClosedPositionBatch(ctx context.Context, positions []domainposition.ClosedPosition) error {
+	for _, closed := range positions {
+		if err := f.UpsertClosedPosition(ctx, closed); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type fakeIncomeLookup struct {
 	alwaysTrue bool                       // true für JEDEN Zeitraum
 	data       map[string]map[string]bool // symbol -> (key -> hasIncome)

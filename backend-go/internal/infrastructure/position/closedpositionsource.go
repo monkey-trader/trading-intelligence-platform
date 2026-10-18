@@ -2,8 +2,6 @@ package position
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -24,14 +22,6 @@ const (
 	maxClosedPositionPages = 1000
 )
 
-// Sentinel-Fehler der Source, per errors.Is erkennbar.
-var (
-	// ErrQueryRangeTooLarge: Der Bereich ist größer als 89 Tage.
-	ErrQueryRangeTooLarge = errors.New("abfragebereich größer als 89 Tage")
-	// ErrPageLimitExceeded: Das Seitenlimit wurde erreicht.
-	ErrPageLimitExceeded = errors.New("seitenlimit überschritten")
-)
-
 // BingXClosedPositionSource fragt die Positions-Historie live bei BingX ab.
 type BingXClosedPositionSource struct {
 	client bingx.GetClient
@@ -49,7 +39,7 @@ func (source *BingXClosedPositionSource) FetchClosedPositions(ctx context.Contex
 		return nil, &domainposition.InvalidQueryRangeError{From: from, To: to}
 	}
 	if to-from > maxQueryRangeMillis {
-		return nil, fmt.Errorf("%w: von %d bis %d, erlaubt sind %d Tage", ErrQueryRangeTooLarge, from, to, int(domainposition.MaxQueryRange.Hours()/24))
+		return nil, &domainposition.QueryRangeTooLargeError{From: from, To: to}
 	}
 
 	var collected []domainposition.ClosedPosition
@@ -76,7 +66,7 @@ func (source *BingXClosedPositionSource) FetchClosedPositions(ctx context.Contex
 			return collected, nil
 		}
 	}
-	return nil, fmt.Errorf("%w: mehr als %d Seiten für %s von %d bis %d, abgebrochen", ErrPageLimitExceeded, maxClosedPositionPages, symbol, from, to)
+	return nil, &domainposition.PageLimitExceededError{Symbol: symbol, From: from, To: to, Pages: maxClosedPositionPages}
 }
 
 // toClosedUnavailable übersetzt bekannte Fehler in *ClosedPositionsUnavailableError; unbekannte gehen unverändert durch.

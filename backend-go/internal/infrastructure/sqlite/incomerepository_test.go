@@ -168,3 +168,34 @@ func TestIncomeLookup_LeereTabelleUndFehler(t *testing.T) {
 		t.Errorf("err=%v", err)
 	}
 }
+
+var _ interfaces.IncomeSymbolLister = (*IncomeRepository)(nil)
+
+func TestListIncomeSymbols(t *testing.T) {
+	db := openMemory(t)
+	now := time.UnixMilli(1)
+	repo := NewIncomeRepository(db, fixedClock(&now))
+	ctx := context.Background()
+
+	empty, err := repo.ListIncomeSymbols(ctx)
+	if err != nil || len(empty) != 0 {
+		t.Fatalf("leere Tabelle: %v, %v", empty, err)
+	}
+	funding := sampleIncome("4", "FUND-USDT", 4000)
+	funding.IncomeType = "FUNDING_FEE"
+	entries := []position.Income{
+		sampleIncome("1", "ONDO-USDT", 1000), sampleIncome("2", "BTC-USDT", 2000),
+		sampleIncome("3", "ONDO-USDT", 3000), funding,
+	}
+	if err := repo.UpsertIncomeBatch(ctx, entries); err != nil {
+		t.Fatal(err)
+	}
+	got, err := repo.ListIncomeSymbols(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// nur REALIZED_PNL, eindeutig, sortiert
+	if len(got) != 2 || got[0] != "BTC-USDT" || got[1] != "ONDO-USDT" {
+		t.Errorf("Symbole = %v, erwartet [BTC-USDT ONDO-USDT]", got)
+	}
+}

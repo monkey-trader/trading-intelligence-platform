@@ -124,8 +124,12 @@ func TestBingXClosedPositionSource_RangeTooBig_Error(t *testing.T) {
 
 	_, err := source.FetchClosedPositions(context.Background(), "BTC-USDT", from, to)
 
-	if !errors.Is(err, ErrQueryRangeTooLarge) {
-		t.Errorf("Fehler = %v, erwartet ErrQueryRangeTooLarge", err)
+	var tooLarge *domainposition.QueryRangeTooLargeError
+	if !errors.As(err, &tooLarge) {
+		t.Fatalf("Fehler = %v, erwartet *QueryRangeTooLargeError", err)
+	}
+	if tooLarge.From != from || tooLarge.To != to {
+		t.Errorf("Bereich = %d–%d, erwartet %d–%d", tooLarge.From, tooLarge.To, from, to)
 	}
 }
 
@@ -477,8 +481,12 @@ func TestBingXClosedPositionSource_PagingUpperLimit(t *testing.T) {
 		t.Fatalf("Fehler erwartet für endless paging (sollte durch Limit abgebrochen werden)")
 	}
 
-	if !errors.Is(err, ErrPageLimitExceeded) {
-		t.Errorf("Fehler = %v, erwartet ErrPageLimitExceeded", err)
+	var pageLimit *domainposition.PageLimitExceededError
+	if !errors.As(err, &pageLimit) {
+		t.Fatalf("Fehler = %v, erwartet *PageLimitExceededError", err)
+	}
+	if pageLimit.Pages != maxClosedPositionPages || pageLimit.Symbol == "" {
+		t.Errorf("PageLimitExceededError = %+v, erwartet Pages=%d und Symbol", pageLimit, maxClosedPositionPages)
 	}
 	// Der Fehler muss von der Source stammen, nicht vom abgebrochenen Context.
 	if errors.Is(err, context.Canceled) {

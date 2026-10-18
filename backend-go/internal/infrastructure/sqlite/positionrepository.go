@@ -54,3 +54,31 @@ func boolToInt(value bool) int {
 	}
 	return 0
 }
+
+// UpsertClosedPositionBatch speichert alle Positionen in einer Transaktion (alles oder nichts).
+func (repo *PositionRepository) UpsertClosedPositionBatch(ctx context.Context, positions []position.ClosedPosition) (err error) {
+	transaction, err := repo.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("positions-transaktion starten: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = transaction.Rollback()
+		}
+	}()
+	importedAt := repo.now().UnixMilli()
+	for _, closed := range positions {
+		if _, err = transaction.ExecContext(ctx, upsertPositionSQL,
+			closed.PositionID, closed.Symbol, string(closed.Side), boolToInt(closed.Isolated),
+			closed.OpenTime, closed.CloseTime, closed.AvgOpenPrice, closed.AvgClosePrice,
+			closed.RealisedProfit, closed.NetProfit, closed.PositionAmount, closed.ClosedAmount,
+			closed.Commission, closed.TotalFunding, closed.Leverage, boolToInt(closed.FullyClosed),
+			closed.Raw, importedAt); err != nil {
+			return fmt.Errorf("position %s speichern: %w", closed.PositionID, err)
+		}
+	}
+	if err = transaction.Commit(); err != nil {
+		return fmt.Errorf("positions-transaktion abschließen: %w", err)
+	}
+	return nil
+}
