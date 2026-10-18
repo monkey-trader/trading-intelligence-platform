@@ -16,6 +16,7 @@ const COLUMN_LABELS = {
   entry: 'Einstieg',
   mark: 'Mark',
   leverage: 'Hebel',
+  margin: 'Margin',
   unrealizedProfit: 'Unreal. PnL',
   pnlRatio: 'PnL %',
   realisedProfit: 'Real. PnL',
@@ -32,6 +33,9 @@ const SIDE_LABELS: Readonly<Record<OpenPosition['side'], string>> = {
 type OpenPositionsTableProps = Readonly<{
   positions: readonly OpenPosition[];
 }>;
+
+/** Margin in USDT: 2 Nachkommastellen. */
+const MARGIN_FORMAT = { minimumFractionDigits: 2, maximumFractionDigits: 2 } as const;
 
 /** PnL-Werte: 2 Nachkommastellen, positive mit "+", damit Gewinn nicht nur an der Farbe hängt. */
 const PNL_FORMAT = {
@@ -102,6 +106,9 @@ function OpenPositionRow({ position }: Readonly<{ position: OpenPosition }>) {
       </td>
       <td data-label={COLUMN_LABELS.leverage} className={styles.cell}>
         {`${position.leverage}×`}
+      </td>
+      <td data-label={COLUMN_LABELS.margin} className={styles.cell}>
+        {formatDecimal(position.margin, MARGIN_FORMAT)}
       </td>
       <td
         data-label={COLUMN_LABELS.unrealizedProfit}
