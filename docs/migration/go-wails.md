@@ -5,7 +5,7 @@ Status: Phase 0, 1 und 2a erledigt, Phase 2b umgesetzt (Branch `feature/go-phase
 ## Aktueller Stand (2026-10-18)
 - **Erledigt:** Phase 0 (Vertrag eingefroren), Phase 1 (Go-Gerüst, `/health`), Phase 2a (offene Positionen
   live, `GET /positions/open`), Phase 2b (Import geschlossener Positionen ohne DB), Phase 2c (SQLite und State),
-  Phase 2d (Income-Import, noch nicht committet).
+  Phase 2d (Income-Import).
 - **2c im Detail:** `infrastructure/sqlite` mit `Open` (Schema idempotent nach `docs/database/schema.md`,
   Pragmas `foreign_keys`, `busy_timeout`, bei Dateien WAL im DSN, damit sie für jede Pool-Verbindung gelten;
   Datei mit Rechten 0600, Verzeichnis muss existieren), `PositionRepository` (Upsert per `ON CONFLICT`,

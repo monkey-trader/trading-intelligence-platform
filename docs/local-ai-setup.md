@@ -70,8 +70,13 @@ Rechner: MacBook Air M2, 24 GB RAM
 - [ ] **Git-Hook-Vorlage global einrichten**, damit jeder neue Klon `repo-rag` automatisch nutzt (siehe „Neues Repo einrichten“)
 - [ ] In bestehenden Repos `git init` ausführen, damit der Hook dort auch ankommt
 - [x] `.claude/agents/` optimiert (Token-Regeln, Modellwahl, Tests nie aufweichen)
+<<<<<<< Updated upstream
 - [ ] Ollama-Autostart prüfen: `brew services list` oder Ollama.app unter Anmeldeobjekte
 - [ ] Docker Desktop: „Start when you sign in“ aktivieren
+=======
+- [x] Ollama-Autostart: läuft als `brew services` (startet bei Login)
+- [x] Docker Desktop: „Start when you sign in“ aktiv (Qdrant startet mit, `--restart unless-stopped`)
+>>>>>>> Stashed changes
 - [ ] Optional: `mxbai-embed-large` testen, falls die Suche ungenau ist
 - [ ] Optional: `--code`-Schalter in `repo-rag`, um Markdown-Treffer auszublenden
 
