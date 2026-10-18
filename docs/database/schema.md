@@ -42,6 +42,24 @@ Index `positions_symbol_close_time` auf `(symbol, close_time)`.
 `position_id`, in einer Transaktion pro Batch. Nie `INSERT OR REPLACE`: Das löscht die Zeile und
 legt sie neu an, was mit dem Fremdschlüssel aus `notes` kollidiert.
 
+## Tabelle `income`
+Kontoweite Einträge von BingX (Gebühren, Funding, realisierter PnL), Quelle der Symbol-Suche.
+
+| Spalte | Typ | Bedeutung |
+|---|---|---|
+| `transaction_id` | TEXT, PK | `tranId` von BingX (19-stellig, als String) |
+| `symbol` | TEXT | z. B. `ONDO-USDT` |
+| `income_type` | TEXT | z. B. `REALIZED_PNL`, `TRADING_FEE`, `FUNDING_FEE` |
+| `amount` | TEXT | Betrag als Dezimal-String (exakt, kein REAL) |
+| `time` | INTEGER | Zeitpunkt (Epoch-ms) |
+| `asset` | TEXT | z. B. `USDT` |
+| `trade_id` | TEXT | Leer bei Funding |
+| `raw` | TEXT | Rohantwort |
+| `imported_at` | INTEGER | Importzeitpunkt (Epoch-ms) |
+
+Index `income_symbol_time` auf `(symbol, time)`. Schreiben per Upsert über `transaction_id`
+(`ON CONFLICT … DO UPDATE`), ein Batch pro 7-Tage-Fenster in einer Transaktion. Fortschritt: `income_scan_until`.
+
 ## Tabelle `notes`
 Journal-Einträge des Nutzers. **Der Import schreibt hier nie**, und es gibt kein `ON DELETE CASCADE`.
 

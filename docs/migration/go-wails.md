@@ -2,9 +2,10 @@
 
 Status: Phase 0, 1 und 2a erledigt, Phase 2b umgesetzt (Branch `feature/go-phase-2b-geschlossene-positionen`), nächster Schritt 2c
 
-## Aktueller Stand (2026-10-17)
+## Aktueller Stand (2026-10-18)
 - **Erledigt:** Phase 0 (Vertrag eingefroren), Phase 1 (Go-Gerüst, `/health`), Phase 2a (offene Positionen
-  live, `GET /positions/open`), Phase 2b (Import geschlossener Positionen ohne DB), Phase 2c (SQLite und State).
+  live, `GET /positions/open`), Phase 2b (Import geschlossener Positionen ohne DB), Phase 2c (SQLite und State),
+  Phase 2d (Income-Import, noch nicht committet).
 - **2c im Detail:** `infrastructure/sqlite` mit `Open` (Schema idempotent nach `docs/database/schema.md`,
   Pragmas `foreign_keys`, `busy_timeout`, bei Dateien WAL im DSN, damit sie für jede Pool-Verbindung gelten;
   Datei mit Rechten 0600, Verzeichnis muss existieren), `PositionRepository` (Upsert per `ON CONFLICT`,
@@ -24,8 +25,14 @@ Status: Phase 0, 1 und 2a erledigt, Phase 2b umgesetzt (Branch `feature/go-phase
   Außerdem für 2e: `PositionRepository` schreibt einzeln (autocommit); `schema.md` verlangt eine Transaktion
   pro Batch, dafür braucht es dann eine Batch-Methode. `main.go` legt das DB-Verzeichnis vor `Open` an.
   Die Binary-Größe mit Treiber ist noch nicht gemessen (erst nach der Verdrahtung aussagekräftig).
-- **Nächster Schritt:** 2d (Income-Import: Source, Repository, echter `IncomeLookup`), danach 2e (Scheduler,
-  Vollimport, Verdrahtung).
+- **2d im Detail:** `ImportIncomeUseCase` (7-Tage-Fenster, 1 h Überlappung, ein Batch pro Fenster, State
+  `income_scan_until` nur nach Erfolg), `BingXIncomeSource` (kontoweit, ohne Symbol und `pageIndex`; blättert
+  mit `limit=1000` und inklusivem `startTime=max(time)`, dedupliziert über `tranId`, volle Seite ohne
+  Fortschritt = Fehler), SQLite `IncomeRepository` und echter `IncomeLookup`, Tabelle `income`.
+- **Offen aus dem Review 2d:** Die Sortierung der Income-Antwort (auf- oder absteigend bei `limit`) ist nicht
+  gegen die echte API belegt. `Symbols` eines abgebrochenen Laufs sind unvollständig; 2e sollte Symbole aus
+  der DB lesen. `tranId` wird strikt als String erwartet (gegen Realantwort bestätigen).
+- **Nächster Schritt:** 2e (Scheduler, Vollimport, Verdrahtung in `main.go`; `IncomeLookup` einhängen).
 
 ## Zielbild
 
