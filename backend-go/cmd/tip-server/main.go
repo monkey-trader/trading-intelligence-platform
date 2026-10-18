@@ -114,7 +114,6 @@ const (
 	importRequestTimeout = 15 * time.Second
 	importRequestPause   = 200 * time.Millisecond
 	importMaxRetries     = 3
-	defaultDatabasePath  = "data/journal.sqlite"
 	defaultFullImportDay = 365
 	databaseDirMode      = 0o700
 	hoursPerDay          = 24
@@ -131,14 +130,14 @@ func startImport(ctx context.Context, logger *slog.Logger, lookupEnv func(string
 	if !configured {
 		return func() {}, nil
 	}
-	databasePath := lookupEnv("JOURNAL_DB")
-	if databasePath == "" {
-		databasePath = defaultDatabasePath
+	databasePath, err := config.ReadDatabasePath(lookupEnv, os.UserConfigDir)
+	if err != nil {
+		return nil, err
 	}
 	if err := os.MkdirAll(filepath.Dir(databasePath), databaseDirMode); err != nil {
 		return nil, err
 	}
-	database, err := sqlite.Open(databasePath)
+	database, err := sqlite.OpenWithClock(databasePath, clock.SystemClock{})
 	if err != nil {
 		return nil, err
 	}

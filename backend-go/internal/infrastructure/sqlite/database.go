@@ -15,7 +15,7 @@ const memoryPath = ":memory:"
 // Open öffnet die Datenbank, aktiviert Fremdschlüssel und busy_timeout (sowie WAL bei Dateien)
 // und legt das Schema an. Die Pragmas stehen im DSN, damit sie für jede Pool-Verbindung gelten.
 // Die Datei entsteht mit Rechten 0600; das Verzeichnis muss existieren.
-func Open(path string) (*sql.DB, error) {
+func openConnection(path string) (*sql.DB, error) {
 	pragmas := []string{"foreign_keys(1)", "busy_timeout(5000)"}
 	if path != memoryPath {
 		pragmas = append(pragmas, "journal_mode(WAL)")
@@ -37,12 +37,6 @@ func Open(path string) (*sql.DB, error) {
 	if path == memoryPath {
 		// Jede Verbindung hätte sonst ihre eigene In-Memory-DB.
 		db.SetMaxOpenConns(1)
-	}
-	for _, statement := range schemaStatements {
-		if _, err := db.Exec(statement); err != nil {
-			_ = db.Close()
-			return nil, fmt.Errorf("sqlite einrichten: %w", err)
-		}
 	}
 	return db, nil
 }

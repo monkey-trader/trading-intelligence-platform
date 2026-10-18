@@ -4,9 +4,9 @@ Stand: TypeScript-Backend, Quelle `backend/src/infrastructure/persistence/sqlite
 Diese Beschreibung ist der Maßstab für das Go-Backend (Migration Phase 4).
 
 ## Allgemein
-- Datei: `JOURNAL_DB`, Standard `data/journal.sqlite` (relativ zum Arbeitsverzeichnis).
+- Datei: `JOURNAL_DB`; Standard im Go-Backend `<UserConfigDir>/tip/journal.db` (macOS: `~/Library/Application Support/tip/journal.db`). Das TS-Backend nutzt weiter `data/journal.sqlite`.
 - Beim Öffnen wird zuerst `PRAGMA foreign_keys = ON` gesetzt, danach das Schema idempotent
-  angelegt (`CREATE TABLE IF NOT EXISTS`). Es gibt noch keine Versionierung (`schema_version` kommt in Phase 4).
+  angelegt (`CREATE TABLE IF NOT EXISTS`). Die Versionierung steht in `schema_version` (siehe unten).
 - **Beträge sind `TEXT`** mit Dezimal-Strings, damit sie exakt erhalten bleiben (nie als Float speichern).
 - **`position_id` ist `TEXT`** (19-stellig, würde als Zahl Genauigkeit verlieren).
 - Zeitpunkte sind `INTEGER` in Epoch-Millisekunden (UTC).
@@ -90,3 +90,14 @@ Schreiben per `INSERT … ON CONFLICT(key) DO UPDATE`. Präfix-Suche über `subs
 Die beiden `contract_discovery_*`-Werte speichern den Beginn des Vollimports (`IMPORT_FULL_DAYS`,
 Standard 365). Wird der Zeitraum größer, gilt die Suche als unvollständig und läuft erneut.
 Einen Schlüssel umzubenennen erzwingt einen vollständigen Neu-Import der betroffenen Daten.
+
+## Tabelle `schema_version`
+Nur Go-Backend. Spalte `version INTEGER NOT NULL`, genau eine Zeile mit der aktuellen Version
+(`CurrentSchemaVersion`, derzeit 1). Eine TS-DB ohne diese Tabelle gilt als Version 0.
+
+- Beim Öffnen einer bestehenden DB mit älterer Version wird vor der Migration eine Sicherung angelegt:
+  `<datei>.bak-v<alteVersion>-<UTC 20060102T150405Z>` (Rechte 0600, `O_EXCL`, identischer Inhalt).
+  Schlägt sie fehl, wird nicht migriert. Frische oder aktuelle DBs bekommen keine Sicherung.
+- Ist die DB-Version höher als die des Programms, wird das Öffnen abgelehnt (`SchemaTooNewError`).
+- Die Sicherung liegt neben der DB im selben Verzeichnis; alte Sicherungen löscht der Nutzer selbst.
+- Weitere Tabellen (z.B. `balance` aus dem TS-Backend) bleiben unberührt.
