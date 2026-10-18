@@ -5,7 +5,7 @@ Persönliches Trading-Journal mit automatischem Import von BingX (USDT-M Futures
 - **API-first:** Ein eigenes Backend besitzt Import, Datenbank und Fachlogik.
   Clients (Web-UI, Skripte, …) sind austauschbar und sprechen nur über die HTTP/JSON-API.
 - **Architektur:** Onion / DDD, feature-sliced, Test-Driven.
-- **Stack:** Node.js + TypeScript, SQLite, Vitest, npm, GitHub Actions.
+- **Stack:** Backend in Go (nur Standardbibliothek), Web-Client mit Vite + React + TypeScript, SQLite, npm, GitHub Actions.
 - **Referenz:** Der Python-Prototyp `../bingx-journal` (siehe CLAUDE.md, inkl. bekanntem Positions-Bug).
 
 Details und Regeln für die Entwicklung stehen in [`CLAUDE.md`](CLAUDE.md).
@@ -13,16 +13,18 @@ Details und Regeln für die Entwicklung stehen in [`CLAUDE.md`](CLAUDE.md).
 ## Lokal starten
 
 ### 1. Einmalig: installieren und Keys hinterlegen
+Voraussetzung: Go 1.27 (`brew install go`), Node (siehe `.nvmrc`), für die Prüfungen zusätzlich golangci-lint v2.15 oder neuer,
+mit Go 1.27 gebaut: `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0`.
 ```bash
-(cd backend && npm ci) && (cd clients/web && npm ci) && (cd contract-tests && npm ci)
-cp backend/.env.example backend/.env   # BX_KEY und BX_SECRET eintragen (Key nur mit Lese-Rechten)
+(cd clients/web && npm ci) && (cd contract-tests && npm ci)
+export BX_KEY=… BX_SECRET=…   # Key nur mit Lese-Rechten; das Backend liest keine .env-Datei
 ```
 
 ### 2. App starten (zwei Terminals, jeweils im Repo-Root)
 
-**Terminal 1: Backend** (API auf http://127.0.0.1:3000)
+**Terminal 1: Backend** (API auf http://127.0.0.1:3000, Import alle 5 Minuten, Details in [`backend/README.md`](backend/README.md))
 ```bash
-cd backend && npm run dev
+cd backend && go run ./cmd/tip-server
 ```
 
 **Terminal 2: Web-UI** (Proxy `/api` → Backend)
@@ -31,44 +33,21 @@ cd clients/web && npm run dev
 ```
 
 Danach http://127.0.0.1:5173 öffnen (Vite bindet nur auf IPv4-Loopback; `localhost` kann auf `::1` zeigen).
-Stoppen: `Ctrl+C` im jeweiligen Terminal.
+Stoppen: `Ctrl+C` im jeweiligen Terminal. Die SQLite-Datei liegt standardmäßig unter
+`<UserConfigDir>/tip/journal.db` (macOS: `~/Library/Application Support/tip/journal.db`, `JOURNAL_DB` überschreibt).
 
 ### 3. Vertragstest gegen das laufende Backend (Terminal 3)
-Prüft die Antworten des Backends gegen `docs/openapi.yaml`. Backend aus Terminal 1 muss laufen.
+Prüft die Antworten des Backends gegen `docs/openapi.yaml`. Das Backend aus Terminal 1 muss laufen.
 ```bash
 cd contract-tests && CONTRACT_BASE_URL=http://127.0.0.1:3000 CONTRACT_EXPECT_CONFIGURED=true npm test
 ```
-- `CONTRACT_EXPECT_CONFIGURED=true` nur mit Keys in `backend/.env` (erwartet dann 200 für
+- `CONTRACT_EXPECT_CONFIGURED=true` nur, wenn `BX_KEY`/`BX_SECRET` gesetzt sind (erwartet dann 200 für
   `/positions/open`). Ohne Keys weglassen, dann wird 503 `not-configured` erwartet (wie in CI).
 - Ohne laufenden Server (nur Validator und Abdeckungs-Check): `cd contract-tests && npm run test:unit`
 
-### 4. Positionen von BingX importieren (optional)
-Schreibt geschlossene Positionen nach `backend/data/journal.sqlite`. Der erste Lauf sucht einmalig
-alle Kontrakte ab und kann lange dauern; er ist fortsetzbar (`Ctrl+C` und später neu starten).
+### 4. Prüfungen des Backends
 ```bash
-cd backend && npm run import:positions
-```
-
-### 5. Go-Backend (im Aufbau, Migration Phase 1)
-Das Go-Backend entsteht parallel zum TS-Backend (`docs/migration/go-wails.md`). Bisher kann es
-`/health` und die allgemeinen Regeln des Vertrags; `/positions/open` liefert bis Phase 2 immer
-503 `not-configured`. Das Web-UI spricht weiterhin mit dem TS-Backend auf Port 3000.
-Voraussetzung: Go 1.27 (`brew install go`), für die Prüfungen zusätzlich golangci-lint v2.15 oder neuer,
-mit Go 1.27 gebaut: `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0`.
-
-**Terminal 4: Go-Backend** auf Port 3001, parallel zum TS-Backend
-```bash
-cd backend-go && PORT=3001 go run ./cmd/tip-server
-```
-
-**Vertragstest gegen das Go-Backend** (ohne `CONTRACT_EXPECT_CONFIGURED`)
-```bash
-cd contract-tests && CONTRACT_BASE_URL=http://127.0.0.1:3001 npm test
-```
-
-**Prüfungen**
-```bash
-cd backend-go && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...
+cd backend && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...
 ```
 
 ### API von Hand ausprobieren
@@ -81,15 +60,14 @@ curl -i -H 'Host: evil.example' http://127.0.0.1:3000/health   # 403 forbidden-h
 
 ### Prüfungen vor einem Commit
 ```bash
-(cd backend && npm run lint && npm run typecheck && npm test)
 (cd clients/web && npm run lint && npm run typecheck && npm test)
 (cd contract-tests && npm run lint && npm run typecheck && npm run test:unit)
-(cd backend-go && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...)
+(cd backend && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...)
 ```
 
 ### Server hängt im Hintergrund?
 ```bash
-lsof -nP -iTCP:3000 -sTCP:LISTEN   # Port 3000 (Backend), 3001 (Go-Backend) bzw. 5173 (UI)
+lsof -nP -iTCP:3000 -sTCP:LISTEN   # Port 3000 (Backend) bzw. 5173 (UI)
 kill <PID>
 ```
 
@@ -192,4 +170,4 @@ der Inhalt lässt sich weitgehend übernehmen.
 ## Sicherheit
 
 - BingX-API-Key **nur mit Lese-Rechten**.
-- `BX_KEY` / `BX_SECRET` nur in `.env` (nicht im Repo).
+- `BX_KEY` / `BX_SECRET` nur als Umgebungsvariablen bzw. in `~/.config/tip/env` (nicht im Repo).

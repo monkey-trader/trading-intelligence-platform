@@ -17,8 +17,8 @@ sind austauschbar und sprechen nur über die API mit dem Backend.
   (z.B. Summen, Liquidationsabstand) gehören ins Backend.
 
 ## Stack
-- Backend: Node.js + TypeScript (`backend/`, produktiv); Go-Backend im Aufbau (`backend-go/`,
-  Migration laut `docs/migration/go-wails.md`, nur Standardbibliothek)
+- Backend: Go (`backend/`, nur Standardbibliothek; das frühere TypeScript-Backend ist entfernt,
+  Migration laut `docs/migration/go-wails.md`)
 - Web-Client: Vite + React + TypeScript, CSS Modules
 - Datenbank: SQLite
 - Tests: Vitest
@@ -27,15 +27,14 @@ sind austauschbar und sprechen nur über die API mit dem Backend.
 
 ## Ordnerstruktur
 ```
-backend/src/{domain,application,infrastructure,presentation}/<feature>/
-backend-go/             Go-Backend (Strangler): cmd/tip-server/, internal/{domain,application,
-                        infrastructure,presentation}/; Befehle: `go test -race ./...`,
+backend/                Go-Backend: cmd/tip-server/, internal/{domain,application,
+                        infrastructure,presentation}/<feature>/; Befehle: `go test -race ./...`,
                         `golangci-lint run ./...`, `gofmt -l .` (muss leer sein)
 docs/openapi.yaml       API-Vertrag (Quelle der Wahrheit, es gibt nur diese eine Spec)
 docs/database/schema.md SQLite-Schema und State-Keys
 contract-tests/         Vertragstest gegen eine laufende API (`CONTRACT_BASE_URL=… npm test`),
-                        backend-unabhängig; gilt für das TS- und später das Go-Backend
-fixtures/bingx/         anonymisierte BingX-Antworten, sprachneutral (Backend: Alias `@fixtures/*`)
+                        backend-unabhängig (läuft in der CI gegen das Go-Backend)
+fixtures/bingx/         anonymisierte BingX-Antworten, sprachneutral (Go-Tests: Pfad relativ zum Repo-Root)
 clients/web/    Web-Client (Vite + React), spricht nur über die HTTP-API
                 API-Typen per `npm run generate:api` aus docs/openapi.yaml (openapi-typescript 7.13.0
                 verlangt TS ^5, läuft mit TS 6 über `overrides` in package.json, getestet)
@@ -44,12 +43,12 @@ clients/web/    Web-Client (Vite + React), spricht nur über die HTTP-API
 ## Lokal starten
 Einmalig installieren und die Keys hinterlegen:
 ```bash
-(cd backend && npm ci) && (cd clients/web && npm ci)
-cp backend/.env.example backend/.env   # BX_KEY und BX_SECRET eintragen (Key nur mit Lese-Rechten)
+(cd clients/web && npm ci)
+export BX_KEY=… BX_SECRET=…   # Key nur mit Lese-Rechten; das Backend liest keine .env-Datei
 ```
 Dann zwei Terminals:
 ```bash
-cd backend && npm run dev        # Terminal 1: API auf http://127.0.0.1:3000
+cd backend && go run ./cmd/tip-server   # Terminal 1: API auf http://127.0.0.1:3000
 cd clients/web && npm run dev    # Terminal 2: Web-UI, Proxy /api → Backend
 ```
 Danach http://127.0.0.1:5173 öffnen (Vite bindet nur auf IPv4-Loopback; `localhost` kann auf `::1` zeigen).
@@ -140,7 +139,7 @@ Bei sichtbaren UI-Änderungen: … → programmer → designer → reviewer.
 
 ## Planung (vor größeren Änderungen lesen)
 - `docs/migration/go-wails.md` – Migration des Backends auf Go, Desktop-App mit Wails,
-  Auslieferung über Homebrew. Go-Backend entsteht parallel in `backend-go/` (Strangler-Pattern).
+  Auslieferung über Homebrew. Das Go-Backend liegt in `backend/`.
 - `docs/features/chart-journal.md` – Feature: Chart mit Entry, SL, TP (Stufen 1–3, read-only).
 
 
@@ -148,7 +147,7 @@ Bei sichtbaren UI-Änderungen: … → programmer → designer → reviewer.
 Bevor du Ordner durchsuchst oder Dateien breit liest:
 `repo-rag search --files-only "<konkrete englische Frage mit Code-Begriffen>"`
 Beispiel: `repo-rag search --files-only "fetch open positions from bingx api"`
-Lies danach nur die gefundenen Dateien/Zeilen. Optional `--path backend-go` zum Eingrenzen.
+Lies danach nur die gefundenen Dateien/Zeilen. Optional `--path backend` zum Eingrenzen.
 Nach grösseren Änderungen: `repo-rag index`.
 
 
@@ -174,7 +173,7 @@ Nach grösseren Änderungen: `repo-rag index`.
   ein einzelner programmer direkt, ohne die ganze Kette.
 
 **Vor jedem Commit (Pflicht)**
-- Go: `cd backend-go && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...`
+- Go: `cd backend && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...`
 - `golangci-lint` läuft lokal (go install, built with go1.27). „Läuft erst in der CI“ ist kein gültiger Grund mehr.
   Schlägt Lint fehl, wird vor dem Commit behoben, nicht nachgezogen.
 

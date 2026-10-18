@@ -16,6 +16,15 @@
   --color-warning-surface: #fff4e0;
   --color-negative-surface: #fdecea;
 
+  /* Chart-Farben (hell), abgeleitet von positive/negative */
+  --color-chart-up: #0b7a45;
+  --color-chart-down: #c8372d;
+  --color-chart-grid: #d9dee5;
+  --color-chart-crosshair: #0b7fab;
+  --color-chart-entry: #0b7fab;
+  --color-chart-stop-loss: #c8372d;
+  --color-chart-take-profit: #0b7a45;
+
   /* Abstände */
   --space-1: 4px;
   --space-2: 8px;
@@ -60,6 +69,15 @@
     --color-warning: #f5b452;
     --color-warning-surface: #2e2410;
     --color-negative-surface: #321717;
+
+    /* Chart-Farben (dunkel), abgeleitet von positive/negative */
+    --color-chart-up: #58d68d;
+    --color-chart-down: #ff6b6b;
+    --color-chart-grid: #24313e;
+    --color-chart-crosshair: #3cc3e6;
+    --color-chart-entry: #3cc3e6;
+    --color-chart-stop-loss: #ff6b6b;
+    --color-chart-take-profit: #58d68d;
 
     --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.5);
   }

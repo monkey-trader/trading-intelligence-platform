@@ -2,9 +2,9 @@
 node_modules/
 dist/
 # Eingebettetes Web-UI: Release-Build kopiert hierhin, nur der Platzhalter bleibt
-!backend-go/internal/presentation/webui/dist/
-backend-go/internal/presentation/webui/dist/*
-!backend-go/internal/presentation/webui/dist/.gitkeep
+!backend/internal/presentation/webui/dist/
+backend/internal/presentation/webui/dist/*
+!backend/internal/presentation/webui/dist/.gitkeep
 coverage/
 
 # Secrets: nur die Vorlage wird committet
@@ -24,7 +24,7 @@ data/
 .claude/settings.local.json
 
 # Go-Binary aus `go build -o tip-server ./cmd/tip-server`
-/backend-go/tip-server
+/backend/tip-server
 
 # Screenshots des designer-Agenten
 clients/web/screenshots/

@@ -18,7 +18,7 @@ Du schreibst ausschließlich Tests, niemals Produktivcode.
   - Fehlerfälle: leere Historie, HTTP 429, `code != 0`
 - Für Infrastruktur nur Fakes/InMemory-Adapter, keine echten API-Aufrufe.
 
-**Go-Backend (`backend-go/`):**
+**Go-Backend (`backend/`):**
 - Tests als `foo_test.go` neben `foo.go`, tabellengetrieben mit `t.Run`, nur Standardbibliothek (`testing`, `net/http/httptest`).
 - Rot bestätigen mit `go test -race ./...`. Damit es kompiliert, dürfen minimale Stubs mit den
   vereinbarten Signaturen und `// TODO(programmer)` angelegt werden, ohne echtes Verhalten.

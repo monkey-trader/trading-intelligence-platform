@@ -126,7 +126,7 @@ flowchart TB
         DESK["desktop: Wails (geplant)"]
     end
     VERTRAG[["docs/openapi.yaml<br/>HTTP/JSON-Vertrag"]]
-    subgraph Backend["backend/ → backend-go/ (Migration)"]
+    subgraph Backend["backend/ (Go)"]
         PRES["presentation<br/>HTTP-API"]
         APP["application<br/>Use Cases"]
         DOM["domain<br/>Entities, Value Objects"]

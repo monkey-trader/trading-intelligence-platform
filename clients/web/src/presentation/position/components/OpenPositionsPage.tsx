@@ -1,3 +1,7 @@
+import { useState } from 'react';
+import type { PositionChartGateway } from '@/domain/position/PositionChartGateway';
+import type { ChartRendererFactory } from '@/presentation/position/chart/ChartRenderer';
+import { PositionChartPanel } from '@/presentation/position/components/PositionChartPanel';
 import type { OpenPositionsGateway } from '@/domain/position/OpenPositionsGateway';
 import { OpenPositionsHeader } from '@/presentation/position/components/OpenPositionsHeader';
 import { OpenPositionsTable } from '@/presentation/position/components/OpenPositionsTable';
@@ -6,11 +10,22 @@ import styles from '@/presentation/position/components/OpenPositionsPage.module.
 
 type OpenPositionsPageProps = Readonly<{
   gateway: OpenPositionsGateway;
+  /** Ohne Chart-Gateway und Renderer gibt es keine Chart-Auswahl. */
+  chartGateway?: PositionChartGateway;
+  createChartRenderer?: ChartRendererFactory;
 }>;
 
 /** Seite "Offene Positionen": lädt über das injizierte Gateway und pollt. */
-export function OpenPositionsPage({ gateway }: OpenPositionsPageProps) {
+export function OpenPositionsPage({
+  gateway,
+  chartGateway,
+  createChartRenderer,
+}: OpenPositionsPageProps) {
   const { status, snapshot, errorMessage, isStale, refresh } = useOpenPositionsViewModel(gateway);
+
+  const [chartPositionId, setChartPositionId] = useState<string>();
+  const toggleChart = (positionId: string) =>
+    setChartPositionId((current) => (current === positionId ? undefined : positionId));
 
   return (
     <main className={styles.page}>
@@ -47,9 +62,21 @@ export function OpenPositionsPage({ gateway }: OpenPositionsPageProps) {
             </p>
           )}
           {snapshot.positions.length > 0 ? (
-            <OpenPositionsTable positions={snapshot.positions} />
+            <OpenPositionsTable
+              positions={snapshot.positions}
+              selectedPositionId={chartPositionId}
+              onSelectPosition={chartGateway && createChartRenderer ? toggleChart : undefined}
+            />
           ) : (
             <p className={styles.message}>Keine offenen Positionen.</p>
+          )}
+          {chartPositionId && chartGateway && createChartRenderer && (
+            <PositionChartPanel
+              positionId={chartPositionId}
+              gateway={chartGateway}
+              createRenderer={createChartRenderer}
+              onClose={() => setChartPositionId(undefined)}
+            />
           )}
         </>
       )}

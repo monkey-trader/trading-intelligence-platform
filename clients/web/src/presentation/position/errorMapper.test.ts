@@ -38,7 +38,7 @@ describe('mapOpenPositionsProblem', () => {
 
   it('weist bei backend-unreachable auf den lokalen Backend-Start hin', () => {
     expect(mapOpenPositionsProblem('backend-unreachable')).toBe(
-      'Backend nicht erreichbar (läuft npm run dev in backend/?).',
+      'Backend nicht erreichbar (läuft der Server aus backend/?).',
     );
   });
 

@@ -1,111 +1,93 @@
-# backend – TypeScript-Backend
+# backend – Go-Backend (`tip-server`)
 
-Produktives Backend der Trading Intelligence Platform: BingX-Import, SQLite und HTTP-API laut
-[`docs/openapi.yaml`](../docs/openapi.yaml). Es basiert auf Node.js 24, TypeScript, Fastify und `node:sqlite`.
-Bis zum Ende der Go-Migration ([`docs/migration/go-wails.md`](../docs/migration/go-wails.md))
-bleibt dieses Backend maßgeblich; danach ersetzt es `../backend-go/`.
+Das Backend der Trading Intelligence Platform (Go, nur Standardbibliothek): BingX-Import, SQLite,
+Fachlogik und HTTP-API gemäß [`docs/openapi.yaml`](../docs/openapi.yaml). Das frühere TypeScript-Backend
+ist entfernt; den Ablauf der Migration beschreibt [`docs/migration/go-wails.md`](../docs/migration/go-wails.md).
 
 Alle Befehle unten laufen im Terminal in diesem Ordner:
-
 ```bash
 cd backend
 ```
 
 ## Voraussetzungen (macOS)
 
-Node.js 24 oder neuer (siehe `../.nvmrc`), entweder mit Homebrew:
-
 ```bash
-brew install node@24
-node --version                   # Kontrolle, z.B. "v24.x"
+brew install go                  # Go 1.27 oder neuer
+go version                       # Kontrolle, z.B. "go version go1.27.2 darwin/arm64"
 ```
 
-oder mit nvm. Dieser Befehl liest `../.nvmrc` aus dem Repo-Root:
-
+Für die Lint-Prüfung brauchst du golangci-lint **v2.15 oder neuer, mit Go 1.27 gebaut**.
+Ein älteres golangci-lint bricht mit „Go language version … lower than the targeted Go version“ ab.
 ```bash
-cd .. && nvm install && nvm use && cd backend
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
+golangci-lint version
+```
+`go install` legt das Programm nach `~/go/bin`. Fehlt dieser Ordner im `PATH`, trägst du ihn einmalig nach:
+```bash
+echo 'export PATH="$HOME/go/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
 ```
 
-Abhängigkeiten installieren (einmalig und nach jeder Änderung an `package-lock.json`). Erlaubt ist nur npm, kein pnpm oder yarn:
-
-```bash
-npm ci
-```
-
-## BingX-Zugang einrichten
-
-```bash
-cp .env.example .env             # danach BX_KEY und BX_SECRET eintragen
-```
-
-- Den API-Key bei BingX **nur mit Lese-Rechten** anlegen.
-- `.env` steht in `.gitignore` und wird nie committet.
-- Ohne Keys startet der Server trotzdem. `GET /positions/open` liefert dann 503 `not-configured`.
+Externe Go-Abhängigkeiten gibt es nicht, nur die Standardbibliothek. Deshalb ist kein `go mod download` nötig.
 
 ## Starten (Entwicklung)
 
+Ohne Build-Schritt, Go kompiliert das Programm im Hintergrund:
 ```bash
-npm run dev
+go run ./cmd/tip-server
+```
+Die API läuft danach auf http://127.0.0.1:3000.
+
+Belegt schon ein anderer Prozess Port 3000, wählst du einen anderen Port:
+```bash
+PORT=3001 go run ./cmd/tip-server
 ```
 
-- Die API läuft auf http://127.0.0.1:3000.
-- `tsx watch` startet den Server bei jeder Änderung an einer Datei neu und lädt `.env`, falls vorhanden.
-- Beenden mit **Ctrl+C**.
+Beenden mit **Ctrl+C**. Der Server schließt laufende Anfragen noch ab (höchstens 10 s).
+Ein zweites Ctrl+C beendet ihn sofort.
 
-## Bauen und gebaut starten
-
-```bash
-npm run build                    # bündelt nach dist/ (tsup): dist/main.js und dist/cli/importPositions.js
-npm start                        # startet dist/main.js mit .env
-```
-
-Ohne `.env`, mit Variablen direkt im Befehl:
+## Bauen und Binary starten
 
 ```bash
-PORT=3001 node dist/main.js
+go build -o tip-server ./cmd/tip-server    # erzeugt ./tip-server (steht in .gitignore)
+./tip-server                               # Start auf 127.0.0.1:3000
+PORT=3001 ./tip-server                     # anderer Port
 ```
 
-## Positionen von BingX importieren
-
+Ein optimiertes, kleineres Binary für Apple Silicon und für Intel:
 ```bash
-npm run import:positions
+GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o tip-server-arm64 ./cmd/tip-server
+GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o tip-server-amd64 ./cmd/tip-server
 ```
 
-- Der Import schreibt geschlossene Positionen nach `data/journal.sqlite` (überschreibbar mit `JOURNAL_DB`). Nutzer-Notizen fasst er nie an.
-- Beim ersten Lauf sucht er einmalig alle USDT-Kontrakte ab. Das kann lange dauern (ca. 1 h).
-- Der Lauf ist fortsetzbar: Mit Ctrl+C abbrechen und später erneut starten.
-- Fortschritt und Hinweise gehen auf stderr.
-- Exit-Codes:
-  - `0`: ok
-  - `1`: Fehler
-  - `2`: verdächtige Symbole, d.h. Income vorhanden, aber keine Positionen gefunden
-
-Datenbank ansehen:
-
+Ein selbst gebautes, unsigniertes Binary läuft im Terminal ohne Rückfrage. Nur ein heruntergeladenes Binary
+blockiert macOS Gatekeeper. Das lässt sich einmalig freigeben:
 ```bash
-sqlite3 data/journal.sqlite 'SELECT symbol, COUNT(*) FROM positions GROUP BY symbol;'
+xattr -d com.apple.quarantine ./tip-server
 ```
 
-Das Schema beschreibt [`docs/database/schema.md`](../docs/database/schema.md).
+## Konfiguration (Umgebungsvariablen)
 
-## Konfiguration (Umgebungsvariablen, in `.env`)
+| Variable | Standard | Bedeutung |
+|---|---|---|
+| `PORT` | `3000` | Port, ganze Zahl 1–65535 |
+| `HOST` | `127.0.0.1` | Bind-Adresse. Erlaubt ist nur Loopback, sonst braucht es `ALLOW_REMOTE=true`. |
+| `ALLOW_REMOTE` | – | `true` erlaubt einen Nicht-Loopback-`HOST`. Die API hat noch keine Authentifizierung! |
+| `ALLOWED_HOSTS` | – | Bei `ALLOW_REMOTE=true` Pflicht: kommagetrennte Host-Header mit Port, z.B. `meinrechner.local:3000` |
+| `BX_KEY`, `BX_SECRET` | – | BingX-Zugang, Lese-Key von BingX. Fehlen sie, kommt beim Start nur ein Hinweis und die Positions- und Chart-Routen liefern 503 `not-configured`. |
 
-| Variable              | Standard                     | Bedeutung                                                                         |
-| --------------------- | ---------------------------- | --------------------------------------------------------------------------------- |
-| `BX_KEY`, `BX_SECRET` | –                            | BingX-Zugang (nur Lese-Rechte)                                                    |
-| `PORT`                | `3000`                       | Port der API                                                                      |
-| `HOST`                | `127.0.0.1`                  | Bind-Adresse; nur Loopback, sonst braucht es `ALLOW_REMOTE=true`                  |
-| `ALLOW_REMOTE`        | –                            | `true` erlaubt einen Nicht-Loopback-`HOST` (die API hat keine Authentifizierung!) |
-| `ALLOWED_HOSTS`       | –                            | Mit `ALLOW_REMOTE=true` Pflicht: Host-Header mit Port, kommagetrennt              |
-| `BX_BASE`             | `https://open-api.bingx.com` | BingX-API-Basis-URL                                                               |
-| `JOURNAL_DB`          | `data/journal.sqlite`        | Pfad zur SQLite-Datenbank                                                         |
-| `IMPORT_FULL_DAYS`    | `365`                        | Tage Historie beim ersten Vollimport                                              |
+`tip-server` liest **keine `.env`-Datei**. Variablen setzt du direkt vor den Befehl
+(`PORT=3001 ./tip-server`) oder exportierst sie in der Shell (`BX_KEY`, `BX_SECRET`).
+
+Das Log geht als JSON auf stderr. Zum Mitlesen mit `jq`:
+```bash
+go run ./cmd/tip-server 2>&1 | jq
+```
 
 ## Ausprobieren
 
 ```bash
 curl -i http://127.0.0.1:3000/health                           # 200 {"status":"ok"}
-curl -s http://127.0.0.1:3000/positions/open | jq              # offene Positionen live von BingX
+curl -i http://127.0.0.1:3000/positions/open                   # 503 not-configured (bis Phase 2)
 curl -i http://127.0.0.1:3000/gibtsnicht                       # 404 not-found
 curl -i -H 'Host: evil.example' http://127.0.0.1:3000/health   # 403 forbidden-host
 ```
@@ -113,52 +95,52 @@ curl -i -H 'Host: evil.example' http://127.0.0.1:3000/health   # 403 forbidden-h
 ## Tests und Prüfungen
 
 ```bash
-npm test                         # alle Tests (Vitest)
-npm run test:watch               # Watch-Modus
-npx vitest run src/presentation/http/createServer.test.ts   # eine Datei
-npx vitest run -t "not-found"                                # Tests nach Name
+go test ./...                    # alle Tests
+go test -race ./...              # mit Data-Race-Erkennung (so läuft die CI)
+go test -run TestReadServerConfig ./internal/infrastructure/config   # einzelner Test
+go test -cover ./...             # mit Abdeckung
 ```
 
-Alles, was die CI prüft:
-
+Alles, was die CI prüft, in einem Befehl:
 ```bash
-npm run lint && npm run typecheck && npm run format:check && npm test
+test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./... && go build ./...
 ```
-
-Formatierung korrigieren: `npm run format`
+Formatierung korrigieren: `gofmt -w .`
 
 ## Vertragstest
 
 Der Vertragstest in `../contract-tests/` prüft die laufende API gegen `docs/openapi.yaml`.
 Starte zuerst den Server in Terminal 1, dann in Terminal 2:
-
 ```bash
 # Terminal 1
-npm run dev
+PORT=3001 go run ./cmd/tip-server
 
 # Terminal 2 (einmalig vorher: cd ../contract-tests && npm ci)
-cd ../contract-tests && CONTRACT_BASE_URL=http://127.0.0.1:3000 CONTRACT_EXPECT_CONFIGURED=true npm test
+cd ../contract-tests && CONTRACT_BASE_URL=http://127.0.0.1:3001 npm test
 ```
-
-`CONTRACT_EXPECT_CONFIGURED=true` gehört nur dazu, wenn Keys in `.env` stehen. Ohne Keys wird 503 `not-configured` erwartet.
 
 ## Port belegt?
 
 ```bash
-lsof -nP -iTCP:3000 -sTCP:LISTEN   # wer hört auf Port 3000?
+lsof -nP -iTCP:3001 -sTCP:LISTEN   # wer hört auf Port 3001?
 kill <PID>
 ```
 
 ## Aufbau
 
 ```
-src/main.ts                    Composition Root der HTTP-API
-src/cli/importPositions.ts     Composition Root des Import-CLI
-src/domain/                    Entities, Value Objects, Errors, Ports, Domain-Services
-src/application/               Use Cases (Import, offene Positionen)
-src/infrastructure/            BingX-Client, SQLite, Konfiguration, Cache
-src/presentation/              HTTP (Fastify-Routen, Host-Prüfung, Problem-Antworten), CLI-Ausgabe
+cmd/tip-server/main.go          Composition Root: Konfiguration, Server, Graceful Shutdown
+internal/domain/                Domain-Kern (ab Phase 2)
+internal/application/           Use Cases (ab Phase 2)
+internal/infrastructure/config/ Umgebungsvariablen lesen und prüfen
+internal/presentation/webui/    eingebettetes Web-UI (dist, im Release vom CI-Build befüllt)
+internal/presentation/httpapi/  HTTP: Router, Host-Prüfung, Problem-Antworten, Listener-Wrapper
+.golangci.yml                   Lint-Regeln inkl. Schichtgrenzen (depguard)
 ```
+Abhängigkeiten zeigen immer nach innen. Die Verdrahtung passiert nur in `cmd/`.
 
-- Abhängigkeiten zeigen immer nach innen; ESLint prüft das.
-- Importiert wird über den Alias `@/` (→ `src/`), Fixtures über `@fixtures/` (→ `../fixtures/`).
+## Web-UI
+
+`internal/presentation/webui/dist` wird per `go:embed` eingebettet und unter `/` ausgeliefert
+(SPA-Fallback auf `index.html`). Im Quellbaum liegt dort nur `.gitkeep`; dann antwortet `/` mit 404
+"Web-UI nicht eingebettet". Der Release-Build baut `clients/web` mit `VITE_API_BASE=''` und kopiert `dist` hierher.

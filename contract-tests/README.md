@@ -19,10 +19,10 @@ Geprüft wird:
 
 ```bash
 npm ci
-# Backend ohne BingX-Keys starten (Beispiel TS-Backend):
-(cd ../backend && env -u BX_KEY -u BX_SECRET PORT=3999 npx tsx src/main.ts &)
+# Backend ohne BingX-Keys starten:
+(cd ../backend && env -u BX_KEY -u BX_SECRET PORT=3999 go run ./cmd/tip-server &)
 CONTRACT_BASE_URL=http://127.0.0.1:3999 npm test
-pkill -f "tsx src/main.ts"
+pkill -f "tip-server"
 
 npm run test:unit   # nur die Tests ohne Server (Validator, HTTP-Helfer, Abdeckung)
 npm run lint && npm run typecheck && npm run format:check

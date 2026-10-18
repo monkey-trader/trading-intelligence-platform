@@ -1,10 +1,9 @@
 # SQLite-Schema
 
-Stand: TypeScript-Backend, Quelle `backend/src/infrastructure/persistence/sqlite/schema.ts`.
-Diese Beschreibung ist der Maßstab für das Go-Backend (Migration Phase 4).
+Stand: Go-Backend, Quelle `backend/internal/infrastructure/sqlite/schema.go`.
 
 ## Allgemein
-- Datei: `JOURNAL_DB`; Standard im Go-Backend `<UserConfigDir>/tip/journal.db` (macOS: `~/Library/Application Support/tip/journal.db`). Das TS-Backend nutzt weiter `data/journal.sqlite`.
+- Datei: `JOURNAL_DB`; Standard im Go-Backend `<UserConfigDir>/tip/journal.db` (macOS: `~/Library/Application Support/tip/journal.db`).
 - Beim Öffnen wird zuerst `PRAGMA foreign_keys = ON` gesetzt, danach das Schema idempotent
   angelegt (`CREATE TABLE IF NOT EXISTS`). Die Versionierung steht in `schema_version` (siehe unten).
 - **Beträge sind `TEXT`** mit Dezimal-Strings, damit sie exakt erhalten bleiben (nie als Float speichern).
@@ -62,6 +61,21 @@ Kontoweite Einträge von BingX (Gebühren, Funding, realisierter PnL), Quelle de
 Index `income_symbol_time` auf `(symbol, time)`. Schreiben per Upsert über `transaction_id`
 (`ON CONFLICT … DO UPDATE`), ein Batch pro 7-Tage-Fenster in einer Transaktion. Fortschritt: `income_scan_until`.
 
+## Tabelle `candles`
+Zwischenspeicher für Kerzen des Charts (öffentlicher BingX-Klines-Endpunkt, Feature `docs/features/chart-journal.md`).
+Reiner Cache: kann gelöscht werden, wird beim nächsten Chart-Aufruf neu gefüllt.
+
+| Spalte | Typ | Bedeutung |
+|---|---|---|
+| `symbol` | TEXT, PK | z. B. `BTC-USDT` |
+| `interval` | TEXT, PK | `5m`, `15m`, `1h`, `4h` oder `1d` |
+| `open_time` | INTEGER, PK | Beginn der Kerze (Epoch-ms) |
+| `open`, `high`, `low`, `close`, `volume` | TEXT | Dezimal-Strings (exakt, kein REAL) |
+
+Schreiben per Upsert über `(symbol, interval, open_time)`, die laufende Kerze wird dadurch aktualisiert
+statt dupliziert. Lesen: die neuesten `limit` Kerzen, aufsteigend sortiert. Keine Schema-Version-Erhöhung,
+die Tabelle entsteht per `CREATE TABLE IF NOT EXISTS`.
+
 ## Tabelle `notes`
 Journal-Einträge des Nutzers. **Der Import schreibt hier nie**, und es gibt kein `ON DELETE CASCADE`.
 
@@ -103,4 +117,4 @@ Nur Go-Backend. Spalte `version INTEGER NOT NULL`, genau eine Zeile mit der aktu
   Schlägt sie fehl, wird nicht migriert. Frische oder aktuelle DBs bekommen keine Sicherung.
 - Ist die DB-Version höher als die des Programms, wird das Öffnen abgelehnt (`SchemaTooNewError`).
 - Die Sicherung liegt neben der DB im selben Verzeichnis; alte Sicherungen löscht der Nutzer selbst.
-- Weitere Tabellen (z.B. `balance` aus dem TS-Backend) bleiben unberührt.
+- Weitere Tabellen (z.B. `balance` aus dem früheren TS-Backend) bleiben unberührt.
