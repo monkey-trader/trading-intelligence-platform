@@ -1,0 +1,64 @@
+# Release des Go-Backends (tip-server) als Homebrew-Formula.
+# Ausgelöst von .github/workflows/release.yml bei Tag v*.
+version: 2
+project_name: tip-server
+
+builds:
+  - id: tip-server
+    dir: backend-go
+    main: ./cmd/tip-server
+    binary: tip-server
+    env:
+      - CGO_ENABLED=0 # SQLite via modernc: reines Go, Cross-Compile ohne macOS-Runner
+    goos: [darwin]
+    goarch: [arm64, amd64]
+    flags: [-trimpath]
+    ldflags: ["-s -w"]
+
+archives:
+  - formats: [tar.gz]
+    name_template: "tip-server_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: github
+  filters:
+    exclude: ["^docs:", "^chore:"]
+
+brews:
+  - name: tip-server
+    repository:
+      owner: c3sm
+      name: homebrew-tap
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    homepage: https://github.com/monkey-trader/trading-intelligence-platform
+    description: Trading-Journal-Backend mit automatischem BingX-Import (lokale HTTP-API)
+    directory: Formula
+    commit_author:
+      name: c3smonkey
+      email: marzelwidmer@gmail.com
+    # Der Dienst liest die BingX-Keys aus ~/.config/tip/env (BX_KEY=..., BX_SECRET=...),
+    # damit keine Secrets in der plist stehen.
+    extra_install: |
+      (bin/"tip-server-service").write <<~SH
+        #!/bin/sh
+        ENV_FILE="${HOME}/.config/tip/env"
+        if [ -f "$ENV_FILE" ]; then set -a; . "$ENV_FILE"; set +a; fi
+        exec "#{opt_bin}/tip-server"
+      SH
+      chmod 0755, bin/"tip-server-service"
+    service: |
+      run [opt_bin/"tip-server-service"]
+      keep_alive true
+      log_path var/"log/tip-server.log"
+      error_log_path var/"log/tip-server.log"
+    caveats: |
+      Keys (nur Lese-Rechte) hinterlegen, dann starten:
+        mkdir -p ~/.config/tip && chmod 700 ~/.config/tip
+        printf 'BX_KEY=...\nBX_SECRET=...\n' > ~/.config/tip/env && chmod 600 ~/.config/tip/env
+        brew services start tip-server
+      API: http://127.0.0.1:3000/health
+    test: |
+      assert_predicate bin/"tip-server", :exist?

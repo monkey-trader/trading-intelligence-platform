@@ -9,6 +9,7 @@ Status: Phase 0, 1 und 2a erledigt, Phase 2b umgesetzt (Branch `feature/go-phase
 - **4:** `schema_version` (Version 1), Sicherung `<datei>.bak-v<alt>-<UTC>` vor Migration (0600, `O_EXCL`),
   Ablehnung zu neuer DBs (`SchemaTooNewError`), Standardpfad `<UserConfigDir>/tip/journal.db` über
   `config.ReadDatabasePath` (`JOURNAL_DB` überschreibt). Details in `docs/database/schema.md`.
+- **Phase 7 (Server):** `.goreleaser.yaml` + `.github/workflows/release.yml` (Tag `v*` → Release + Formula im Tap `c3sm/homebrew-tap`, Secret `TAP_GITHUB_TOKEN`). Keys für den Dienst in `~/.config/tip/env`. Cask `tip-app` folgt mit Phase 6.
 - **Offen:** Binary-Größe messen, Sortierung der Income-Antwort gegen die echte API belegen, Homebrew/Wails (Phase 5+).
 - **Importbeginn:** Der Import startet ab dem ersten Serverstart (State `import_started_at`, `ResolveImportStart`), keine Historie, keine Vollsuche über alle Kontrakte. Bei jedem Lauf (also auch beim Start) werden die aktuell offenen Positionen als Zeile in `positions` angelegt (`close_time` 0, `fully_closed` 0), damit sie im Journal verwaltet werden können; ihre Symbole gehen in den Closed-Import. Schließt eine Position, überschreibt der Upsert dieselbe Zeile, Notizen bleiben.
 - **Zurückgestellt:** `RunFullSearch`/`RunFullSearchUntilDone` (Historie nachladen) existieren, sind aber nicht verdrahtet; später als Nutzeraktion.
@@ -17,9 +18,9 @@ Status: Phase 0, 1 und 2a erledigt, Phase 2b umgesetzt (Branch `feature/go-phase
 ## Zielbild
 
 ```
-brew install monkey-trader/tap/tip-server        # Go-Backend (Formula)
+brew install c3sm/tap/tip-server        # Go-Backend (Formula)
 brew services start tip-server                   # launchd-Dienst: Import alle 5 Min, HTTP-API auf localhost
-brew install --cask monkey-trader/tap/tip-app    # Wails-App (Cask): Fenster auf die API
+brew install --cask c3sm/tap/tip-app    # Wails-App (Cask): Fenster auf die API
 ```
 
 - **tip-server (Go):** Import, SQLite, Fachlogik, HTTP-API gemäß `docs/openapi.yaml`.
@@ -174,7 +175,7 @@ Aufteilung in Schritte (je eigener Branch, architect → test-author → program
 - Wails-Version (v2 stabil vs. neuere Version) beim Setup prüfen.
 
 ## Phase 7 – Release und Homebrew
-- Eigener Tap: Repo `monkey-trader/homebrew-tap`.
+- Eigener Tap: Repo `c3sm/homebrew-tap`.
 - **Formula `tip-server`** mit `service`-Block → `brew services start tip-server`
   richtet den launchd-Dienst ein.
 - **Cask `tip-app`** für die Wails-.app.
