@@ -8,7 +8,7 @@ const PROBLEM_MESSAGES: Readonly<Record<OpenPositionsProblemType, string>> = {
   'upstream-error': 'BingX meldet einen Fehler.',
   'invalid-response': 'BingX hat unerwartete Daten geliefert.',
   internal: 'Interner Fehler im Backend.',
-  'backend-unreachable': 'Backend nicht erreichbar (läuft npm run dev in backend/?).',
+  'backend-unreachable': 'Backend nicht erreichbar (läuft der Server aus backend/?).',
   'invalid-body': 'Unerwartete Antwort vom Backend (Client und Backend passen nicht zusammen?).',
 };
 

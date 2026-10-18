@@ -1,8 +1,7 @@
 # BingX-Fixtures
 
-Echte BingX-Antworten, anonymisiert, als sprachneutrales JSON. Das TypeScript-Backend
-(`backend/`, Import über den Alias `@fixtures/bingx/...`) und später das Go-Backend
-(`backend-go/`, Pfad relativ zum Repo-Root) testen gegen dieselben Dateien.
+Echte BingX-Antworten, anonymisiert, als sprachneutrales JSON. Die Tests des Go-Backends
+(`backend/`, Pfad relativ zum Repo-Root) laufen gegen diese Dateien.
 
 ## Regeln
 - Inhalte bleiben **exakt wie von BingX geliefert**, auch Zahlen-Strings wie `"0.8650"`

@@ -75,8 +75,8 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version-file: backend-go/go.mod
-          cache-dependency-path: backend-go/go.mod
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.mod
 
       - uses: actions/setup-node@v7
         with:
@@ -92,13 +92,13 @@ jobs:
         run: npm ci && npm run build
 
       - name: Web-UI nach webui/dist kopieren
-        run: cp -R clients/web/dist/. backend-go/internal/presentation/webui/dist/
+        run: cp -R clients/web/dist/. backend/internal/presentation/webui/dist/
 
       # Ohne index.html entstünde still ein Release mit leerem UI; "/api/" im Bundle hieße, VITE_API_BASE griff nicht.
       - name: UI-Einbettung prüfen
         run: |
-          test -f backend-go/internal/presentation/webui/dist/index.html
-          ! grep -rq '/api/' backend-go/internal/presentation/webui/dist/assets
+          test -f backend/internal/presentation/webui/dist/index.html
+          ! grep -rq '/api/' backend/internal/presentation/webui/dist/assets
 
       # Mit Tag: Assets ans bestehende Release hängen + Formula im Tap. Auf PRs nur Snapshot bauen.
       - name: GoReleaser

@@ -25,7 +25,7 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ['**/backend/**', '**/backend-go/**', '**/clients/**'],
+              group: ['**/backend/**', '**/clients/**'],
               message: 'Der Vertragstest kennt nur die HTTP-API und docs/openapi.yaml.',
             },
           ],

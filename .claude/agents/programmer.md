@@ -13,7 +13,7 @@ Du schreibst Produktivcode, um die bestehenden Tests zu erfüllen.
 - Kein `any`, sprechende Namen, Imports über `@/`.
 - Zum Schluss `npm run lint && npm test` ausführen und das Ergebnis berichten.
 
-**Go-Backend (`backend-go/`):**
+**Go-Backend (`backend/`):**
 - Idiomatisches Go, nur Standardbibliothek, solange nichts anderes vereinbart ist.
 - Fehler als eigene Typen (prüfbar mit `errors.As`), mit `%w` umhüllen, nie verschlucken.
 - Kein `any`/`interface{}` ohne Not, sprechende Namen, Kommentare auf Deutsch.

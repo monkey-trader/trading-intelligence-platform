@@ -1,10 +1,9 @@
 # SQLite-Schema
 
-Stand: TypeScript-Backend, Quelle `backend/src/infrastructure/persistence/sqlite/schema.ts`.
-Diese Beschreibung ist der Maßstab für das Go-Backend (Migration Phase 4).
+Stand: Go-Backend, Quelle `backend/internal/infrastructure/sqlite/schema.go`.
 
 ## Allgemein
-- Datei: `JOURNAL_DB`; Standard im Go-Backend `<UserConfigDir>/tip/journal.db` (macOS: `~/Library/Application Support/tip/journal.db`). Das TS-Backend nutzt weiter `data/journal.sqlite`.
+- Datei: `JOURNAL_DB`; Standard im Go-Backend `<UserConfigDir>/tip/journal.db` (macOS: `~/Library/Application Support/tip/journal.db`).
 - Beim Öffnen wird zuerst `PRAGMA foreign_keys = ON` gesetzt, danach das Schema idempotent
   angelegt (`CREATE TABLE IF NOT EXISTS`). Die Versionierung steht in `schema_version` (siehe unten).
 - **Beträge sind `TEXT`** mit Dezimal-Strings, damit sie exakt erhalten bleiben (nie als Float speichern).
@@ -118,4 +117,4 @@ Nur Go-Backend. Spalte `version INTEGER NOT NULL`, genau eine Zeile mit der aktu
   Schlägt sie fehl, wird nicht migriert. Frische oder aktuelle DBs bekommen keine Sicherung.
 - Ist die DB-Version höher als die des Programms, wird das Öffnen abgelehnt (`SchemaTooNewError`).
 - Die Sicherung liegt neben der DB im selben Verzeichnis; alte Sicherungen löscht der Nutzer selbst.
-- Weitere Tabellen (z.B. `balance` aus dem TS-Backend) bleiben unberührt.
+- Weitere Tabellen (z.B. `balance` aus dem früheren TS-Backend) bleiben unberührt.

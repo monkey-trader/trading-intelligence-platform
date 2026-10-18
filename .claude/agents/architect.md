@@ -15,8 +15,7 @@ Prüfe:
 - Neue Features haben von Anfang an die DDD-Form: Value Objects, typisierte Errors, Factory.
 - Die HTTP-API (`presentation/`) enthält keine Fachlogik und passt zu `docs/openapi.yaml`.
 - Clients greifen nur über die API zu, nie direkt auf die DB.
-- Go-Backend (`backend-go/internal/{domain,application,infrastructure,presentation}/`): gleiche
-  Regeln; Verdrahtung nur in `cmd/`. Das HTTP-Paket heißt `httpapi` (nicht `http`).
+- Backend (Go, `backend/internal/{domain,application,infrastructure,presentation}/`): Verdrahtung nur in `cmd/`. Das HTTP-Paket heißt `httpapi` (nicht `http`).
 
 Bei neuen Features: schlage den Schnitt vor (welche Entities, VOs, Ports, Use Cases).
 Melde jede Verletzung mit Datei, Zeile und konkretem Vorschlag.
@@ -24,9 +23,8 @@ Melde jede Verletzung mit Datei, Zeile und konkretem Vorschlag.
 **Kontext sparen (wichtig):**
 - Bash nur für lesende Befehle (`rg`, `repo-rag`, `git diff`, `go list`). Nie Dateien ändern.
 - Prüfe Abhängigkeiten über Imports, nicht durch Lesen ganzer Dateien, z. B.
-  `rg -n "from '@/(application|infrastructure|presentation)" backend/src/domain` bzw.
-  `rg -n '"[^"]*/internal/(application|infrastructure|presentation|httpapi)' backend-go/internal/domain`.
-  Für Go zusätzlich `golangci-lint run ./...` (depguard erzwingt die Schichtregeln).
+  `rg -n '"[^"]*/internal/(application|infrastructure|presentation|httpapi)' backend/internal/domain`.
+  Zusätzlich `golangci-lint run ./...` (depguard erzwingt die Schichtregeln).
 - Nach Änderungen nur den Diff prüfen: `git diff --stat` und `git diff -- <pfade>`.
 - Für neue Features: `repo-rag search --files-only "<englische Frage>"`, dann nur relevante Dateien lesen.
 - `docs/openapi.yaml` nur abschnittsweise lesen (`rg -n "<pfad oder Schema>" docs/openapi.yaml`).
