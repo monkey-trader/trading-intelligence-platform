@@ -44,6 +44,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/positions/{positionId}/chart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Kerzen-Chart einer offenen Position mit Entry, Stop-Loss und Take-Profit
+         * @description Liefert die letzten `limit` Kerzen des Symbols (öffentlicher BingX-Klines-Endpunkt, im Backend in SQLite zwischengespeichert) sowie Entry, Stop-Loss- und Take-Profit-Linien der Position. SL und TP stammen aus den offenen BingX-Orders (`STOP_MARKET`, `TAKE_PROFIT_MARKET`), die über die `positionId` zugeordnet werden. Mehrere Teil-TPs und -SLs sind möglich, ohne SL/TP sind die Listen leer. Nur lesend. Orders werden bis zu 5 s zwischengespeichert, `fetchedAt` nennt das Alter. Stufe 1 gilt nur für aktuell offene Positionen; unbekannte oder geschlossene `positionId` liefert 404.
+         */
+        get: operations["getPositionChart"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -99,6 +119,57 @@ export interface components {
             openTime: number;
             /** @description Letzte Änderung in Epoch-Millisekunden. */
             updateTime: number;
+        };
+        PositionChart: {
+            positionId: string;
+            /** @example SUI-USDT */
+            symbol: string;
+            /** @enum {string} */
+            side: "LONG" | "SHORT";
+            /** @enum {string} */
+            interval: "5m" | "15m" | "1h" | "4h" | "1d";
+            /** @description Aufsteigend nach `time` sortiert (BingX liefert absteigend), ohne Duplikate. */
+            candles: components["schemas"]["Candle"][];
+            entry: components["schemas"]["EntryLevel"];
+            /** @description Offene Stop-Loss-Orders der Position, leer wenn keine gesetzt ist. */
+            stopLoss: components["schemas"]["ProtectiveOrder"][];
+            /** @description Offene Take-Profit-Orders der Position (Teil-TPs einzeln), leer wenn keine gesetzt ist. */
+            takeProfit: components["schemas"]["ProtectiveOrder"][];
+            /** @description Ereignisse auf der Zeitachse. In Stufe 1 nur der Einstieg. */
+            markers: components["schemas"]["ChartMarker"][];
+            /** @description Zeitpunkt der Abfrage der Orders bei BingX in Epoch-Millisekunden. */
+            fetchedAt: number;
+        };
+        Candle: {
+            /** @description Beginn der Kerze in Epoch-Millisekunden. */
+            time: number;
+            open: components["schemas"]["Decimal"];
+            high: components["schemas"]["Decimal"];
+            low: components["schemas"]["Decimal"];
+            close: components["schemas"]["Decimal"];
+            volume: components["schemas"]["Decimal"];
+        };
+        EntryLevel: {
+            /** @description Durchschnittlicher Einstiegspreis der Position. */
+            price: components["schemas"]["Decimal"];
+            /** @description Eröffnung der Position in Epoch-Millisekunden. */
+            time: number;
+        };
+        ProtectiveOrder: {
+            /** @description BingX-Order-ID (19-stellig, immer String, nie als Zahl parsen). */
+            orderId: string;
+            /** @description Auslösepreis (`stopPrice` bei BingX). */
+            triggerPrice: components["schemas"]["Decimal"];
+            quantity: components["schemas"]["Decimal"];
+            /** @description Abstand des Auslösepreises zum Entry relativ zum Entry, 8 Nachkommastellen, vorzeichenbehaftet (-0.075 = 7.5 % unter dem Entry, +0.25 = 25 % darüber). */
+            distanceRatio: components["schemas"]["Decimal"];
+        };
+        ChartMarker: {
+            /** @description Zeitpunkt in Epoch-Millisekunden. */
+            time: number;
+            /** @enum {string} */
+            kind: "ENTRY";
+            price: components["schemas"]["Decimal"];
         };
     };
     responses: {
@@ -166,6 +237,41 @@ export interface operations {
                 };
             };
             403: components["responses"]["Problem"];
+            500: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+            504: components["responses"]["Problem"];
+        };
+    };
+    getPositionChart: {
+        parameters: {
+            query?: {
+                /** @description Kerzenintervall. */
+                interval?: "5m" | "15m" | "1h" | "4h" | "1d";
+                /** @description Anzahl der letzten Kerzen (BingX erlaubt höchstens 1000 pro Abfrage). */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description BingX-Positions-ID (19-stellig, immer String). */
+                positionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Chart-Daten der Position. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PositionChart"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
             500: components["responses"]["Problem"];
             502: components["responses"]["Problem"];
             503: components["responses"]["Problem"];

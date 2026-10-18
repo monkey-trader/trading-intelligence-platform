@@ -1,0 +1,5 @@
+{
+  "code": 109425,
+  "msg": "FOO-USDT not exist, please verify it in api: /openApi/swap/v2/quote/contracts",
+  "data": {}
+}

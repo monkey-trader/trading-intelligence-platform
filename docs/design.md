@@ -91,16 +91,15 @@ Real. PnL, Liq.-Preis, Liq.-Abstand, Eröffnet.
   vermutlich vor allem Gebühren und Funding, daher oft leicht negativ. 2 Nachkommastellen.
 - Header: Summe des unrealisierten PnL in `font-size-x-large`, mit `+`/`-` und Tönung.
 
-## Chart (geplant, siehe `docs/features/chart-journal.md`)
-
-Neue Tokens, bevor der Chart gebaut wird (hell und dunkel):
-
+## Chart (Stufe 1)
+Chart-Tokens angelegt in `design-tokens.css` (hell und dunkel):
 - `--color-chart-up`, `--color-chart-down` (Kerzen, abgeleitet von positive/negative)
 - `--color-chart-grid`, `--color-chart-crosshair`
-- `--color-chart-entry` (neutral), `--color-chart-stop-loss` (negative), `--color-chart-take-profit` (positive)
-- Offene Orders gestrichelt, ausgelöste/historische durchgezogen.
-- Linien-Labels: Preis + Abstand in % zum Entry.
-  Lightweight Charts bekommt die Farben zur Laufzeit aus den CSS-Variablen (bei Theme-Wechsel neu lesen).
+- `--color-chart-entry` (neutral, accent), `--color-chart-stop-loss` (negative), `--color-chart-take-profit` (positive)
+- Lightweight Charts liest Farben zur Laufzeit via `readToken()` aus CSS-Variablen.
+- **Bekannte Limitation:** Theme-Wechsel zur Laufzeit (ohne Neuladen) aktualisiert Chart-Farben nicht;
+  wird in Stufe 2 gelöst (Listener auf `prefers-color-scheme`-Wechsel).
+- Read-only Chart mit Entry-Marker, SL/TP-Linien (gestrichelt). Linien-Labels (Preis + %): Stufe 2+.
 
 ## Offene Punkte
 

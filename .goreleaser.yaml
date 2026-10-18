@@ -5,7 +5,7 @@ project_name: tip-server
 
 builds:
   - id: tip-server
-    dir: backend-go
+    dir: backend
     main: ./cmd/tip-server
     binary: tip-server
     env:

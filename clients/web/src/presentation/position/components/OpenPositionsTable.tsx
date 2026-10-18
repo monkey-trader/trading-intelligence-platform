@@ -32,6 +32,9 @@ const SIDE_LABELS: Readonly<Record<OpenPosition['side'], string>> = {
 
 type OpenPositionsTableProps = Readonly<{
   positions: readonly OpenPosition[];
+  /** Position, deren Chart gerade offen ist. */
+  selectedPositionId?: string | undefined;
+  onSelectPosition?: ((positionId: string) => void) | undefined;
 }>;
 
 /** Margin in USDT: 2 Nachkommastellen. */
@@ -45,7 +48,11 @@ const PNL_FORMAT = {
 } as const;
 
 /** Offene Positionen als Tabelle; auf schmalen Bildschirmen als Karten. */
-export function OpenPositionsTable({ positions }: OpenPositionsTableProps) {
+export function OpenPositionsTable({
+  positions,
+  selectedPositionId,
+  onSelectPosition,
+}: OpenPositionsTableProps) {
   return (
     // Zwischen 768 px und voller Tabellenbreite scrollt die Tabelle horizontal im Panel,
     // das Symbol bleibt dabei links stehen. tabIndex, damit man auch per Tastatur scrollen kann.
@@ -67,7 +74,12 @@ export function OpenPositionsTable({ positions }: OpenPositionsTableProps) {
         </thead>
         <tbody>
           {positions.map((position) => (
-            <OpenPositionRow key={`${position.positionId}-${position.side}`} position={position} />
+            <OpenPositionRow
+              key={`${position.positionId}-${position.side}`}
+              position={position}
+              isSelected={position.positionId === selectedPositionId}
+              onSelectPosition={onSelectPosition}
+            />
           ))}
         </tbody>
       </table>
@@ -75,7 +87,15 @@ export function OpenPositionsTable({ positions }: OpenPositionsTableProps) {
   );
 }
 
-function OpenPositionRow({ position }: Readonly<{ position: OpenPosition }>) {
+function OpenPositionRow({
+  position,
+  isSelected,
+  onSelectPosition,
+}: Readonly<{
+  position: OpenPosition;
+  isSelected: boolean;
+  onSelectPosition?: ((positionId: string) => void) | undefined;
+}>) {
   // Tönung passend zur Anzeige: PnL mit 2 Stellen, Verhältnis als Prozent mit 2 Stellen (= 4 Stellen).
   const profitToneClass = styles[pnlTone(position.unrealizedProfit, 2)];
   const ratioToneClass = styles[pnlTone(position.pnlRatio, 4)];
@@ -91,6 +111,15 @@ function OpenPositionRow({ position }: Readonly<{ position: OpenPosition }>) {
         className={`${styles.cell} ${styles.symbolCell}`}
       >
         {position.symbol}
+        <button
+          type="button"
+          className={styles.chartButton}
+          aria-label={`Chart ${isSelected ? 'ausblenden' : 'anzeigen'}: ${position.symbol}`}
+          aria-expanded={isSelected}
+          onClick={() => onSelectPosition?.(position.positionId)}
+        >
+          Chart
+        </button>
       </th>
       <td data-label={COLUMN_LABELS.side} className={`${styles.cell} ${sideClass}`}>
         {SIDE_LABELS[position.side]}

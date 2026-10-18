@@ -1,6 +1,6 @@
 # Migrationsplan: Backend auf Go, Desktop-App mit Wails, Auslieferung über Homebrew
 
-Status: Phase 0 bis 4 und 7 (Server) erledigt, Release automatisch über semantic-release; offen: Phase 5 (zurückgestellt) und Phase 6 (Wails)
+Status: Phase 0 bis 5 und 7 (Server) erledigt, Release automatisch über semantic-release; offen: Phase 6 (Wails)
 
 ## Aktueller Stand (2026-10-18)
 - **Erledigt:** Phase 0 bis 2d (Vertrag, Gerüst, offene Positionen, Positions-Import, SQLite/State, Income-Import).
@@ -12,10 +12,15 @@ Status: Phase 0 bis 4 und 7 (Server) erledigt, Release automatisch über semanti
 - **Phase 7 (Server):** `.goreleaser.yaml` + `.github/workflows/release.yml` (Push auf `main` → semantic-release berechnet die Version aus Conventional Commits, `feat` → minor, `fix`/`perf`/`chore`/`docs`/`refactor`/`test`/`ci`/`style` → patch, `!` oder `BREAKING CHANGE:` (bei jedem Typ, auch `chore!:`) → major; legt Tag + GitHub Release an, danach Build im selben Workflow + Formula im Tap `monkey-trader/homebrew-tap`, Secret `TAP_GITHUB_TOKEN`; Konfiguration `.releaserc.json`; Build eines bestehenden Tags erneut per `workflow_dispatch`). Keys für den Dienst in `~/.config/tip/env`. Cask `tip-app` folgt mit Phase 6.
 - **Web-UI:** wird per `go:embed` im Go-Server unter `/` ausgeliefert (Release-Build baut `clients/web` mit `VITE_API_BASE=''`); `/health`, `/positions`, `/api` bleiben API.
 - **Release (2026-10-18):** Aktuell `v0.1.5`, installiert per `brew upgrade tip-server && brew services restart tip-server` (Health-Check `http://127.0.0.1:3000/health`). Releases entstehen nur noch automatisch auf `main` (semantic-release per `npx`, Node aus `.nvmrc`, Preset `conventional-changelog-conventionalcommits@8`, weil neuere Presets Writer 9 brauchen). Regeln in `.releaserc.json`: Breaking → major, `feat` → minor, `fix`/`perf`/`chore`/`docs`/`refactor`/`test`/`ci`/`style` → patch. Tag, Build und Tap-Update laufen im selben Workflow (Tags vom `GITHUB_TOKEN` lösen keinen zweiten aus); Runner `ubuntu-24.04`. Fehlgeschlagenen Build eines Tags wiederholen: `workflow_dispatch` mit Tag.
+- **Chart Stufe 1 (2026-10-18, Branch `feature/chart-stufe-1`):** `GET /positions/{positionId}/chart` (nur offene Positionen) liefert Kerzen
+  (öffentlicher Klines-Endpunkt v3, absteigend geliefert, im Backend aufsteigend sortiert; Cache-Tabelle `candles`), Entry sowie SL/TP aus
+  `openOrders` (Zuordnung über `positionID`, 19-stellig, verlustfrei gelesen) mit `distanceRatio`. Web-UI: Chart-Button je Zeile,
+  `PositionChartPanel` mit Lightweight Charts. Gemessen: `allOrders` erlaubt nur 7-Tage-Fenster (für Stufe 3). Offen: Stufe 2 (Polling,
+  Theme-Wechsel im Chart-Adapter), Stufe 3 (geschlossene Trades, Order-Historie).
 - **Offen:** Binary-Größe messen, Sortierung der Income-Antwort gegen die echte API belegen, Homebrew/Wails (Phase 5+).
 - **Importbeginn:** Der Import startet ab dem ersten Serverstart (State `import_started_at`, `ResolveImportStart`), keine Historie, keine Vollsuche über alle Kontrakte. Bei jedem Lauf (also auch beim Start) werden die aktuell offenen Positionen als Zeile in `positions` angelegt (`close_time` 0, `fully_closed` 0), damit sie im Journal verwaltet werden können; ihre Symbole gehen in den Closed-Import. Schließt eine Position, überschreibt der Upsert dieselbe Zeile, Notizen bleiben.
 - **Zurückgestellt:** `RunFullSearch`/`RunFullSearchUntilDone` (Historie nachladen) existieren, sind aber nicht verdrahtet; später als Nutzeraktion.
-- **Parallelbetrieb:** TS- und Go-Backend laufen bewusst nebeneinander; Phase 5 (TS löschen) ist zurückgestellt.
+- **Phase 5 erledigt (2026-10-18):** Das TS-Backend ist gelöscht, `backend-go/` heißt jetzt `backend/` (Go-Modul `…/trading-intelligence-platform/backend`). Pfade `backend-go/` in den Phasen unten sind historisch. CI: ein Job `Go-Backend`, `Vertragstest` ohne Matrix (plus OpenAPI-Lint). Die alte TS-SQLite (`data/journal.sqlite`) wurde ausserhalb des Repos gesichert.
 
 ## Zielbild
 
@@ -165,7 +170,7 @@ Aufteilung in Schritte (je eigener Branch, architect → test-author → program
 - Speicherort: `~/Library/Application Support/tip/journal.db`.
 
 ## Phase 5 – Aufräumen
-- TS-Backend löschen, `backend-go/` → `backend/`.
+- TS-Backend löschen, `backend-go/` → `backend/` (**erledigt**, siehe „Aktueller Stand“).
 - `CLAUDE.md` und `.claude/agents/*` anpassen:
   Backend-Befehle `go test ./...`, `golangci-lint run`; Vitest/npm gelten nur noch fürs UI.
 - README aktualisieren.

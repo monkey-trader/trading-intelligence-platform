@@ -12,39 +12,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  backend:
-    name: Backend (Lint + Tests)
-    runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
-
-      - name: Abhängigkeiten installieren
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Formatierung prüfen
-        run: npm run format:check
-
-      - name: Tests
-        run: npm test
-
-      - name: OpenAPI-Spezifikation prüfen
-        run: npx --yes @redocly/cli@2.64.1 lint ../docs/openapi.yaml
-
   web:
     name: Web-Client (Lint + Tests + Build)
     runs-on: ubuntu-24.04
@@ -88,20 +55,20 @@ jobs:
       - name: Build
         run: npm run build
 
-  backend-go:
+  backend:
     name: Go-Backend (Format + Vet + Lint + Tests + Build)
     runs-on: ubuntu-24.04
     defaults:
       run:
-        working-directory: backend-go
+        working-directory: backend
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-go@v7
         with:
-          go-version-file: backend-go/go.mod
+          go-version-file: backend/go.mod
           # Kein go.sum (nur Standardbibliothek): Cache-Schlüssel aus go.mod.
-          cache-dependency-path: backend-go/go.mod
+          cache-dependency-path: backend/go.mod
 
       - name: Formatierung prüfen
         run: |
@@ -119,7 +86,7 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.15.0
-          working-directory: backend-go
+          working-directory: backend
 
       - name: Tests
         run: go test -race ./...
@@ -128,12 +95,8 @@ jobs:
         run: go build ./...
 
   contract:
-    name: Vertragstest (${{ matrix.backend }})
+    name: Vertragstest
     runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        backend: [ts, go]
     env:
       SERVER_LOG: ${{ github.workspace }}/backend-server.log
     steps:
@@ -143,50 +106,37 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: |
-            backend/package-lock.json
-            contract-tests/package-lock.json
+          cache-dependency-path: contract-tests/package-lock.json
 
-      - name: TS-Backend installieren und bauen
-        if: matrix.backend == 'ts'
-        working-directory: backend
-        run: |
-          npm ci
-          npm run build
+      - name: OpenAPI-Spezifikation prüfen
+        run: npx --yes @redocly/cli@2.64.1 lint docs/openapi.yaml
 
       - uses: actions/setup-go@v7
-        if: matrix.backend == 'go'
         with:
-          go-version-file: backend-go/go.mod
-          cache-dependency-path: backend-go/go.mod
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.mod
 
       - name: Go-Backend bauen
-        if: matrix.backend == 'go'
-        working-directory: backend-go
+        working-directory: backend
         run: go build -o tip-server ./cmd/tip-server
 
       - name: Backend ohne BingX-Keys starten
         env:
-          BACKEND: ${{ matrix.backend }}
           PORT: '3000'
           HOST: 127.0.0.1
           # Explizit leer: GET /positions/open muss 503 not-configured liefern.
           BX_KEY: ''
           BX_SECRET: ''
         run: |
-          if [ "$BACKEND" = "ts" ]; then
-            (cd backend && nohup node dist/main.js > "$SERVER_LOG" 2>&1 &)
-          else
-            (cd backend-go && nohup ./tip-server > "$SERVER_LOG" 2>&1 &)
-          fi
+          (cd backend && nohup ./tip-server > "$SERVER_LOG" 2>&1 &)
           for attempt in $(seq 1 30); do
             if curl -sf http://127.0.0.1:3000/health > /dev/null; then
-              echo "Backend ($BACKEND) läuft nach ${attempt} Versuch(en)."
+              echo "Backend läuft nach ${attempt} Versuch(en)."
               exit 0
             fi
             sleep 1
           done
-          echo "Backend ($BACKEND) hat /health nicht innerhalb von 30 s beantwortet."
+          echo "Backend hat /health nicht innerhalb von 30 s beantwortet."
           cat "$SERVER_LOG"
           exit 1
 

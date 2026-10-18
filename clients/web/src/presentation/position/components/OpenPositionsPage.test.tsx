@@ -1,6 +1,9 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import type { PositionChartGateway } from '@/domain/position/PositionChartGateway';
+import { xagLongChart } from '@/test/fixtures/positionChart';
+import { createFakeChartRenderer } from '@/test/fakes/fakeChartRenderer';
 import type { OpenPositionsGateway } from '@/domain/position/OpenPositionsGateway';
 import type { OpenPositionsResult } from '@/domain/position/OpenPositionsResult';
 import { emptySnapshot, sampleSnapshot } from '@/test/fixtures/openPositions';
@@ -125,5 +128,87 @@ describe('OpenPositionsPage', () => {
 
     expect(await screen.findByText('Keine offenen Positionen.')).toBeInTheDocument();
     expect(fetchOpenPositions).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('OpenPositionsPage: Chart-Ansicht', () => {
+  function renderWithChart() {
+    const { gateway } = createSequenceGateway({ kind: 'ok', snapshot: sampleSnapshot });
+    const fetchChart = vi.fn<PositionChartGateway['fetchChart']>().mockResolvedValue({
+      kind: 'ok',
+      chart: xagLongChart,
+    });
+    const renderer = createFakeChartRenderer();
+    render(
+      <OpenPositionsPage
+        gateway={gateway}
+        chartGateway={{ fetchChart }}
+        createChartRenderer={() => renderer}
+      />,
+    );
+    return { fetchChart, renderer };
+  }
+
+  it('zeigt anfangs kein Chart-Panel', async () => {
+    renderWithChart();
+    await screen.findByRole('table', { name: /offene positionen/i });
+
+    expect(screen.queryByRole('heading', { name: /NCCOXAG2USD-USDT/ })).not.toBeInTheDocument();
+  });
+
+  it('zeigt nach Klick auf Chart das Panel unterhalb der Tabelle und lädt die gewählte Position', async () => {
+    const user = userEvent.setup();
+    const { fetchChart } = renderWithChart();
+    const table = await screen.findByRole('table', { name: /offene positionen/i });
+
+    await user.click(screen.getByRole('button', { name: /chart.*SUI-USDT/i }));
+
+    const heading = await screen.findByRole('heading', { name: /NCCOXAG2USD-USDT/ });
+    expect(fetchChart).toHaveBeenCalledWith(
+      sampleSnapshot.positions.find((position) => position.symbol === 'SUI-USDT')?.positionId,
+      '15m',
+      300,
+      expect.any(AbortSignal),
+    );
+    expect(table.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('blendet das Panel bei erneutem Klick auf denselben Button aus und räumt auf', async () => {
+    const user = userEvent.setup();
+    const { renderer } = renderWithChart();
+    await screen.findByRole('table', { name: /offene positionen/i });
+    const chartButton = screen.getByRole('button', { name: /chart.*SUI-USDT/i });
+    await user.click(chartButton);
+    await screen.findByRole('heading', { name: /NCCOXAG2USD-USDT/ });
+
+    await user.click(screen.getByRole('button', { name: /chart.*SUI-USDT/i }));
+
+    expect(screen.queryByRole('heading', { name: /NCCOXAG2USD-USDT/ })).not.toBeInTheDocument();
+    expect(renderer.destroy).toHaveBeenCalled();
+  });
+
+  it('blendet das Panel über Schließen aus', async () => {
+    const user = userEvent.setup();
+    renderWithChart();
+    await screen.findByRole('table', { name: /offene positionen/i });
+    await user.click(screen.getByRole('button', { name: /chart.*SUI-USDT/i }));
+    await screen.findByRole('heading', { name: /NCCOXAG2USD-USDT/ });
+
+    await user.click(screen.getByRole('button', { name: /schließen/i }));
+
+    expect(screen.queryByRole('heading', { name: /NCCOXAG2USD-USDT/ })).not.toBeInTheDocument();
+  });
+
+  it('wechselt beim Klick auf eine andere Position das Chart, ohne zwei Panels zu zeigen', async () => {
+    const user = userEvent.setup();
+    const { fetchChart } = renderWithChart();
+    await screen.findByRole('table', { name: /offene positionen/i });
+    await user.click(screen.getByRole('button', { name: /chart.*SUI-USDT/i }));
+    await screen.findByRole('heading', { name: /NCCOXAG2USD-USDT/ });
+
+    await user.click(screen.getByRole('button', { name: /chart.*NCCOGOLD2USD-USDT/i }));
+
+    await vi.waitFor(() => expect(fetchChart).toHaveBeenCalledTimes(2));
+    expect(screen.getAllByRole('heading', { name: /NCCOXAG2USD-USDT/ })).toHaveLength(1);
   });
 });

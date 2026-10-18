@@ -138,7 +138,7 @@ und startet die erste Indexierung. Mit `--claude` ergänzt es zusätzlich diesen
 ## Code finden (repo-rag)
 Bevor du Ordner durchsuchst oder Dateien breit liest:
 `repo-rag search --files-only "<konkrete englische Frage mit Code-Begriffen>"`
-Lies danach nur die gefundenen Dateien/Zeilen. Optional `--path backend-go` zum Eingrenzen.
+Lies danach nur die gefundenen Dateien/Zeilen. Optional `--path backend` zum Eingrenzen.
 Nach grösseren Änderungen: `repo-rag index`.
 
 ## Token-Sparen: lokales Modell
@@ -155,7 +155,7 @@ Nicht delegieren: Architektur, Strategielogik, Risk Engine, Exchange-Integration
 ```bash
 # Suchen (Begriffe verwenden, die im Code vorkommen)
 repo-rag search --files-only "fetch open positions from bingx api"
-repo-rag search -k 5 --path backend-go "risk limit"
+repo-rag search -k 5 --path backend "risk limit"
 repo-rag stats
 
 # Lokales Modell

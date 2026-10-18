@@ -31,7 +31,7 @@ Das UI braucht ein laufendes Backend auf http://127.0.0.1:3000. Es läuft also i
 
 ```bash
 # Terminal 1: Backend (siehe ../../backend/README.md)
-cd ../../backend && npm run dev
+cd ../../backend && go run ./cmd/tip-server
 
 # Terminal 2: Web-UI
 npm run dev

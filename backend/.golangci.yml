@@ -1,0 +1,65 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - govet
+    - errcheck
+    - staticcheck
+    - revive
+    - unused
+    - ineffassign
+    - depguard
+  settings:
+    depguard:
+      # Onion-Architektur: Abhängigkeiten zeigen immer nach innen zum Domain-Kern.
+      rules:
+        domain:
+          list-mode: lax
+          files:
+            - "**/internal/domain/**"
+          deny:
+            - pkg: github.com/monkey-trader/trading-intelligence-platform/backend/internal/application
+              desc: Der Domain-Kern hängt nicht von der Application-Schicht ab.
+            - pkg: github.com/monkey-trader/trading-intelligence-platform/backend/internal/infrastructure
+              desc: Der Domain-Kern hängt nicht von der Infrastruktur ab.
+            - pkg: github.com/monkey-trader/trading-intelligence-platform/backend/internal/presentation
+              desc: Der Domain-Kern hängt nicht von der Präsentation ab.
+            - pkg: net/http
+              desc: HTTP gehört in Infrastruktur oder Präsentation.
+            - pkg: database/sql
+              desc: Datenbankzugriff gehört in die Infrastruktur.
+        application:
+          list-mode: lax
+          files:
+            - "**/internal/application/**"
+          deny:
+            - pkg: github.com/monkey-trader/trading-intelligence-platform/backend/internal/infrastructure
+              desc: Use Cases bekommen Ports injiziert und kennen die Infrastruktur nicht.
+            - pkg: github.com/monkey-trader/trading-intelligence-platform/backend/internal/presentation
+              desc: Use Cases kennen die Präsentation nicht.
+            - pkg: net/http
+              desc: HTTP gehört in Infrastruktur oder Präsentation.
+            - pkg: database/sql
+              desc: Datenbankzugriff gehört in die Infrastruktur.
+        presentation:
+          list-mode: lax
+          files:
+            - "**/internal/presentation/**"
+          deny:
+            - pkg: github.com/monkey-trader/trading-intelligence-platform/backend/internal/infrastructure
+              desc: Die Präsentation spricht über Use Cases, nicht direkt mit der Infrastruktur.
+            - pkg: database/sql
+              desc: Datenbankzugriff gehört in die Infrastruktur.
+  exclusions:
+    rules:
+      # Gewollte Fachnamen im Positions-Kern (Zuschnitt Phase 2a): PositionDomainError, PositionID,
+      # PositionSide. Sie entsprechen den TS-Namen und sind ohne Paketpräfix eindeutiger.
+      - path: internal/domain/position/
+        linters:
+          - revive
+        text: "exported: type name will be used as position\\.Position.* by other packages, and that stutters"
+
+formatters:
+  enable:
+    - gofmt

@@ -77,6 +77,71 @@ paths:
           $ref: '#/components/responses/Problem'
         '504':
           $ref: '#/components/responses/Problem'
+  /positions/{positionId}/chart:
+    get:
+      operationId: getPositionChart
+      summary: Kerzen-Chart einer offenen Position mit Entry, Stop-Loss und Take-Profit
+      description: >-
+        Liefert die letzten `limit` Kerzen des Symbols (öffentlicher BingX-Klines-Endpunkt, im Backend
+        in SQLite zwischengespeichert) sowie Entry, Stop-Loss- und Take-Profit-Linien der Position.
+        SL und TP stammen aus den offenen BingX-Orders (`STOP_MARKET`, `TAKE_PROFIT_MARKET`), die über
+        die `positionId` zugeordnet werden. Mehrere Teil-TPs und -SLs sind möglich, ohne SL/TP sind die
+        Listen leer. Nur lesend. Orders werden bis zu 5 s zwischengespeichert, `fetchedAt` nennt das
+        Alter. Stufe 1 gilt nur für aktuell offene Positionen; unbekannte oder geschlossene `positionId`
+        liefert 404.
+      tags:
+        - Positionen
+      parameters:
+        - name: positionId
+          in: path
+          required: true
+          description: BingX-Positions-ID (19-stellig, immer String).
+          schema:
+            type: string
+            pattern: '^\d{1,20}$'
+        - name: interval
+          in: query
+          required: false
+          description: Kerzenintervall.
+          schema:
+            type: string
+            enum:
+              - 5m
+              - 15m
+              - 1h
+              - 4h
+              - 1d
+            default: 15m
+        - name: limit
+          in: query
+          required: false
+          description: Anzahl der letzten Kerzen (BingX erlaubt höchstens 1000 pro Abfrage).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 300
+      responses:
+        '200':
+          description: Chart-Daten der Position.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PositionChart'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+        '502':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
+        '504':
+          $ref: '#/components/responses/Problem'
 tags:
   - name: System
     description: Betriebliche Endpunkte
@@ -234,3 +299,137 @@ components:
         updateTime:
           type: integer
           description: Letzte Änderung in Epoch-Millisekunden.
+    PositionChart:
+      type: object
+      additionalProperties: false
+      required:
+        - positionId
+        - symbol
+        - side
+        - interval
+        - candles
+        - entry
+        - stopLoss
+        - takeProfit
+        - markers
+        - fetchedAt
+      properties:
+        positionId:
+          type: string
+        symbol:
+          type: string
+          example: SUI-USDT
+        side:
+          type: string
+          enum:
+            - LONG
+            - SHORT
+        interval:
+          type: string
+          enum:
+            - 5m
+            - 15m
+            - 1h
+            - 4h
+            - 1d
+        candles:
+          type: array
+          description: Aufsteigend nach `time` sortiert (BingX liefert absteigend), ohne Duplikate.
+          items:
+            $ref: '#/components/schemas/Candle'
+        entry:
+          $ref: '#/components/schemas/EntryLevel'
+        stopLoss:
+          type: array
+          description: Offene Stop-Loss-Orders der Position, leer wenn keine gesetzt ist.
+          items:
+            $ref: '#/components/schemas/ProtectiveOrder'
+        takeProfit:
+          type: array
+          description: Offene Take-Profit-Orders der Position (Teil-TPs einzeln), leer wenn keine gesetzt ist.
+          items:
+            $ref: '#/components/schemas/ProtectiveOrder'
+        markers:
+          type: array
+          description: Ereignisse auf der Zeitachse. In Stufe 1 nur der Einstieg.
+          items:
+            $ref: '#/components/schemas/ChartMarker'
+        fetchedAt:
+          type: integer
+          description: Zeitpunkt der Abfrage der Orders bei BingX in Epoch-Millisekunden.
+    Candle:
+      type: object
+      additionalProperties: false
+      required:
+        - time
+        - open
+        - high
+        - low
+        - close
+        - volume
+      properties:
+        time:
+          type: integer
+          description: Beginn der Kerze in Epoch-Millisekunden.
+        open:
+          $ref: '#/components/schemas/Decimal'
+        high:
+          $ref: '#/components/schemas/Decimal'
+        low:
+          $ref: '#/components/schemas/Decimal'
+        close:
+          $ref: '#/components/schemas/Decimal'
+        volume:
+          $ref: '#/components/schemas/Decimal'
+    EntryLevel:
+      type: object
+      additionalProperties: false
+      required:
+        - price
+        - time
+      properties:
+        price:
+          $ref: '#/components/schemas/Decimal'
+          description: Durchschnittlicher Einstiegspreis der Position.
+        time:
+          type: integer
+          description: Eröffnung der Position in Epoch-Millisekunden.
+    ProtectiveOrder:
+      type: object
+      additionalProperties: false
+      required:
+        - orderId
+        - triggerPrice
+        - quantity
+        - distanceRatio
+      properties:
+        orderId:
+          type: string
+          description: BingX-Order-ID (19-stellig, immer String, nie als Zahl parsen).
+        triggerPrice:
+          $ref: '#/components/schemas/Decimal'
+          description: Auslösepreis (`stopPrice` bei BingX).
+        quantity:
+          $ref: '#/components/schemas/Decimal'
+        distanceRatio:
+          $ref: '#/components/schemas/Decimal'
+          description: >-
+            Abstand des Auslösepreises zum Entry relativ zum Entry, 8 Nachkommastellen, vorzeichenbehaftet
+            (-0.075 = 7.5 % unter dem Entry, +0.25 = 25 % darüber).
+    ChartMarker:
+      type: object
+      additionalProperties: false
+      required:
+        - time
+        - kind
+        - price
+      properties:
+        time:
+          type: integer
+          description: Zeitpunkt in Epoch-Millisekunden.
+        kind:
+          type: string
+          enum:
+            - ENTRY
+        price:
+          $ref: '#/components/schemas/Decimal'
