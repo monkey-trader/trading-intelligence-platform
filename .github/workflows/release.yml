@@ -31,5 +31,5 @@ jobs:
           args: ${{ startsWith(github.ref, 'refs/tags/') && 'release --clean' || 'release --snapshot --skip=publish --clean' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Fine-grained PAT mit Contents: write auf c3sm/homebrew-tap
+          # Fine-grained PAT mit Contents: write auf monkey-trader/homebrew-tap
           TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}

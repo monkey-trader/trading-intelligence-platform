@@ -30,7 +30,7 @@ changelog:
 brews:
   - name: tip-server
     repository:
-      owner: c3sm
+      owner: monkey-trader
       name: homebrew-tap
       token: "{{ .Env.TAP_GITHUB_TOKEN }}"
     homepage: https://github.com/monkey-trader/trading-intelligence-platform
