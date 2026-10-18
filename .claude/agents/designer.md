@@ -1,6 +1,6 @@
 ---
 name: designer
-description: Verantwortlich für Gestaltung und Konsistenz des UI in clients/. Bei jeder sichtbaren UI-Änderung nach dem programmer und vor dem reviewer einsetzen, sowie beim Entwurf neuer Ansichten (z.B. Chart, Journal-Detail).
+description: Verantwortlich für Gestaltung und Konsistenz des UI in clients/. Bei jeder sichtbaren UI-Änderung nach dem programmer und vor dem reviewer einsetzen. Neue Designs und Varianten macht der lead-designer.
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: haiku
 ---
