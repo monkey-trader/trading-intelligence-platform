@@ -4,11 +4,13 @@ Quelle der Wahrheit für das UI. Der `designer`-Agent hält dieses Dokument aktu
 Stand: beschreibt den **bestehenden** Web-Client (`clients/web`) plus die Zielrichtung.
 
 ## Leitidee
+
 Ein ruhiges, dichtes Trading-Journal: viele Zahlen auf einen Blick, klare Hierarchie,
 Gewinn/Verlust sofort erkennbar. Inspiration: professionelle Trading-Apps (dunkel, aufgeräumt,
 panelbasiert) – eigener Look, keine Kopie fremder Marken oder Logos.
 
 ## Grundregeln
+
 1. **Nur Design-Tokens.** Komponenten verwenden ausschließlich Variablen aus
    `clients/web/src/styles/design-tokens.css`. Erlaubte Ausnahmen: `1px`-Rahmen, `2px`-Fokusrahmen,
    Breakpoints in Media Queries (CSS erlaubt dort keine Variablen).
@@ -22,32 +24,36 @@ panelbasiert) – eigener Look, keine Kopie fremder Marken oder Logos.
    Dunkel ist die primäre Zielansicht; hell muss trotzdem sauber funktionieren.
 
 ## Farben (Tokens)
-| Token | Zweck |
-|---|---|
-| `--color-background` | Seitenhintergrund |
-| `--color-surface` | Panels, Karten, Tabellen |
-| `--color-surface-raised` | hervorgehobene Flächen |
-| `--color-border` | Rahmen, Trennlinien |
-| `--color-text` / `--color-text-muted` | Text / Labels, Metadaten |
-| `--color-accent` | Aktionen, Links, Fokus |
+
+| Token                                   | Zweck                          |
+| --------------------------------------- | ------------------------------ |
+| `--color-background`                    | Seitenhintergrund              |
+| `--color-surface`                       | Panels, Karten, Tabellen       |
+| `--color-surface-raised`                | hervorgehobene Flächen         |
+| `--color-border`                        | Rahmen, Trennlinien            |
+| `--color-text` / `--color-text-muted`   | Text / Labels, Metadaten       |
+| `--color-accent`                        | Aktionen, Links, Fokus         |
 | `--color-positive` / `--color-negative` | Gewinn / Verlust, Long / Short |
-| `--color-warning` (+ `-surface`) | veraltete Daten, Hinweise |
-| `--color-negative-surface` | Fehlerpanels |
+| `--color-warning` (+ `-surface`)        | veraltete Daten, Hinweise      |
+| `--color-negative-surface`              | Fehlerpanels                   |
 
 Kontrast: Text mindestens 4.5:1 (WCAG AA) in beiden Themes.
 
 ## Abstände, Radien, Schatten
+
 - Abstände: `--space-1` (4) bis `--space-6` (32), 4er-Raster.
 - Radien: `--radius-small` (Buttons, Hinweise), `--radius-medium` (Panels, Karten).
 - Schatten: nur `--shadow-card`.
 
 ## Typografie
+
 - Schrift: System-Schrift (`--font-family-base`).
 - Größen: `--font-size-small` (Labels), `-base` (Text), `-large` (Titel, Symbol in Karten),
   `-x-large` (Kennzahl im Header, z.B. Gesamt-PnL).
 - Gewichte: `regular` und `strong`, keine weiteren.
 
 ## Zahlen
+
 - Immer `font-variant-numeric: tabular-nums`, in Tabellen rechtsbündig.
 - Formatierung nur über die Formatter in `presentation/*/format/`:
   - Locale **de-CH** (`1'234.5`), exakt mit Dezimal-Strings, nie über `Number`.
@@ -64,18 +70,21 @@ Kontrast: Text mindestens 4.5:1 (WCAG AA) in beiden Themes.
 - Tönung über `pnlTone`: Ein Wert, der gerundet 0 ist, ist neutral (kein rotes `0.00`).
 
 ## Bausteine
-| Baustein | Aussehen |
-|---|---|
-| Panel / Karte | `surface`, 1px `border`, `radius-medium`, `shadow-card` |
-| Tabelle | Panel (s.o.) als Scroll-Container; Kopfzeile `text-muted` + `font-size-small`; Zahlen rechtsbündig; Symbol links, fett und sticky |
-| Primär-Button | `accent`-Hintergrund, Text in `surface`, `radius-small`, `focus-visible`-Rahmen |
-| Fehler | `negative-surface`, Rahmen und Text `negative`, mit Retry-Button |
-| Veraltet-Hinweis | `warning-surface`, Rahmen und Text `warning`, `font-size-small` |
-| Long / Short | Text "Long"/"Short", fett, in `positive`/`negative` |
+
+| Baustein         | Aussehen                                                                                                                          |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Panel / Karte    | `surface`, 1px `border`, `radius-medium`, `shadow-card`                                                                           |
+| Tabelle          | Panel (s.o.) als Scroll-Container; Kopfzeile `text-muted` + `font-size-small`; Zahlen rechtsbündig; Symbol links, fett und sticky |
+| Primär-Button    | `accent`-Hintergrund, Text in `surface`, `radius-small`, `focus-visible`-Rahmen                                                   |
+| Fehler           | `negative-surface`, Rahmen und Text `negative`, mit Retry-Button                                                                  |
+| Veraltet-Hinweis | `warning-surface`, Rahmen und Text `warning`, `font-size-small`                                                                   |
+| Long / Short     | Text "Long"/"Short", fett, in `positive`/`negative`                                                                               |
 
 ## Ansicht: Offene Positionen
+
 Spalten in dieser Reihenfolge: Symbol, Seite, Menge, Einstieg, Mark, Hebel, Unreal. PnL, PnL %,
 Real. PnL, Liq.-Preis, Liq.-Abstand, Eröffnet.
+
 - **Unreal. PnL**, **PnL %**, **Real. PnL**: mit `+`/`-`, getönt über `pnlTone` (PnL auf 2 Stellen,
   PnL % auf 4 Stellen des Verhältnisses = 2 Prozent-Stellen).
 - **Real. PnL** (`realisedProfit`): bereits realisierter Anteil der offenen Position. Nach den echten Daten
@@ -93,6 +102,7 @@ Chart-Tokens angelegt in `design-tokens.css` (hell und dunkel):
 - Read-only Chart mit Entry-Marker, SL/TP-Linien (gestrichelt). Linien-Labels (Preis + %): Stufe 2+.
 
 ## Offene Punkte
+
 - **Seitenbreite `max-width: 1280px`:** Für eine Desktop-App mit mehreren Panels (Chart,
   Positionen, Historie) eher volle Breite mit Panel-Layout. Entscheiden, wenn der Chart kommt.
 - **Breakpoint 768 px** steht in drei Media Queries (`OpenPositionsHeader`, `OpenPositionsPage`,
@@ -117,3 +127,15 @@ Chart-Tokens angelegt in `design-tokens.css` (hell und dunkel):
     ("Offene Positionen") sind fast gleich; Screenreader nennen es doppelt. Container besser
     "Tabelle offene Positionen, scrollbar" nennen.
   - Die Grenze "ca. 1'280 px", ab der die Tabelle ohne Scrollen passt, ist nicht gemessen.
+
+## Design: Pro (Kraken-Stil)
+
+Seriös, tiefes Indigo/Violett (dunkel bevorzugt, hell unterstützt), gedämpfter Violett-Akzent,
+Radien 6/8 px, Borders statt Schatten, Seitenbreite 1360 px. Tabellenkopf auf
+`--color-surface-raised`, Sticky-Spalte opak auf `--color-surface`.
+
+- Tokens: siehe `design-tokens.css`; zusätzlich `--layout-max-width`, `--panel-radius`,
+  `--table-cell-padding-block/-inline`, `--font-family-numeric`, `--color-on-accent`,
+  `--color-positive-surface`.
+- Kontrast: alle Text-Paare rechnerisch >= 4.5:1, hell (min. 4.82) und dunkel (min. 5.6).
+- Die früheren Design-Lab-Varianten (Terminal, Clean, Exchange) wurden verworfen.

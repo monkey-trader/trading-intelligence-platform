@@ -3,27 +3,29 @@
   color-scheme: light dark;
 
   /* Farben, hell */
-  --color-background: #f5f7fa;
+  --color-background: #f3f2f8;
   --color-surface: #ffffff;
-  --color-surface-raised: #eef1f5;
-  --color-border: #d9dee5;
-  --color-text: #17202a;
-  --color-text-muted: #5f6b76;
-  --color-accent: #0b7fab;
-  --color-positive: #0b7a45; /* Kontrast ≥ 4.5:1 auf Weiß (WCAG AA) */
-  --color-negative: #c8372d;
-  --color-warning: #a35f00;
-  --color-warning-surface: #fff4e0;
-  --color-negative-surface: #fdecea;
+  --color-surface-raised: #ebeaf4;
+  --color-border: #d6d3e6;
+  --color-text: #1c1a2e;
+  --color-text-muted: #5a5775;
+  --color-accent: #5b3fc4;
+  --color-positive: #0a7040; /* Kontrast ≥ 4.5:1 auf Weiß (WCAG AA) */
+  --color-negative: #bf2d3a;
+  --color-warning: #8a4f00;
+  --color-warning-surface: #fff3de;
+  --color-negative-surface: #fbe8ea;
+  --color-positive-surface: #e2f2e9;
+  --color-on-accent: #ffffff; /* Text auf accent-Flächen (Buttons) */
 
   /* Chart-Farben (hell), abgeleitet von positive/negative */
-  --color-chart-up: #0b7a45;
-  --color-chart-down: #c8372d;
-  --color-chart-grid: #d9dee5;
-  --color-chart-crosshair: #0b7fab;
-  --color-chart-entry: #0b7fab;
-  --color-chart-stop-loss: #c8372d;
-  --color-chart-take-profit: #0b7a45;
+  --color-chart-up: #0a7040;
+  --color-chart-down: #bf2d3a;
+  --color-chart-grid: #d6d3e6;
+  --color-chart-crosshair: #5b3fc4;
+  --color-chart-entry: #5b3fc4;
+  --color-chart-stop-loss: #bf2d3a;
+  --color-chart-take-profit: #0a7040;
 
   /* Abstände */
   --space-1: 4px;
@@ -35,7 +37,7 @@
 
   /* Radien */
   --radius-small: 6px;
-  --radius-medium: 10px;
+  --radius-medium: 8px;
 
   /* Schrift */
   --font-family-base:
@@ -52,33 +54,52 @@
      Jede Media Query mit 768px trägt einen Kommentar "--breakpoint-table": grep findet alle Stellen. */
   --breakpoint-table: 768px;
 
-  --shadow-card: 0 1px 3px rgba(15, 23, 32, 0.08);
+  --shadow-card: none;
+
+  /* Layout und Dichte  */
+  --layout-max-width: 1360px;
+  --panel-radius: var(--radius-medium);
+  --table-cell-padding-block: var(--space-3);
+  --table-cell-padding-inline: var(--space-3);
+  --font-family-numeric: var(--font-family-base);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-background: #0b0f14;
-    --color-surface: #111922;
-    --color-surface-raised: #17212c;
-    --color-border: #24313e;
-    --color-text: #e6eef8;
-    --color-text-muted: #8b98a3;
-    --color-accent: #3cc3e6;
-    --color-positive: #58d68d;
-    --color-negative: #ff6b6b;
-    --color-warning: #f5b452;
-    --color-warning-surface: #2e2410;
-    --color-negative-surface: #321717;
+    --color-background: #120f24;
+    --color-surface: #1a1633;
+    --color-surface-raised: #231e43;
+    --color-border: #342e5c;
+    --color-text: #ebe9f7;
+    --color-text-muted: #a29fc4;
+    --color-accent: #a592f5;
+    --color-positive: #4cc790;
+    --color-negative: #f2727f;
+    --color-warning: #e8b45f;
+    --color-warning-surface: #2c2414;
+    --color-negative-surface: #35172a;
+    --color-positive-surface: #123027;
+
+    --color-on-accent: #120f24;
 
     /* Chart-Farben (dunkel), abgeleitet von positive/negative */
-    --color-chart-up: #58d68d;
-    --color-chart-down: #ff6b6b;
-    --color-chart-grid: #24313e;
-    --color-chart-crosshair: #3cc3e6;
-    --color-chart-entry: #3cc3e6;
-    --color-chart-stop-loss: #ff6b6b;
-    --color-chart-take-profit: #58d68d;
+    --color-chart-up: #4cc790;
+    --color-chart-down: #f2727f;
+    --color-chart-grid: #342e5c;
+    --color-chart-crosshair: #a592f5;
+    --color-chart-entry: #a592f5;
+    --color-chart-stop-loss: #f2727f;
+    --color-chart-take-profit: #4cc790;
+  }
+}
 
-    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.5);
+@media (min-width: 768px) {
+  /* --breakpoint-table */
+  thead th {
+    background: var(--color-surface-raised);
+  }
+
+  tbody tr > th {
+    background: var(--color-surface);
   }
 }
