@@ -84,3 +84,29 @@ func (*InvalidPositionSideError) positionDomainError()            {}
 func (*InvalidTradingSymbolError) positionDomainError()           {}
 func (*UpdateBeforeOpenError) positionDomainError()               {}
 func (*SuspiciousEmptyPositionHistoryError) positionDomainError() {}
+
+// QueryRangeTooLargeError meldet: Der Abfragebereich ist größer als 89 Tage.
+type QueryRangeTooLargeError struct {
+	From int64
+	To   int64
+}
+
+// PageLimitExceededError meldet: Das Seitenlimit einer Abfrage wurde erreicht.
+type PageLimitExceededError struct {
+	Symbol string
+	From   int64
+	To     int64
+	Pages  int
+}
+
+func (err *QueryRangeTooLargeError) Error() string {
+	return fmt.Sprintf("Abfragebereich %d–%d ist größer als %d Tage.", err.From, err.To, int(MaxQueryRange.Hours()/24))
+}
+
+func (err *PageLimitExceededError) Error() string {
+	return fmt.Sprintf("Seitenlimit erreicht: %d Seiten für %s von %d bis %d, abgebrochen.",
+		err.Pages, err.Symbol, err.From, err.To)
+}
+
+func (*QueryRangeTooLargeError) positionDomainError() {}
+func (*PageLimitExceededError) positionDomainError()  {}

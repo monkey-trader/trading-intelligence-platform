@@ -67,3 +67,25 @@ func (lookup *IncomeLookup) HasIncomeForSymbol(ctx context.Context, symbol strin
 	}
 	return exists, nil
 }
+
+// ListIncomeSymbols liefert die Symbole mit REALIZED_PNL (eindeutig, sortiert).
+func (repo *IncomeRepository) ListIncomeSymbols(ctx context.Context) ([]string, error) {
+	rows, err := repo.db.QueryContext(ctx,
+		`SELECT DISTINCT symbol FROM income WHERE income_type = 'REALIZED_PNL' ORDER BY symbol`)
+	if err != nil {
+		return nil, fmt.Errorf("income-symbole lesen: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	symbols := []string{}
+	for rows.Next() {
+		var symbol string
+		if err := rows.Scan(&symbol); err != nil {
+			return nil, fmt.Errorf("income-symbol lesen: %w", err)
+		}
+		symbols = append(symbols, symbol)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("income-symbole lesen: %w", err)
+	}
+	return symbols, nil
+}

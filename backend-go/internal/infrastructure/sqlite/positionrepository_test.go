@@ -132,3 +132,85 @@ func TestUpsert_AbgebrochenerKontextLiefertFehler(t *testing.T) {
 		t.Fatal("Fehler erwartet")
 	}
 }
+
+func TestUpsertBatch_SpeichertAlleUndIstIdempotent(t *testing.T) {
+	db := openMemory(t)
+	now := time.UnixMilli(1_800_000_000_000)
+	repo := NewPositionRepository(db, fixedClock(&now))
+	first, second := samplePosition(), samplePosition()
+	second.PositionID = "1234567890123456790"
+	batch := []position.ClosedPosition{first, second, first} // Duplikat im Batch
+	for run := 1; run <= 2; run++ {
+		if err := repo.UpsertClosedPositionBatch(context.Background(), batch); err != nil {
+			t.Fatalf("Lauf %d: %v", run, err)
+		}
+	}
+	var count int
+	_ = db.QueryRow(`SELECT COUNT(*) FROM positions`).Scan(&count)
+	if count != 2 {
+		t.Errorf("Zeilen = %d, erwartet 2", count)
+	}
+}
+
+func TestUpsertBatch_LeerIstOk(t *testing.T) {
+	now := time.UnixMilli(1)
+	repo := NewPositionRepository(openMemory(t), fixedClock(&now))
+	if err := repo.UpsertClosedPositionBatch(context.Background(), nil); err != nil {
+		t.Errorf("err = %v", err)
+	}
+}
+
+func TestUpsertBatch_RollbackBeiFehler(t *testing.T) {
+	db := openMemory(t)
+	if _, err := db.Exec(`CREATE TRIGGER fail_bad BEFORE INSERT ON positions WHEN NEW.position_id = '999' BEGIN SELECT RAISE(ABORT, 'bad'); END`); err != nil {
+		t.Fatal(err)
+	}
+	now := time.UnixMilli(1)
+	repo := NewPositionRepository(db, fixedClock(&now))
+	bad := samplePosition()
+	bad.PositionID = "999"
+	err := repo.UpsertClosedPositionBatch(context.Background(), []position.ClosedPosition{samplePosition(), bad})
+	if err == nil {
+		t.Fatal("Fehler erwartet")
+	}
+	var count int
+	_ = db.QueryRow(`SELECT COUNT(*) FROM positions`).Scan(&count)
+	if count != 0 {
+		t.Errorf("%d Zeilen übrig, Rollback erwartet", count)
+	}
+}
+
+func TestUpsertBatch_LaesstNotesUnberuehrt(t *testing.T) {
+	db := openMemory(t)
+	now := time.UnixMilli(1_800_000_000_000)
+	repo := NewPositionRepository(db, fixedClock(&now))
+	input := samplePosition()
+	if err := repo.UpsertClosedPositionBatch(context.Background(), []position.ClosedPosition{input}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO notes (position_id, setup, rating, mistakes, notes, updated_at) VALUES (?, 'Breakout', 4, 'zu früh', 'Text', 42)`, input.PositionID); err != nil {
+		t.Fatal(err)
+	}
+	input.NetProfit = "5"
+	if err := repo.UpsertClosedPositionBatch(context.Background(), []position.ClosedPosition{input}); err != nil {
+		t.Fatal(err)
+	}
+	var setup, text string
+	var rating, updatedAt int
+	if err := db.QueryRow(`SELECT setup, rating, notes, updated_at FROM notes`).Scan(&setup, &rating, &text, &updatedAt); err != nil {
+		t.Fatal(err)
+	}
+	if setup != "Breakout" || rating != 4 || text != "Text" || updatedAt != 42 {
+		t.Errorf("notes verändert: %s %d %s %d", setup, rating, text, updatedAt)
+	}
+}
+
+func TestUpsertBatch_AbgebrochenerKontext(t *testing.T) {
+	now := time.UnixMilli(1)
+	repo := NewPositionRepository(openMemory(t), fixedClock(&now))
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := repo.UpsertClosedPositionBatch(ctx, []position.ClosedPosition{samplePosition()}); err == nil {
+		t.Error("Fehler erwartet")
+	}
+}
