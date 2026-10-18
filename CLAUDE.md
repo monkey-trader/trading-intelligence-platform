@@ -152,7 +152,7 @@ Nach grösseren Änderungen: `repo-rag index`.
 
 
 - **ask-local nur für EINE Quelle** (ein Log, ein Diff, eine Datei). Nicht für Vergleiche mehrerer Quellen oder Status-Fragen (z. B. Plan vs. Commits) – das machst du selbst, `git log --oneline -20` ist billig.
-- Für Kleinkram (Commit-Messages, kurze Logs) `ask-local --fast` nutzen (schnelleres 7b-Modell).
+- `ask-local` nutzt standardmässig das schnelle 7b-Modell (gut im Herauslesen: Logs, Diffs, Fixtures, Commit-Messages). Nur wenn Verständnis/Gewichtung nötig ist: `ask-local --deep` (14b, ~2× langsamer).
 - Erscheint `[ask-local] WARNUNG: Eingabe zu lang`, Ergebnis nicht trauen: Eingabe eingrenzen und neu fragen.
 
 ## Agenten-Orchestrierung (Token-Regeln für den Lead)
