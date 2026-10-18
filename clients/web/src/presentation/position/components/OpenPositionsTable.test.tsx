@@ -16,6 +16,7 @@ const COLUMN_LABELS = [
   'Einstieg',
   'Mark',
   'Hebel',
+  'Margin',
   'Unreal. PnL',
   'PnL %',
   'Real. PnL',
@@ -95,6 +96,7 @@ describe('OpenPositionsTable', () => {
     expect(cellOf(row, 'Einstieg')).toHaveTextContent(/^0\.96$/);
     expect(cellOf(row, 'Mark')).toHaveTextContent(/^1\.01$/);
     expect(cellOf(row, 'Hebel')).toHaveTextContent(/^10\s?[x×]$/);
+    expect(cellOf(row, 'Margin')).toHaveTextContent(/^60\.50$/);
     expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^\+25\.00$/);
     expect(cellOf(row, 'PnL %')).toHaveTextContent(/^\+52\.08\s?%$/);
     expect(cellOf(row, 'Real. PnL')).toHaveTextContent(/^[-−]0\.24$/);
