@@ -14,7 +14,7 @@ concurrency:
 jobs:
   backend:
     name: Backend (Lint + Tests)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: backend
@@ -47,7 +47,7 @@ jobs:
 
   web:
     name: Web-Client (Lint + Tests + Build)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: clients/web
@@ -90,7 +90,7 @@ jobs:
 
   backend-go:
     name: Go-Backend (Format + Vet + Lint + Tests + Build)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: backend-go
@@ -129,7 +129,7 @@ jobs:
 
   contract:
     name: Vertragstest (${{ matrix.backend }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
