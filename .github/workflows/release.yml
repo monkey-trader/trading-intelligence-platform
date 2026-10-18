@@ -23,6 +23,28 @@ jobs:
           go-version-file: backend-go/go.mod
           cache-dependency-path: backend-go/go.mod
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: clients/web/package-lock.json
+
+      # Web-UI bauen und einbetten; im Release liegt die API im Root, daher leere API-Basis.
+      - name: Web-UI bauen
+        working-directory: clients/web
+        env:
+          VITE_API_BASE: ''
+        run: npm ci && npm run build
+
+      - name: Web-UI nach webui/dist kopieren
+        run: cp -R clients/web/dist/. backend-go/internal/presentation/webui/dist/
+
+      # Ohne index.html entstünde still ein Release mit leerem UI; "/api/" im Bundle hieße, VITE_API_BASE griff nicht.
+      - name: UI-Einbettung prüfen
+        run: |
+          test -f backend-go/internal/presentation/webui/dist/index.html
+          ! grep -rq '/api/' backend-go/internal/presentation/webui/dist/assets
+
       # Auf Tags: echtes Release + Formula im Tap. Auf PRs nur Konfiguration prüfen und Snapshot bauen.
       - name: GoReleaser
         uses: goreleaser/goreleaser-action@v7

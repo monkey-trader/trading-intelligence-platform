@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
@@ -24,6 +25,7 @@ import (
 	"github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/infrastructure/scheduler"
 	"github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/infrastructure/sqlite"
 	"github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/presentation/httpapi"
+	"github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/presentation/webui"
 )
 
 // shutdownTimeout begrenzt, wie lange laufende Anfragen beim Beenden noch abgeschlossen werden.
@@ -68,6 +70,7 @@ func run(logger *slog.Logger) error {
 	handler := httpapi.NewHandler(httpapi.Settings{
 		AllowedHosts:     serverConfig.AllowedHosts,
 		GetOpenPositions: getOpenPositions.Execute,
+		WebUI:            newWebUI(),
 	}, logger)
 	server := httpapi.NewServer(handler, logger)
 
@@ -253,4 +256,14 @@ func logMissingBingXCredentials(logger *slog.Logger, missingVariables []string) 
 		logger.Warn("BingX-Zugang nicht konfiguriert; GET /positions/open liefert 503 not-configured",
 			slog.Any("missingVariables", missingVariables))
 	}
+}
+
+// newWebUI liefert das eingebettete UI, oder nil, wenn nur der Platzhalter eingebettet ist
+// (Entwicklungs-Build ohne UI): dann gilt für unbekannte Pfade der API-Vertrag (404 not-found).
+func newWebUI() http.Handler {
+	files := webui.EmbeddedFiles()
+	if _, err := fs.Stat(files, "index.html"); err != nil {
+		return nil
+	}
+	return webui.NewHandler(files)
 }

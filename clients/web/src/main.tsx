@@ -9,7 +9,10 @@ import '@/styles/global.css';
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Element #root fehlt in index.html');
 
-const openPositionsGateway = createHttpOpenPositionsGateway();
+const openPositionsGateway = createHttpOpenPositionsGateway(
+  fetch,
+  import.meta.env.VITE_API_BASE ?? '/api',
+);
 
 createRoot(rootElement).render(
   <StrictMode>
