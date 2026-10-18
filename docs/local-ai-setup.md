@@ -90,8 +90,9 @@ Rechner: MacBook Air M2, 24 GB RAM
 | `qwen2.5-coder:14b` | Ollama | Code-Modell für `ask-local` |
 | `nomic-embed-text` | Ollama | Embeddings für Qdrant |
 | Qdrant | Docker, `localhost:6333` | Vector-DB, Dashboard: http://localhost:6333/dashboard |
-| `ask-local` | `~/bin/ask-local` | Frage/Pipe an das lokale Modell |
-| `repo-rag` | `~/bin/repo-rag` | Repo indexieren und semantisch suchen |
+| `ask-local` | `~/.dotfiles/bin/ask-local` | Frage/Pipe an das lokale Modell (7b, `--deep` = 14b) |
+| `repo-rag` | `~/.dotfiles/bin/repo-rag` | Repo indexieren und semantisch suchen |
+| `bench-local` | `~/.dotfiles/bin/bench-local` | lokale Modelle mit Repo-Aufgaben messen |
 | Index-Status | `~/.cache/repo-rag/<collection>.json` | welche Dateien indexiert sind |
 
 ---
@@ -102,8 +103,8 @@ Rechner: MacBook Air M2, 24 GB RAM
 # 1. Ollama (als Hintergrunddienst)
 brew install ollama
 brew services start ollama
-ollama pull qwen2.5-coder:14b
-ollama pull qwen2.5-coder:7b      # für ask-local --fast
+ollama pull qwen2.5-coder:14b     # für ask-local --deep
+ollama pull qwen2.5-coder:7b      # Standard für ask-local
 ollama pull nomic-embed-text
 
 # 2. Qdrant (startet mit Docker automatisch neu)
@@ -111,10 +112,8 @@ docker run -d --name qdrant --restart unless-stopped \
   -p 6333:6333 -p 6334:6334 \
   -v ~/qdrant_storage:/qdrant/storage qdrant/qdrant
 
-# 3. Scripts
-mkdir -p ~/bin
-cp ask-local repo-rag ~/bin/ && chmod +x ~/bin/ask-local ~/bin/repo-rag
-echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+# 3. Scripts: liegen im Dotfiles-Repo (github.com/c3smonkey/.dotfiles, Ordner bin/),
+#    ~/.dotfiles/bin ist über die .zshrc bereits im PATH
 
 # 4. Git-Hook-Vorlage (einmalig, gilt für alle neuen Klone)
 mkdir -p ~/.git-template/hooks
@@ -255,3 +254,13 @@ Referenz: Phase 2b (≈ 2100 Zeilen, architect → test-author → programmer �
 - `/clear` nach jedem Commit, Stand in `docs/migration/go-wails.md` → „Aktueller Stand“
 
 **Lehre aus der CI:** Lint, das „erst in der CI“ läuft, sammelt Fehler über mehrere Phasen an (PR #2 war rot). Seit dem lokalen Lint ist das behoben.
+
+### Benchmark lokale Modelle (18.10.2026, `bench-local`, M2 24 GB)
+
+| Modell | Tempo | Verlauf zusammenfassen | Fixture-Felder herauslesen |
+|---|---|---|---|
+| qwen2.5-coder:7b | ~17 tok/s | ❌ älteste statt neueste Commits | ✅ alle Typen korrekt |
+| qwen2.5-coder:14b | ~8 tok/s | ✅ richtig gewichtet | ⚠️ 1 Typfehler |
+| mistral | ~9 tok/s | ❌ | ❌ 4 Fehler |
+
+→ `ask-local` nutzt standardmässig das **7b** (schnell, gut im Herauslesen), `--deep` das **14b** (Verständnis/Gewichtung). Mistral nicht verwenden.
