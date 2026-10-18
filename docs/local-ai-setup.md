@@ -42,8 +42,8 @@ flowchart TB
     Lead -->|"2. liest nur Treffer"| Repo
 ```
 
-> **Aktuell:** Alle 5 Subagenten laufen noch auf Claude und verbrauchen Tokens (programmer ≈ 110k, designer ≈ 71k).
-> **Ziel:** Subagenten nutzen ebenfalls `repo-rag` und `ask-local`, und Routineteile wandern ins lokale Modell.
+> **Stand 18.10.2026:** Alle 5 Subagenten laufen auf Claude (architect/designer: Haiku, Rest: Sonnet), mit Token-Regeln
+> in `CLAUDE.md` und `.claude/agents/`. Ergebnis: ≈ +1 % Wochen-Limit pro Phase statt +3 % (siehe „Messwerte“ unten).
 
 ### Ziel-Bild
 
@@ -69,7 +69,7 @@ Rechner: MacBook Air M2, 24 GB RAM
 
 - [ ] **Git-Hook-Vorlage global einrichten**, damit jeder neue Klon `repo-rag` automatisch nutzt (siehe „Neues Repo einrichten“)
 - [ ] In bestehenden Repos `git init` ausführen, damit der Hook dort auch ankommt
-- [ ] `.claude/agents/` optimieren (programmer.md ≈ 110k Tokens, designer.md ≈ 71k), damit sie `repo-rag` und `ask-local` nutzen
+- [x] `.claude/agents/` optimiert (Token-Regeln, Modellwahl, Tests nie aufweichen)
 - [ ] Ollama-Autostart prüfen: `brew services list` oder Ollama.app unter Anmeldeobjekte
 - [ ] Docker Desktop: „Start when you sign in“ aktivieren
 - [ ] Optional: `mxbai-embed-large` testen, falls die Suche ungenau ist
@@ -232,4 +232,21 @@ Referenz: Phase 2b (≈ 2100 Zeilen, architect → test-author → programmer �
 | programmer | sonnet |
 | reviewer | sonnet |
 
-**Nächste Messung:** Phase 2c gleich messen (`/usage` vor Start und nach Commit) und mit 2b vergleichen.
+### Vergleich nach den neuen Regeln (17./18.10.2026)
+
+| Phase | Regeln | Woche | Kosten-Äquivalent | Dauer | Nacharbeit |
+|---|---|---|---|---|---|
+| 2b | alt (Haiku-test-author, Resume, mehrere Runden) | +3 % (+1 % Nachzieher) | $5.55 | 45 min + Nachzieher | Tests aufgeweicht, 2 Review-Runden |
+| 2c | neu | +1 % | $1.41 | 16 min | keine |
+| 2d | neu + lokaler Lint | +1 % | $1.67 | 17 min | keine; reviewer fand echten Paging-Bug |
+
+**Ergebnis:** etwa 3–4× günstiger pro Phase, bei besserer Qualität.
+
+**Was den Unterschied gemacht hat** (Regeln in `CLAUDE.md`, Abschnitt „Agenten-Orchestrierung“):
+- Agenten neu starten statt resumen, kurze Übergabe, Bericht ≤ 15 Zeilen
+- test-author und programmer je eine Runde, reviewer genau einmal am Ende
+- test-author auf Sonnet + „Tests nie aufweichen“
+- `golangci-lint` lokal vor jedem Commit (Version built with go1.27, via `go install`)
+- `/clear` nach jedem Commit, Stand in `docs/migration/go-wails.md` → „Aktueller Stand“
+
+**Lehre aus der CI:** Lint, das „erst in der CI“ läuft, sammelt Fehler über mehrere Phasen an (PR #2 war rot). Seit dem lokalen Lint ist das behoben.
