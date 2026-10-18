@@ -67,8 +67,7 @@ Rechner: MacBook Air M2, 24 GB RAM
 
 ## ✅ TODO
 
-- [ ] **Git-Hook-Vorlage global einrichten**, damit jeder neue Klon `repo-rag` automatisch nutzt (siehe „Neues Repo einrichten“)
-- [ ] In bestehenden Repos `git init` ausführen, damit der Hook dort auch ankommt
+- [x] Git-Hook-Vorlage und Repo-Setup: `git ai-init` (siehe „Neues Repo einrichten“)
 - [x] `.claude/agents/` optimiert (Token-Regeln, Modellwahl, Tests nie aufweichen)
 <<<<<<< Updated upstream
 - [ ] Ollama-Autostart prüfen: `brew services list` oder Ollama.app unter Anmeldeobjekte
@@ -128,11 +127,12 @@ git config --global init.templateDir ~/.git-template
 
 ```bash
 cd <repo>
-git init            # nur bei bestehenden Repos: kopiert den Hook aus der Vorlage
-repo-rag index      # erste Indexierung (einige Minuten)
+git ai-init --claude
 ```
 
-Dann den folgenden Abschnitt in die `CLAUDE.md` des Repos einfügen:
+`git ai-init` (in `~/.dotfiles/bin`) richtet einmalig die globale Hook-Vorlage ein (`~/.dotfiles/git-template`,
+`init.templateDir`), installiert im Repo den post-commit-Hook (überschreibt keinen fremden), prüft Ollama/Qdrant/Modelle
+und startet die erste Indexierung. Mit `--claude` ergänzt es zusätzlich diesen Abschnitt in der `CLAUDE.md`:
 
 ```markdown
 ## Code finden (repo-rag)
