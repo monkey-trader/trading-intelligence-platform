@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"maps"
 	"net/http"
+	"path"
 	"strings"
 
 	appposition "github.com/monkey-trader/trading-intelligence-platform/backend-go/internal/application/position"
@@ -48,7 +49,7 @@ func newRouter(routes map[string]http.HandlerFunc, webUI http.Handler) http.Hand
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		route, found := routes[r.Method+" "+r.URL.Path]
 		if !found {
-			if webUI != nil && !isAPIPath(r.URL.Path) {
+			if webUI != nil && wantsWebUI(r) {
 				webUI.ServeHTTP(w, r)
 				return
 			}
@@ -61,6 +62,18 @@ func newRouter(routes map[string]http.HandlerFunc, webUI http.Handler) http.Hand
 
 // apiPathPrefixes sind Pfade, die nie vom Web-UI bedient werden (immer 404 not-found).
 var apiPathPrefixes = []string{"/health", "/positions", "/api"}
+
+// wantsWebUI: Das UI bedient nur GET/HEAD, nie API-Pfade, und nur "/", Dateien (mit Endung) und
+// Browser-Navigationen (Accept: text/html). Alles andere bleibt 404 not-found im API-Vertrag.
+func wantsWebUI(r *http.Request) bool {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		return false
+	}
+	if isAPIPath(r.URL.Path) {
+		return false
+	}
+	return r.URL.Path == "/" || path.Ext(r.URL.Path) != "" || strings.Contains(r.Header.Get("Accept"), "text/html")
+}
 
 func isAPIPath(urlPath string) bool {
 	for _, prefix := range apiPathPrefixes {
