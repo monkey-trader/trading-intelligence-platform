@@ -23,8 +23,6 @@ const snapshotBody: SnapshotBody = {
       unrealizedProfit: '-6.2500',
       realisedProfit: '-0.5187',
       pnlRatio: '-0.0904',
-      liquidationPrice: '4410.5',
-      liquidationDistanceRatio: '0.05640719',
       stopLoss: '4200',
       takeProfit: '4100',
       breakEven: false,
@@ -46,8 +44,6 @@ const snapshotBody: SnapshotBody = {
       unrealizedProfit: '25.0000',
       realisedProfit: '-0.2400',
       pnlRatio: '0.5208',
-      liquidationPrice: '0',
-      liquidationDistanceRatio: null,
       stopLoss: null,
       takeProfit: null,
       breakEven: null,
@@ -118,18 +114,6 @@ describe('createHttpOpenPositionsGateway', () => {
       const result = await gateway.fetchOpenPositions(newSignal());
 
       expect(result).toEqual({ kind: 'ok', snapshot: snapshotBody });
-    });
-
-    it('übernimmt liquidationDistanceRatio null unverändert', async () => {
-      const gateway = createHttpOpenPositionsGateway(
-        fakeFetchReturning(jsonResponse(snapshotBody)),
-      );
-
-      const result = await gateway.fetchOpenPositions(newSignal());
-
-      if (result.kind !== 'ok') throw new Error(`erwartet ok, erhalten ${result.kind}`);
-      expect(result.snapshot.positions[1]?.liquidationDistanceRatio).toBeNull();
-      expect(result.snapshot.positions[0]?.liquidationDistanceRatio).toBe('0.05640719');
     });
 
     it('übernimmt stopLoss, takeProfit und breakEven (auch null) unverändert', async () => {

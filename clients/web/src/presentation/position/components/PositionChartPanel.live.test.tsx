@@ -95,9 +95,9 @@ describe('PositionChartPanel Live-Update', () => {
     const { renderer } = renderLive({ kind: 'ok', chart: xagLongChart });
     await tick(0);
     await act(async () => {
-      await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(
-        screen.getByRole('button', { name: '1h' }),
-      );
+      await userEvent
+        .setup({ advanceTimers: vi.advanceTimersByTime })
+        .click(screen.getByRole('button', { name: '1h' }));
     });
     await waitFor(() => expect(renderer.setCandles).toHaveBeenCalledTimes(2));
   });

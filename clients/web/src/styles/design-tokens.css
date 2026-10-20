@@ -56,11 +56,14 @@
 
   --shadow-card: none;
 
+  /* Fokusrahmen (focus-visible) und Drop-Indikator beim Spalten-Verschieben. */
+  --border-width-emphasis: 2px;
+
   /* Layout und Dichte  */
   --layout-max-width: 1360px;
   --panel-radius: var(--radius-medium);
   --table-cell-padding-block: var(--space-3);
-  --table-cell-padding-inline: var(--space-3);
+  --table-cell-padding-inline: var(--space-2);
   --font-family-numeric: var(--font-family-base);
 }
 

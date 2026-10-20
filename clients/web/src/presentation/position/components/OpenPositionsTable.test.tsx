@@ -7,7 +7,7 @@ import {
   goldShortPosition,
   noStopLossPosition,
   unknownOrdersPosition,
-  positionWithoutLiquidation,
+  flatPosition,
   suiLongPosition,
 } from '@/test/fixtures/openPositions';
 import { formatDateTime } from '@/presentation/position/format/formatTimestamp';
@@ -24,8 +24,6 @@ const COLUMN_LABELS = [
   'Unreal. PnL',
   'PnL %',
   'Real. PnL',
-  'Liq.-Preis',
-  'Liq.-Abstand',
   'SL',
   'TP',
   'Eröffnet',
@@ -106,8 +104,6 @@ describe('OpenPositionsTable', () => {
     expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^\+25\.00$/);
     expect(cellOf(row, 'PnL %')).toHaveTextContent(/^\+52\.08\s?%$/);
     expect(cellOf(row, 'Real. PnL')).toHaveTextContent(/^[-−]0\.24$/);
-    expect(cellOf(row, 'Liq.-Preis')).toHaveTextContent(/^0\.865$/);
-    expect(cellOf(row, 'Liq.-Abstand')).toHaveTextContent(/^14\.36\s?%$/);
     expect(cellOf(row, 'Eröffnet')).toHaveTextContent(formatDateTime(suiLongPosition.openTime));
   });
 
@@ -123,13 +119,11 @@ describe('OpenPositionsTable', () => {
     expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^[-−]6\.25$/);
     expect(cellOf(row, 'PnL %')).toHaveTextContent(/^[-−]9\.04\s?%$/);
     expect(cellOf(row, 'Real. PnL')).toHaveTextContent(/^[-−]0\.52$/);
-    expect(cellOf(row, 'Liq.-Preis')).toHaveTextContent(/^4['’]410\.5$/);
-    expect(cellOf(row, 'Liq.-Abstand')).toHaveTextContent(/^5\.64\s?%$/);
     expect(cellOf(row, 'Eröffnet')).toHaveTextContent(formatDateTime(goldShortPosition.openTime));
   });
 
   it('tönt die PnL-Zellen nach dem Vorzeichen', () => {
-    const table = renderTable([goldShortPosition, suiLongPosition, positionWithoutLiquidation]);
+    const table = renderTable([goldShortPosition, suiLongPosition, flatPosition]);
     const winner = rowFor(table, 'SUI-USDT');
     const loser = rowFor(table, 'NCCOGOLD2USD-USDT');
     const flat = rowFor(table, 'BTC-USDT');
@@ -143,7 +137,7 @@ describe('OpenPositionsTable', () => {
     expect(hasTone(cellOf(flat, 'Unreal. PnL'), 'negative')).toBe(false);
   });
 
-  it('zeigt positive PnL-Werte mit explizitem "+", Preise und Liq.-Abstand ohne "+"', () => {
+  it('zeigt positive PnL-Werte mit explizitem "+" und Preise ohne "+"', () => {
     const profitablePosition: OpenPosition = {
       ...suiLongPosition,
       positionId: '9100000000000000004',
@@ -154,8 +148,6 @@ describe('OpenPositionsTable', () => {
       unrealizedProfit: '1234.5',
       realisedProfit: '12.3456',
       pnlRatio: '0.12345',
-      liquidationPrice: '2100.25',
-      liquidationDistanceRatio: '0.32634',
     };
     const table = renderTable([profitablePosition]);
     const row = rowFor(table, 'ETH-USDT');
@@ -166,13 +158,11 @@ describe('OpenPositionsTable', () => {
     expect(cellOf(row, 'Menge')).toHaveTextContent(/^2$/);
     expect(cellOf(row, 'Einstieg')).toHaveTextContent(/^2['’]500\.5$/);
     expect(cellOf(row, 'Mark')).toHaveTextContent(/^3['’]117\.75$/);
-    expect(cellOf(row, 'Liq.-Preis')).toHaveTextContent(/^2['’]100\.25$/);
-    expect(cellOf(row, 'Liq.-Abstand')).toHaveTextContent(/^32\.63\s?%$/);
   });
 
   it('zeigt PnL-Werte, die gerundet 0 sind, ohne Vorzeichen', () => {
     const nearlyFlatPosition: OpenPosition = {
-      ...positionWithoutLiquidation,
+      ...flatPosition,
       unrealizedProfit: '0.004',
       realisedProfit: '-0.004',
       pnlRatio: '-0.00004',
@@ -187,7 +177,7 @@ describe('OpenPositionsTable', () => {
   });
 
   it('zeigt bei PnL genau 0 kein Vorzeichen', () => {
-    const table = renderTable([positionWithoutLiquidation]);
+    const table = renderTable([flatPosition]);
     const row = rowFor(table, 'BTC-USDT');
 
     expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^0\.00$/);
@@ -201,14 +191,6 @@ describe('OpenPositionsTable', () => {
 
     expect(hasTone(cellOf(rowFor(table, 'SUI-USDT'), 'Real. PnL'), 'positive')).toBe(true);
     expect(hasTone(cellOf(rowFor(table, 'NCCOGOLD2USD-USDT'), 'Real. PnL'), 'negative')).toBe(true);
-  });
-
-  it('zeigt einen Gedankenstrich ohne Liquidationspreis und ohne Liq.-Abstand', () => {
-    const table = renderTable([positionWithoutLiquidation]);
-    const row = rowFor(table, 'BTC-USDT');
-
-    expect(cellOf(row, 'Liq.-Abstand')).toHaveTextContent(/^–$/);
-    expect(cellOf(row, 'Liq.-Preis')).toHaveTextContent(/^–$/);
   });
 });
 

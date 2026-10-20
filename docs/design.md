@@ -63,7 +63,7 @@ Kontrast: Text mindestens 4.5:1 (WCAG AA) in beiden Themes.
     (`signDisplay: 'exceptZero'` in `formatDecimal` bzw. `formatRatioAsPercent`). Gewinn hängt so
     nicht nur an der Farbe. Ein Wert, der gerundet 0 ist, steht ohne Vorzeichen (`0.00`, nie
     `+0.00` oder `-0.00`). Das Vorzeichen richtet sich nach dem gerundeten Wert (`0.005` → `+0.01`).
-  - **Kein `+`** bei Preisen, Mengen, Hebel und Abständen (z.B. Liq.-Abstand): Das sind keine
+  - **Kein `+`** bei Preisen, Mengen, Hebel und Abständen: Das sind keine
     Gewinn/Verlust-Größen. Standard der Formatter bleibt `signDisplay: 'negative'`.
   - Preise und Mengen ohne feste Stellen (so viele, wie BingX liefert, Nullen am Ende entfallen).
   - Fehlender Wert: einheitliches Platzhalterzeichen (`MISSING_VALUE`).
@@ -82,8 +82,19 @@ Kontrast: Text mindestens 4.5:1 (WCAG AA) in beiden Themes.
 
 ## Ansicht: Offene Positionen
 
-Spalten in dieser Reihenfolge: Symbol, Seite, Menge, Einstieg, Mark, Hebel, Margin, Unreal. PnL,
-PnL %, Real. PnL, Liq.-Preis, Liq.-Abstand, SL, TP, Eröffnet.
+Standard-Reihenfolge: Symbol, Seite, Menge, Einstieg, Mark, Hebel, Margin, Unreal. PnL,
+PnL %, Real. PnL, SL, TP, Eröffnet. Das Symbol bleibt immer die erste Spalte.
+
+- **Spalten umordnen (ab 768 px)**: Jeder Spaltenkopf (außer Symbol) hat einen Griff `.dragHandle`
+  (Glyphe ⠇, `cursor: grab`, `text-muted`, 16px-Box = `--space-4`, ohne Abstand zum Label). Hover:
+  `accent`-Glyphe, `surface`-Hintergrund, `border`-Rahmen. Fokus: 2px-Ring (`--border-width-emphasis`)
+  innerhalb der Box. Die ganze Kopfzelle ist Drag-Quelle; Tastatur: Griff fokussieren, Alt + Pfeiltaste.
+  Drop-Ziel: `.dropTarget` mit 2px-Indikator links (`accent`). Auf Mobile gibt es keinen Kopf und
+  keinen Griff (`display: none`).
+- **Toolbar** über der Tabelle (`.toolbar`): Ab 768 px reserviert sie immer `--space-6` Höhe, damit der
+  Tabellenkopf nicht springt, wenn der Button **"Spalten zurücksetzen"** erscheint (nur bei
+  nicht-Standard-Reihenfolge). Rechtsbündig, `surface-raised`, 1px `border`, `radius-small`,
+  `font-size-small`, Fokusrahmen 2px. Auf Mobile ohne Inhalt ausgeblendet.
 
 - **SL / TP**: Zahl rechtsbündig, fehlt sie, steht `–` (`MISSING_VALUE`). **Badge "BE"** (nur bei
   `breakEven: true`): `positive-surface`-Hintergrund, Text `positive`, `font-size-small`, fett,
@@ -118,8 +129,10 @@ Chart-Tokens angelegt in `design-tokens.css` (hell und dunkel):
   über `@custom-media` (PostCSS-Plugin oder Lightning CSS als Vite-Transformer). Das ändert die
   CSS-Pipeline und lohnt sich bei drei Stellen noch nicht. Neu bewerten, wenn mehr Ansichten
   (Chart, Historie) dazukommen oder ein zweiter Breakpoint nötig wird.
-- **Scroll-Hinweis in der Tabelle:** Zwischen 768 px und ca. 1'280 px sind die rechten Spalten
-  (Liq.-Abstand, Eröffnet) erst nach horizontalem Scrollen sichtbar. Unter macOS sind
+- **Scroll-Hinweis in der Tabelle:** Bei 1440 px passt die Tabelle ohne Scrollen (gemessen: 1310 px
+  Panelbreite, Tabelle 1310 px nach Reduktion von `--table-cell-padding-inline` auf `space-2` und
+  Griff ohne Abstand). Unter ca. 1'306 px (gemessen 1280 px: Tabelle 1306 px, Panel 1230 px) scrollt
+  sie wieder; dort sind die rechten Spalten (SL, TP, Eröffnet) erst nach horizontalem Scrollen sichtbar. Unter macOS sind
   Scrollbalken standardmäßig ausgeblendet, der Hinweis fehlt also. Optionen: Schatten am rechten
   Rand als Scroll-Andeutung, oder den Tabellen-Breakpoint anheben und dazwischen Karten im
   Raster zeigen. Mit dem Panel-Layout (Seitenbreite) zusammen entscheiden.
@@ -133,7 +146,7 @@ Chart-Tokens angelegt in `design-tokens.css` (hell und dunkel):
   - Das `aria-label` des Containers ("Offene Positionen, horizontal scrollbar") und das der Tabelle
     ("Offene Positionen") sind fast gleich; Screenreader nennen es doppelt. Container besser
     "Tabelle offene Positionen, scrollbar" nennen.
-  - Die Grenze "ca. 1'280 px", ab der die Tabelle ohne Scrollen passt, ist nicht gemessen.
+  - Die Grenze für das Scrollen ist jetzt gemessen (siehe oben), nicht mehr geschätzt.
 
 ## Design: Pro (Kraken-Stil)
 
@@ -142,7 +155,9 @@ Radien 6/8 px, Borders statt Schatten, Seitenbreite 1360 px. Tabellenkopf auf
 `--color-surface-raised`, Sticky-Spalte opak auf `--color-surface`.
 
 - Tokens: siehe `design-tokens.css`; zusätzlich `--layout-max-width`, `--panel-radius`,
-  `--table-cell-padding-block/-inline`, `--font-family-numeric`, `--color-on-accent`,
-  `--color-positive-surface`.
+  `--table-cell-padding-block/-inline` (inline jetzt `space-2`, dichter), `--font-family-numeric`,
+  `--color-on-accent`, `--color-positive-surface`, `--border-width-emphasis` (2px: Fokusrahmen,
+  Drop-Indikator; theme-unabhängig).
 - Kontrast: alle Text-Paare rechnerisch >= 4.5:1, hell (min. 4.82) und dunkel (min. 5.6).
+  Griff-Glyphe (nur Icon, Nicht-Text, Ziel 3:1): `text-muted` auf `surface-raised` hell 5.76:1, dunkel 6.20:1.
 - Die früheren Design-Lab-Varianten (Terminal, Clean, Exchange) wurden verworfen.

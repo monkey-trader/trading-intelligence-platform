@@ -172,7 +172,7 @@ func TestExecute_Sortierung(t *testing.T) {
 	}
 }
 
-func TestExecute_PositionUnveraendertMitAbstand(t *testing.T) {
+func TestExecute_PositionUnveraendert(t *testing.T) {
 	original := openPosition(nil)
 
 	overview := execute(t, sourceWith(original))
@@ -180,56 +180,8 @@ func TestExecute_PositionUnveraendertMitAbstand(t *testing.T) {
 	if len(overview.Positions) != 1 {
 		t.Fatalf("%d Positionen, erwartet 1", len(overview.Positions))
 	}
-	entry := overview.Positions[0]
-	if entry.OpenPosition != original {
-		t.Errorf("Position verändert:\n%+v\nerwartet\n%+v", entry.OpenPosition, original)
-	}
-	// LONG: (1.0100 − 0.865) / 1.0100 = 0.1435643564… → 0.14356436
-	if entry.LiquidationDistanceRatio == nil || *entry.LiquidationDistanceRatio != "0.14356436" {
-		t.Errorf("LiquidationDistanceRatio = %v, erwartet 0.14356436", describeRatio(entry.LiquidationDistanceRatio))
-	}
-}
-
-func TestExecute_AbstandJeSeiteUndNilOhneLiquidation(t *testing.T) {
-	source := sourceWith(
-		openPosition(func(p *position.OpenPosition) { p.PositionID = "3"; p.LiquidationPrice = "0"; p.OpenTime = 1 }),
-		openPosition(func(p *position.OpenPosition) {
-			p.PositionID = "2"
-			p.Side = position.Short
-			p.MarkPrice = "4175.00"
-			p.LiquidationPrice = "4410.5"
-			p.OpenTime = 2
-		}),
-		openPosition(func(p *position.OpenPosition) {
-			p.PositionID = "1"
-			p.MarkPrice = "81365.0"
-			p.LiquidationPrice = "76507"
-			p.OpenTime = 3
-		}),
-	)
-
-	overview := execute(t, source)
-
-	expected := []struct {
-		positionID string
-		ratio      *string
-	}{
-		{"1", ptr("0.05970626")},
-		{"2", ptr("0.05640719")},
-		{"3", nil},
-	}
-	if len(overview.Positions) != len(expected) {
-		t.Fatalf("%d Positionen, erwartet %d", len(overview.Positions), len(expected))
-	}
-	for index, want := range expected {
-		entry := overview.Positions[index]
-		if entry.PositionID != want.positionID {
-			t.Errorf("Index %d: positionId = %q, erwartet %q", index, entry.PositionID, want.positionID)
-		}
-		if describeRatio(entry.LiquidationDistanceRatio) != describeRatio(want.ratio) {
-			t.Errorf("Index %d: Abstand = %s, erwartet %s", index,
-				describeRatio(entry.LiquidationDistanceRatio), describeRatio(want.ratio))
-		}
+	if overview.Positions[0].OpenPosition != original {
+		t.Errorf("Position verändert:\n%+v\nerwartet\n%+v", overview.Positions[0].OpenPosition, original)
 	}
 }
 

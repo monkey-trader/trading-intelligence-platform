@@ -20,10 +20,6 @@ export type OpenPosition = Readonly<{
   unrealizedProfit: string;
   realisedProfit: string;
   pnlRatio: string;
-  /** "0" bedeutet keine Liquidation. */
-  liquidationPrice: string;
-  /** null ohne Liquidationspreis oder bei Mark-Preis 0. */
-  liquidationDistanceRatio: string | null;
   /** Stop-Loss-Preis; null = keiner gesetzt. */
   stopLoss: string | null;
   /** Take-Profit-Preis; null = keiner gesetzt. */

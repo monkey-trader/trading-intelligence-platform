@@ -241,8 +241,6 @@ components:
         - unrealizedProfit
         - realisedProfit
         - pnlRatio
-        - liquidationPrice
-        - liquidationDistanceRatio
         - openTime
         - updateTime
         - stopLoss
@@ -285,17 +283,6 @@ components:
         pnlRatio:
           $ref: '#/components/schemas/Decimal'
           description: Unrealisierter PnL relativ zur Margin (0.25 = 25 %).
-        liquidationPrice:
-          $ref: '#/components/schemas/Decimal'
-          description: '"0" bedeutet keine Liquidation.'
-        liquidationDistanceRatio:
-          description: >-
-            Abstand des Mark-Preises zum Liquidationspreis relativ zum Mark-Preis, 8 Nachkommastellen
-            (0.06 = 6 %). LONG (mark − liq) / mark, SHORT (liq − mark) / mark. null ohne
-            Liquidationspreis ("0") oder bei Mark-Preis 0.
-          oneOf:
-            - $ref: '#/components/schemas/Decimal'
-            - type: 'null'
         openTime:
           type: integer
           description: Eröffnung in Epoch-Millisekunden.

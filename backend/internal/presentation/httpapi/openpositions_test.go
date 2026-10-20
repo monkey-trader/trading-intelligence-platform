@@ -25,12 +25,12 @@ const openPositionsFetchedAt int64 = 1791800000000
 var openPositionSchemaFields = []string{
 	"positionId", "symbol", "side", "isolated", "positionAmount", "avgOpenPrice", "markPrice",
 	"leverage", "initialMargin", "margin", "positionValue", "unrealizedProfit", "realisedProfit",
-	"pnlRatio", "liquidationPrice", "liquidationDistanceRatio", "stopLoss", "takeProfit", "breakEven", "openTime", "updateTime",
+	"pnlRatio", "stopLoss", "takeProfit", "breakEven", "openTime", "updateTime",
 }
 
 func ratio(value string) *string { return &value }
 
-var goldEntry = appposition.OpenPositionWithDistance{
+var goldEntry = appposition.OpenPositionEntry{
 	OpenPosition: position.OpenPosition{
 		PositionID: "9100000000000000002", Symbol: "NCCOGOLD2USD-USDT", Side: position.Short, Isolated: true,
 		PositionAmount: "0.25", AvgOpenPrice: "4150.00", MarkPrice: "4175.00", Leverage: 15,
@@ -38,11 +38,10 @@ var goldEntry = appposition.OpenPositionWithDistance{
 		RealisedProfit: "-0.5187", PnlRatio: "-0.0904", LiquidationPrice: "4410.5",
 		OpenTime: 1791700000000, UpdateTime: 1791710000000,
 	},
-	LiquidationDistanceRatio: ratio("0.05640719"),
 }
 
-// crossEntry ohne Liquidationspreis: liquidationDistanceRatio null, Dezimal-Hebel.
-var crossEntry = appposition.OpenPositionWithDistance{
+// crossEntry ohne Liquidationspreis: Dezimal-Hebel.
+var crossEntry = appposition.OpenPositionEntry{
 	OpenPosition: position.OpenPosition{
 		PositionID: "9100000000000000001", Symbol: "SUI-USDT", Side: position.Long, Isolated: false,
 		PositionAmount: "500", AvgOpenPrice: "0.9600", MarkPrice: "1.0100", Leverage: 2.5,
@@ -50,26 +49,25 @@ var crossEntry = appposition.OpenPositionWithDistance{
 		RealisedProfit: "-0.2400", PnlRatio: "0.5208", LiquidationPrice: "0",
 		OpenTime: 1791500000000, UpdateTime: 1791600000000,
 	},
-	LiquidationDistanceRatio: nil,
 }
 
 const goldJSON = `{"positionId":"9100000000000000002","symbol":"NCCOGOLD2USD-USDT","side":"SHORT","isolated":true,` +
 	`"positionAmount":"0.25","avgOpenPrice":"4150.00","markPrice":"4175.00","leverage":15,` +
 	`"initialMargin":"69.1667","margin":"65.0000","positionValue":"1043.75","unrealizedProfit":"-6.2500",` +
-	`"realisedProfit":"-0.5187","pnlRatio":"-0.0904","liquidationPrice":"4410.5",` +
-	`"liquidationDistanceRatio":"0.05640719","stopLoss":null,"takeProfit":null,"breakEven":null,"openTime":1791700000000,"updateTime":1791710000000}`
+	`"realisedProfit":"-0.5187","pnlRatio":"-0.0904",` +
+	`"stopLoss":null,"takeProfit":null,"breakEven":null,"openTime":1791700000000,"updateTime":1791710000000}`
 
 const crossJSON = `{"positionId":"9100000000000000001","symbol":"SUI-USDT","side":"LONG","isolated":false,` +
 	`"positionAmount":"500","avgOpenPrice":"0.9600","markPrice":"1.0100","leverage":2.5,` +
 	`"initialMargin":"48.0000","margin":"60.5000","positionValue":"505","unrealizedProfit":"25.0000",` +
-	`"realisedProfit":"-0.2400","pnlRatio":"0.5208","liquidationPrice":"0",` +
-	`"liquidationDistanceRatio":null,"stopLoss":null,"takeProfit":null,"breakEven":null,"openTime":1791500000000,"updateTime":1791600000000}`
+	`"realisedProfit":"-0.2400","pnlRatio":"0.5208",` +
+	`"stopLoss":null,"takeProfit":null,"breakEven":null,"openTime":1791500000000,"updateTime":1791600000000}`
 
 func settingsWith(getOpenPositions func(context.Context) (appposition.OpenPositionsOverview, error)) Settings {
 	return Settings{AllowedHosts: testSettings.AllowedHosts, GetOpenPositions: getOpenPositions}
 }
 
-func overviewOf(total string, entries ...appposition.OpenPositionWithDistance) func(context.Context) (appposition.OpenPositionsOverview, error) {
+func overviewOf(total string, entries ...appposition.OpenPositionEntry) func(context.Context) (appposition.OpenPositionsOverview, error) {
 	return func(context.Context) (appposition.OpenPositionsOverview, error) {
 		return appposition.OpenPositionsOverview{Positions: entries, TotalUnrealizedProfit: total, FetchedAt: openPositionsFetchedAt}, nil
 	}
@@ -100,7 +98,7 @@ func TestOpenPositions_Erfolg(t *testing.T) {
 		},
 		{
 			name:         "leere Liste als []",
-			getPositions: overviewOf("0", []appposition.OpenPositionWithDistance{}...),
+			getPositions: overviewOf("0", []appposition.OpenPositionEntry{}...),
 			expectedBody: `{"positions":[],"totalUnrealizedProfit":"0","fetchedAt":1791800000000}`,
 		},
 		{
@@ -427,7 +425,7 @@ func TestToOpenPositionsSnapshotDto_SchutzfelderWerdenAbgebildet(t *testing.T) {
 			entry := goldEntry
 			entry.StopLoss, entry.TakeProfit, entry.BreakEven = testCase.stopLoss, testCase.take, testCase.breakEven
 
-			encoded, err := json.Marshal(toOpenPositionsSnapshotDto(appposition.OpenPositionsOverview{Positions: []appposition.OpenPositionWithDistance{entry}, TotalUnrealizedProfit: "0"}))
+			encoded, err := json.Marshal(toOpenPositionsSnapshotDto(appposition.OpenPositionsOverview{Positions: []appposition.OpenPositionEntry{entry}, TotalUnrealizedProfit: "0"}))
 
 			if err != nil || !strings.Contains(string(encoded), testCase.expected) {
 				t.Errorf("JSON = %s (%v), erwartet Teilstring %s", encoded, err, testCase.expected)
