@@ -391,6 +391,13 @@ components:
           oneOf:
             - type: integer
             - type: 'null'
+        levels:
+          type: array
+          description: >-
+            CRV-Level 1R/2R/3R als Preise (2R = Preis, an dem der SL auf Break-even gezogen wird, 3R = Ziel).
+            Fehlt, wenn das Risiko unbekannt ist.
+          items:
+            $ref: '#/components/schemas/RLevel'
     RLevel:
       type: object
       additionalProperties: false

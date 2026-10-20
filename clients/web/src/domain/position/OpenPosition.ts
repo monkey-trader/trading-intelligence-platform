@@ -1,3 +1,11 @@
+/** CRV-Level (1R/2R/3R) als Preis; 2R = Break-even-Trigger, 3R = Ziel. */
+export type OpenPositionLevel = Readonly<{
+  kind: 'ONE_R' | 'TWO_R' | 'THREE_R';
+  rMultiple: number;
+  price: string;
+  percent: string;
+}>;
+
 /** Seite einer Position im Hedge-Modus. */
 export type PositionSide = 'LONG' | 'SHORT';
 
@@ -36,6 +44,8 @@ export type OpenPosition = Readonly<{
   breakEvenTriggerReached: boolean | null;
   /** Kerzenbeginn (Epoch-Millisekunden) des ersten 2R; null = nicht erreicht/unbekannt. */
   reached2RAt: number | null;
+  /** CRV-Level; fehlt, wenn das Risiko unbekannt ist. */
+  levels?: readonly OpenPositionLevel[] | undefined;
   /** Epoch-Millisekunden. */
   openTime: number;
   /** Epoch-Millisekunden. */

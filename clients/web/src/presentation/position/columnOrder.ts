@@ -5,10 +5,10 @@ export const DEFAULT_COLUMN_ORDER = [
   'positionValue',
   'margin',
   'unrealizedProfit',
-  'rMultiple',
   'realisedProfit',
   'entry',
   'tpSl',
+  'beTarget',
 ] as const;
 
 export type ColumnKey = (typeof DEFAULT_COLUMN_ORDER)[number];

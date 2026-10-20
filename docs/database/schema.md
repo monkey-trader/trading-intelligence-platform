@@ -112,6 +112,8 @@ Einen Schlüssel umzubenennen erzwingt einen vollständigen Neu-Import der betro
 Ursprüngliches Risiko einer offenen Position (Grundlage der R-Level 1R/2R/3R). Wird beim ersten Sehen einer
 Position angelegt und nie überschrieben, nur wenn der SL auf der Verlustseite des Entry liegt (SL = Entry oder
 kein SL: kein Eintrag, Risiko unbekannt).
+Der ursprüngliche SL kann auch aus der `allOrders`-Historie stammen: Ist der aktuelle SL unbrauchbar, gilt der
+zeitlich früheste STOP-Order-Trigger der Position auf der Verlustseite (Negativ-Cache 10 min im Speicher).
 
 | Spalte | Typ | Bedeutung |
 |---|---|---|

@@ -17,10 +17,10 @@ const COLUMN_LABELS = {
   positionValue: 'Positionswert',
   margin: 'Margin',
   unrealizedProfit: 'Unreal. PnL',
-  rMultiple: 'R',
   realisedProfit: 'Real. PnL',
   entry: 'Einstieg',
   tpSl: 'TP / SL',
+  beTarget: 'BE / Ziel',
 } as const;
 
 const SIDE_LABELS: Readonly<Record<OpenPosition['side'], string>> = {
@@ -46,16 +46,6 @@ const PNL_FORMAT = {
   maximumFractionDigits: 2,
   signDisplay: 'exceptZero',
 } as const;
-
-/** R-Vielfaches mit einer Nachkommastelle und Vorzeichen, Dezimalpunkt wie die übrigen Spalten ("+1.4R"). */
-function formatRMultiple(value: string): string {
-  const formatted = formatDecimal(value, {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-    signDisplay: 'exceptZero',
-  });
-  return `${formatted}R`;
-}
 
 /** Offene Positionen als Tabelle; auf schmalen Bildschirmen als Karten. */
 export function OpenPositionsTable({
@@ -202,6 +192,8 @@ function OpenPositionRow({
   const tickerFallback = (position.symbol.split('-')[0] ?? position.symbol).toUpperCase();
   const displayName = assetIcon?.displayName ?? tickerFallback;
 
+  const breakEvenLevel = position.levels?.find((level) => level.kind === 'TWO_R');
+  const targetLevel = position.levels?.find((level) => level.kind === 'THREE_R');
   const cells: Record<ColumnKey, ReactNode> = {
     symbol: (
       <th
@@ -264,17 +256,6 @@ function OpenPositionRow({
         </div>
       </td>
     ),
-    rMultiple: (
-      <td data-label={COLUMN_LABELS.rMultiple} className={styles.cell}>
-        {position.currentRMultiple === null ? (
-          <span aria-label="Risiko unbekannt">{MISSING_VALUE}</span>
-        ) : (
-          <span className={styles[pnlTone(position.currentRMultiple, 1)]}>
-            {formatRMultiple(position.currentRMultiple)}
-          </span>
-        )}
-      </td>
-    ),
     realisedProfit: (
       <td
         data-label={COLUMN_LABELS.realisedProfit}
@@ -308,6 +289,18 @@ function OpenPositionRow({
             )}
           </span>
         </div>
+      </td>
+    ),
+    beTarget: (
+      <td data-label={COLUMN_LABELS.beTarget} className={styles.cell}>
+        {breakEvenLevel && targetLevel ? (
+          <div className={styles.twoLine}>
+            <span>{`BE ${formatDecimal(breakEvenLevel.price)}`}</span>
+            <span>{`Ziel ${formatDecimal(targetLevel.price)}`}</span>
+          </div>
+        ) : (
+          <span aria-label="Risiko unbekannt">{MISSING_VALUE}</span>
+        )}
       </td>
     ),
   };

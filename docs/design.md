@@ -83,11 +83,11 @@ Kontrast: Text mindestens 4.5:1 (WCAG AA) in beiden Themes.
 ## Ansicht: Offene Positionen
 
 Standard-Reihenfolge (ColumnKeys): `symbol`, `positionValue`, `margin`, `unrealizedProfit`,
-`rMultiple` (nach `unrealizedProfit`), `realisedProfit`, `entry`, `tpSl`. Das Symbol bleibt immer fix links (sticky).
+`realisedProfit`, `entry`, `tpSl`, `beTarget`. Das Symbol bleibt immer fix links (sticky).
 Entfallen: Seite, Menge, Mark, Hebel, Eröffnet, SL/TP einzeln, PnL % (jetzt in Unreal. PnL).
 
 ### Positionstabelle (BingX-Stil, flach)
-Labels: Symbol, Positionswert, Margin, Unreal. PnL, Real. PnL, Einstieg, TP / SL.
+Labels: Symbol, Positionswert, Margin, Unreal. PnL, Real. PnL, Einstieg, TP / SL, BE / Ziel.
 Optik: keine Zebra-Streifen, nur 1px `border` zwischen Zeilen, Kopfzeile `font-size-x-small`,
 `text-muted`, auf `surface` (nicht raised), Zeilen luftig (`--table-row-padding-block` = `space-4`).
 Neue Tokens: `--font-size-x-small`, `--table-row-padding-block`, `--size-coin-icon` (20px),
@@ -102,6 +102,7 @@ Zellaufbau (Klassen):
 - **Unreal. PnL**: `.twoLine` > Betrag (USDT, mit Vorzeichen, Ton `positive`/`negative`) + `.lineSub` "(+x,xx %)" gleicher Ton.
 - **TP / SL**: `.twoLine` > TP-Zeile, darunter `.slLine` (SL, rot); "–" wenn nicht gesetzt. Zeilen mit
   Präfix "TP"/"SL" als Text (`.lineMuted`), damit Farbe nicht einziges Merkmal ist.
+- **BE / Ziel**: `.twoLine` > "BE <2R-Preis>" und "Ziel <3R-Preis>" (Preisformat wie Einstieg); ohne `levels` "–" mit `aria-label="Risiko unbekannt"`.
 - Mobile (<768 px): Karte wie bisher, jede Zelle mit `data-label`; `.twoLine` rechtsbündig neben dem Label.
   Abnahme (Design-Review, gerendert 1440/390 px hell und dunkel): Label (`::before`) hat `margin-inline-end: auto`,
   Wert und Einheit stehen als Gruppe rechtsbündig (`.cell` ohne `gap`, Abstand über `padding-inline-end`).
@@ -116,8 +117,7 @@ Zellaufbau (Klassen):
   selbst kontrastreich. Die 3R-Linie (Teal, Hue ~195°) und die TP-Linie (Grün, Hue ~152°) unterscheiden sich
   zusätzlich durch Linienstil (3R gepunktet, TP gestrichelt) und Titel.
 - Fehlender SL: "SL –" ohne Klasse `.slLine`, also gedämpft; rot (`.slLine`) nur bei gesetztem SL.
-- **R-Spalte** (`rMultiple`, Label "R"): aktueller Gewinn in R, eine Nachkommastelle, Vorzeichen ("+1.4R"),
-  Ton über `pnlTone`; `null` = "–" mit `aria-label="Risiko unbekannt"`. Bleibt auch mobil (Karte) sichtbar.
+- **R-Spalte entfernt** (2026-10-21): Die Spalte „BE / Ziel“ mit den Preisen und der Chip ersetzen sie; `currentRMultiple` bleibt in der API (Journal, Stufe 3).
 - **Aktionschip "2R · BE ziehen"** (`.chipAction`, `warning-surface` mit Text `warning`) in der Chip-Zeile der
   Symbolzelle, nur bei `breakEvenTriggerReached: true` und `breakEven` nicht `true`; bleibt auch mobil.
 - **R-Linien im Chart**: 1R `text-muted` gepunktet ("1R"), 2R `warning` gestrichelt ("2R · BE"), 3R neues Token

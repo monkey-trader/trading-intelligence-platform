@@ -26,8 +26,9 @@ type OpenPositionEntry struct {
 	InitialStopLoss         *string
 	RiskDistance            *string
 	CurrentRMultiple        *string
-	BreakEvenTriggerReached *bool  // nil auch, wenn die Kerzen nicht lesbar waren
-	Reached2RAt             *int64 // Kerzenbeginn, nil wenn nicht erreicht oder unbekannt
+	BreakEvenTriggerReached *bool                   // nil auch, wenn die Kerzen nicht lesbar waren
+	Reached2RAt             *int64                  // Kerzenbeginn, nil wenn nicht erreicht oder unbekannt
+	Levels                  []domainposition.RLevel // 1R/2R/3R, nil bei unbekanntem Risiko
 }
 
 // riskCandleLimit ist die Zahl der 5-Minuten-Kerzen, in denen nach 2R gesucht wird.
@@ -42,16 +43,33 @@ type OpenPositionsOverview struct {
 
 // GetOpenPositionsUseCase liefert die offenen Positionen, neueste zuerst.
 type GetOpenPositionsUseCase struct {
-	source  interfaces.OpenPositionSource
-	orders  chartinterfaces.ProtectiveOrderSource // optional
-	risks   interfaces.PositionRiskRepository     // optional
-	candles chartinterfaces.CandleRepository      // optional
-	now     func() int64
+	source   interfaces.OpenPositionSource
+	orders   chartinterfaces.ProtectiveOrderSource // optional
+	risks    interfaces.PositionRiskRepository     // optional
+	resolver *RiskResolver
+	candles  chartinterfaces.CandleRepository // optional
+	now      func() int64
 }
 
 // WithRisk ergänzt R-Multiple und 2R-Status; now liefert die Zeit in Epoch-ms für das erste Sehen.
 func (useCase *GetOpenPositionsUseCase) WithRisk(risks interfaces.PositionRiskRepository, candles chartinterfaces.CandleRepository, now func() int64) *GetOpenPositionsUseCase {
 	useCase.risks, useCase.candles, useCase.now = risks, candles, now
+	useCase.resolver = NewRiskResolver(risks, now)
+	return useCase
+}
+
+// WithRiskResolver nutzt einen gemeinsam verwendeten Resolver (z.B. mit dem Chart-Use-Case) samt seinem Repository.
+func (useCase *GetOpenPositionsUseCase) WithRiskResolver(resolver *RiskResolver, risks interfaces.PositionRiskRepository, candles chartinterfaces.CandleRepository, now func() int64) *GetOpenPositionsUseCase {
+	useCase.risks, useCase.candles, useCase.now = risks, candles, now
+	useCase.resolver = resolver
+	return useCase
+}
+
+// WithStopHistory ergänzt die Suche des ursprünglichen SL in der Order-Historie; nach WithRisk aufrufen.
+func (useCase *GetOpenPositionsUseCase) WithStopHistory(history interfaces.StopOrderHistorySource) *GetOpenPositionsUseCase {
+	if useCase.resolver != nil {
+		useCase.resolver.WithHistory(history)
+	}
 	return useCase
 }
 
@@ -71,6 +89,13 @@ func (useCase *GetOpenPositionsUseCase) Execute(ctx context.Context) (OpenPositi
 	sortedPositions := slices.Clone(snapshot.Positions)
 	slices.SortFunc(sortedPositions, compareNewestFirst)
 
+	if useCase.resolver != nil {
+		openIDs := make([]string, 0, len(sortedPositions))
+		for _, openPosition := range sortedPositions {
+			openIDs = append(openIDs, openPosition.PositionID)
+		}
+		useCase.resolver.BeginRun(openIDs)
+	}
 	groupedOrders := useCase.ordersByPosition(ctx)
 	entries := make([]OpenPositionEntry, 0, len(sortedPositions))
 	for _, openPosition := range sortedPositions {
@@ -165,7 +190,7 @@ func (useCase *GetOpenPositionsUseCase) applyRisk(ctx context.Context, entry *Op
 			stopTriggers = append(stopTriggers, order.TriggerPrice)
 		}
 	}
-	risk, known := ResolveRisk(ctx, useCase.risks, useCase.now, entry.OpenPosition, stopTriggers)
+	risk, known := useCase.resolver.Resolve(ctx, entry.OpenPosition, stopTriggers)
 	if !known {
 		return
 	}
@@ -180,6 +205,9 @@ func (useCase *GetOpenPositionsUseCase) applyRisk(ctx context.Context, entry *Op
 		return
 	}
 	entry.InitialStopLoss, entry.RiskDistance, entry.CurrentRMultiple = &risk.InitialStopLoss, &riskDistance, &currentR
+	if levels, levelsErr := domainposition.RLevels(entry.Side, risk.EntryPrice, risk.InitialStopLoss); levelsErr == nil {
+		entry.Levels = levels
+	}
 	entry.BreakEvenTriggerReached, entry.Reached2RAt = useCase.twoRStatus(ctx, entry, risk)
 }
 

@@ -69,11 +69,28 @@ type GetPositionChartUseCase struct {
 	logger    *slog.Logger
 	risks     positioninterfaces.PositionRiskRepository // optional
 	now       func() int64
+	resolver  *appposition.RiskResolver
 }
 
 // WithRisk ergänzt die R-Level; now liefert die Zeit in Epoch-ms für das erste Sehen.
 func (useCase *GetPositionChartUseCase) WithRisk(risks positioninterfaces.PositionRiskRepository, now func() int64) *GetPositionChartUseCase {
 	useCase.risks, useCase.now = risks, now
+	useCase.resolver = appposition.NewRiskResolver(risks, now)
+	return useCase
+}
+
+// WithRiskResolver nutzt einen gemeinsam verwendeten Resolver samt seinem Repository.
+func (useCase *GetPositionChartUseCase) WithRiskResolver(resolver *appposition.RiskResolver, risks positioninterfaces.PositionRiskRepository, now func() int64) *GetPositionChartUseCase {
+	useCase.risks, useCase.now = risks, now
+	useCase.resolver = resolver
+	return useCase
+}
+
+// WithStopHistory ergänzt die Suche des ursprünglichen SL in der Order-Historie; nach WithRisk aufrufen.
+func (useCase *GetPositionChartUseCase) WithStopHistory(history positioninterfaces.StopOrderHistorySource) *GetPositionChartUseCase {
+	if useCase.resolver != nil {
+		useCase.resolver.WithHistory(history)
+	}
 	return useCase
 }
 
@@ -143,6 +160,13 @@ func (useCase *GetPositionChartUseCase) findPosition(ctx context.Context, positi
 	if err != nil {
 		return position.OpenPosition{}, err
 	}
+	if useCase.resolver != nil {
+		openIDs := make([]string, 0, len(snapshot.Positions))
+		for _, openPosition := range snapshot.Positions {
+			openIDs = append(openIDs, openPosition.PositionID)
+		}
+		useCase.resolver.BeginRun(openIDs)
+	}
 	for _, openPosition := range snapshot.Positions {
 		if openPosition.PositionID == positionID {
 			return openPosition, nil
@@ -186,7 +210,7 @@ func (useCase *GetPositionChartUseCase) levels(ctx context.Context, openPosition
 	for _, order := range stopLoss {
 		stopTriggers = append(stopTriggers, order.TriggerPrice)
 	}
-	risk, known := appposition.ResolveRisk(ctx, useCase.risks, useCase.now, openPosition, stopTriggers)
+	risk, known := useCase.resolver.Resolve(ctx, openPosition, stopTriggers)
 	if !known {
 		return []position.RLevel{}
 	}

@@ -17,10 +17,10 @@ describe('DEFAULT_COLUMN_ORDER', () => {
       'positionValue',
       'margin',
       'unrealizedProfit',
-      'rMultiple',
       'realisedProfit',
       'entry',
       'tpSl',
+      'beTarget',
     ]);
     expect(new Set(DEFAULT_COLUMN_ORDER).size).toBe(8);
   });
@@ -85,12 +85,11 @@ describe('sanitizeColumnOrder', () => {
       DEFAULT.filter((key) => !['symbol', 'tpSl', 'entry'].includes(key)),
     );
   });
-  it('hängt eine fehlende rMultiple hinten an (alte gespeicherte Reihenfolge)', () => {
-    const stored = DEFAULT.filter((key) => key !== 'rMultiple');
-    const result = sanitizeColumnOrder(stored);
+  it('ignoriert die entfernte Spalte rMultiple in alten gespeicherten Reihenfolgen', () => {
+    const result = sanitizeColumnOrder(['symbol', 'rMultiple', 'entry']);
     expect(result).toHaveLength(8);
-    expect(result[result.length - 1]).toBe('rMultiple');
-    expect(result.slice(0, 7)).toEqual(stored);
+    expect(result.slice(0, 2)).toEqual(['symbol', 'entry']);
+    expect(result).not.toContain('rMultiple');
   });
   it('erzwingt symbol als erste Spalte', () => {
     const result = sanitizeColumnOrder(['entry', 'symbol', 'margin']);

@@ -18,10 +18,10 @@ const COLUMN_LABELS = [
   'Positionswert',
   'Margin',
   'Unreal. PnL',
-  'R',
   'Real. PnL',
   'Einstieg',
   'TP / SL',
+  'BE / Ziel',
 ] as const;
 
 type ColumnLabel = (typeof COLUMN_LABELS)[number];
