@@ -94,6 +94,19 @@ eigenen Analyse). Das Journal zeigt ihn als Link, ohne ihn einzubetten oder abzu
 
 ---
 
+## CRV-Level (umgesetzt 2026-10-20, offene Positionen)
+
+Aus dem ursprünglichen Risiko (Entry→SL) berechnet das Backend 1R, 2R (Break-even-Trigger) und 3R (CRV-Ziel 1:3).
+- Chart: `PositionChart.levels` als gepunktete (1R, 3R) bzw. gestrichelte (2R, „2R · BE“) Linien; liegt 3R innerhalb von 0,1 % des Entry am TP, zeigt eine Linie „TP = 3R“.
+- Tabelle: Chip „▲ 2R · BE ziehen“, sobald 2R erreicht und der SL noch nicht auf Break-even ist. Eine eigene R-Spalte gibt es nicht mehr (ersetzt durch „BE / Ziel“); `currentRMultiple` bleibt in der API.
+- Das ursprüngliche SL wird beim ersten Sehen gespeichert (`position_risk`); ohne bekanntes Risiko gibt es keine Level.
+- Grenze: Die 2R-Prüfung nutzt die letzten 1000 gecachten 5-Minuten-Kerzen (ca. 3,5 Tage).
+- Das `rMultiple` bei Schließung (Stufe 3) ist davon getrennt.
+- Tabelle: Spalte „BE / Ziel“ mit 2R-Preis („BE …“, dort den SL bei BingX auf Break-even setzen) und 3R-Preis („Ziel …“, TP).
+- Stand die Position beim ersten Sehen schon auf Break-even, wird der ursprüngliche SL aus der Order-Historie (`allOrders`) rekonstruiert. Das klappt nur, wenn der SL dort als eigene Stop-Order steht; sonst bleibt das Risiko unbekannt („–“).
+
+---
+
 ## Stufe 3 – Abgeschlossene Trades im Journal
 
 Der wertvollste Teil für die Auswertung: "Wo lag mein SL, wo wäre er besser gewesen?"

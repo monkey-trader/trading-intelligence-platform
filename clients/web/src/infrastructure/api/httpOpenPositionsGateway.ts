@@ -9,6 +9,7 @@ import type { components } from '@/infrastructure/api/generated';
 
 type OpenPositionsSnapshotDto = components['schemas']['OpenPositionsSnapshot'];
 type OpenPositionDto = components['schemas']['OpenPosition'];
+type RLevelDto = components['schemas']['RLevel'];
 type ProblemDto = components['schemas']['Problem'];
 
 const OPEN_POSITIONS_PATH = '/positions/open';
@@ -150,6 +151,8 @@ function parseOpenPositionDto(candidate: unknown): OpenPositionDto | undefined {
     openTime,
     updateTime,
   } = candidate;
+  const { initialStopLoss, riskDistance, currentRMultiple, breakEvenTriggerReached, reached2RAt } =
+    candidate;
   const matchesContract =
     typeof positionId === 'string' &&
     positionId !== '' &&
@@ -193,7 +196,37 @@ function parseOpenPositionDto(candidate: unknown): OpenPositionDto | undefined {
     breakEven,
     openTime,
     updateTime,
+    initialStopLoss: isDecimal(initialStopLoss) ? initialStopLoss : null,
+    riskDistance: isDecimal(riskDistance) ? riskDistance : null,
+    currentRMultiple: isDecimal(currentRMultiple) ? currentRMultiple : null,
+    breakEvenTriggerReached:
+      typeof breakEvenTriggerReached === 'boolean' ? breakEvenTriggerReached : null,
+    reached2RAt: isFiniteNumber(reached2RAt) ? reached2RAt : null,
+    ...withLevels(parseLevels(candidate['levels'])),
   };
+}
+
+function withLevels(levels: RLevelDto[] | undefined): { levels?: RLevelDto[] } {
+  return levels ? { levels } : {};
+}
+
+/** Defensiv: alles Unpassende (fehlend, leer, ungültig) ergibt undefined. */
+function parseLevels(value: unknown): RLevelDto[] | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  const levels: RLevelDto[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) return undefined;
+    const { kind, rMultiple, price, percent } = entry;
+    if (
+      (kind !== 'ONE_R' && kind !== 'TWO_R' && kind !== 'THREE_R') ||
+      !isFiniteNumber(rMultiple) ||
+      !isDecimal(price) ||
+      !isDecimal(percent)
+    )
+      return undefined;
+    levels.push({ kind, rMultiple, price, percent });
+  }
+  return levels;
 }
 
 function toSnapshot(snapshotDto: OpenPositionsSnapshotDto): OpenPositionsSnapshot {
@@ -225,6 +258,12 @@ function toOpenPosition(positionDto: OpenPositionDto): OpenPosition {
     breakEven: positionDto.breakEven,
     openTime: positionDto.openTime,
     updateTime: positionDto.updateTime,
+    initialStopLoss: positionDto.initialStopLoss ?? null,
+    riskDistance: positionDto.riskDistance ?? null,
+    currentRMultiple: positionDto.currentRMultiple ?? null,
+    breakEvenTriggerReached: positionDto.breakEvenTriggerReached ?? null,
+    reached2RAt: positionDto.reached2RAt ?? null,
+    ...(positionDto.levels && positionDto.levels.length > 0 ? { levels: positionDto.levels } : {}),
   };
 }
 

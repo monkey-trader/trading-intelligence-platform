@@ -1,6 +1,27 @@
 package httpapi
 
-import appchart "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/chart"
+import (
+	appchart "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/chart"
+	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/position"
+)
+
+// rLevelDto ist das Schema RLevel.
+type rLevelDto struct {
+	Kind      string `json:"kind"`
+	RMultiple int    `json:"rMultiple"`
+	Price     string `json:"price"`
+	Percent   string `json:"percent"`
+}
+
+var rLevelKinds = map[int]string{1: "ONE_R", 2: "TWO_R", 3: "THREE_R"}
+
+func toRLevelDtos(levels []position.RLevel) []rLevelDto {
+	dtos := make([]rLevelDto, 0, len(levels))
+	for _, level := range levels {
+		dtos = append(dtos, rLevelDto{Kind: rLevelKinds[level.Multiple], RMultiple: level.Multiple, Price: level.Price, Percent: level.Percent})
+	}
+	return dtos
+}
 
 // candleDto ist das Schema Candle aus docs/openapi.yaml.
 type candleDto struct {
@@ -41,6 +62,7 @@ type positionChartDto struct {
 	StopLoss   []protectiveOrderDto `json:"stopLoss"`
 	TakeProfit []protectiveOrderDto `json:"takeProfit"`
 	Markers    []markerDto          `json:"markers"`
+	Levels     []rLevelDto          `json:"levels,omitempty"`
 	FetchedAt  int64                `json:"fetchedAt"`
 }
 
@@ -59,7 +81,7 @@ func toPositionChartDto(result appchart.PositionChart) positionChartDto {
 		Interval: string(result.Interval), Candles: candles,
 		Entry:    entryLevelDto{Price: result.Entry.Price, Time: result.Entry.Time},
 		StopLoss: toProtectiveOrderDtos(result.StopLoss), TakeProfit: toProtectiveOrderDtos(result.TakeProfit),
-		Markers: markers, FetchedAt: result.FetchedAt,
+		Markers: markers, Levels: toRLevelDtos(result.Levels), FetchedAt: result.FetchedAt,
 	}
 }
 

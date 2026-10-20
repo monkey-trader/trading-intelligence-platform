@@ -358,6 +358,10 @@
   background: var(--color-positive-surface);
   color: var(--color-positive);
 }
+.chipAction {
+  background: var(--color-warning-surface);
+  color: var(--color-warning);
+}
 .chipShort {
   background: var(--color-negative-surface);
   color: var(--color-negative);
@@ -396,4 +400,29 @@
   margin-left: var(--space-1);
   color: var(--color-text-muted);
   font-size: var(--font-size-small);
+}
+
+/* BE / Ziel: zwei Zeilen als Tonpillen (Text, nicht nur Farbe). BE = 2R-Linie (warning),
+   Ziel = 3R-Linie (chart-r-target). Pillen statt Präfix-Span, damit "BE 1.08" in einem Element steht. */
+.levelStack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+}
+.levelPill {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-chip);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-strong);
+  line-height: var(--line-height-base);
+  white-space: nowrap;
+}
+.levelBe {
+  background: var(--color-warning-surface);
+  color: var(--color-warning);
+}
+.levelTarget {
+  background: var(--color-r-target-surface);
+  color: var(--color-chart-r-target);
 }

@@ -58,4 +58,10 @@ var schemaStatements = []string{
 		key TEXT PRIMARY KEY,
 		value INTEGER NOT NULL
 	)`,
+	`CREATE TABLE IF NOT EXISTS position_risk (
+		position_id TEXT PRIMARY KEY,
+		entry_price TEXT NOT NULL,
+		initial_stop_loss TEXT NOT NULL,
+		first_seen_at INTEGER NOT NULL
+	)`,
 }

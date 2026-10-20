@@ -108,6 +108,22 @@ Die beiden `contract_discovery_*`-Werte speichern den Beginn des Vollimports (`I
 Standard 365). Wird der Zeitraum größer, gilt die Suche als unvollständig und läuft erneut.
 Einen Schlüssel umzubenennen erzwingt einen vollständigen Neu-Import der betroffenen Daten.
 
+## Tabelle `position_risk`
+Ursprüngliches Risiko einer offenen Position (Grundlage der R-Level 1R/2R/3R). Wird beim ersten Sehen einer
+Position angelegt und nie überschrieben, nur wenn der SL auf der Verlustseite des Entry liegt (SL = Entry oder
+kein SL: kein Eintrag, Risiko unbekannt).
+Der ursprüngliche SL kann auch aus der `allOrders`-Historie stammen: Ist der aktuelle SL unbrauchbar, gilt der
+zeitlich früheste STOP-Order-Trigger der Position auf der Verlustseite (Negativ-Cache 10 min im Speicher).
+
+| Spalte | Typ | Bedeutung |
+|---|---|---|
+| `position_id` | TEXT, PK | 19-stellige positionId, immer als String |
+| `entry_price` | TEXT | Entry beim ersten Sehen (Dezimal-String) |
+| `initial_stop_loss` | TEXT | SL beim ersten Sehen (Dezimal-String) |
+| `first_seen_at` | INTEGER | Zeitpunkt des ersten Sehens (Epoch-ms) |
+
+Keine Schema-Version-Erhöhung (wie `candles`): Die Tabelle entsteht per `CREATE TABLE IF NOT EXISTS`.
+
 ## Tabelle `schema_version`
 Nur Go-Backend. Spalte `version INTEGER NOT NULL`, genau eine Zeile mit der aktuellen Version
 (`CurrentSchemaVersion`, derzeit 1). Eine TS-DB ohne diese Tabelle gilt als Version 0.

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	appposition "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/position"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/chart"
 	chartinterfaces "github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/chart/interfaces"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/position"
@@ -55,6 +56,7 @@ type PositionChart struct {
 	StopLoss   []ProtectiveOrderWithDistance
 	TakeProfit []ProtectiveOrderWithDistance
 	Markers    []Marker
+	Levels     []position.RLevel // 1R/2R/3R, leer bei unbekanntem Risiko
 	FetchedAt  int64
 }
 
@@ -65,6 +67,31 @@ type GetPositionChartUseCase struct {
 	source    chartinterfaces.CandleSource
 	candles   chartinterfaces.CandleRepository
 	logger    *slog.Logger
+	risks     positioninterfaces.PositionRiskRepository // optional
+	now       func() int64
+	resolver  *appposition.RiskResolver
+}
+
+// WithRisk ergänzt die R-Level; now liefert die Zeit in Epoch-ms für das erste Sehen.
+func (useCase *GetPositionChartUseCase) WithRisk(risks positioninterfaces.PositionRiskRepository, now func() int64) *GetPositionChartUseCase {
+	useCase.risks, useCase.now = risks, now
+	useCase.resolver = appposition.NewRiskResolver(risks, now)
+	return useCase
+}
+
+// WithRiskResolver nutzt einen gemeinsam verwendeten Resolver samt seinem Repository.
+func (useCase *GetPositionChartUseCase) WithRiskResolver(resolver *appposition.RiskResolver, risks positioninterfaces.PositionRiskRepository, now func() int64) *GetPositionChartUseCase {
+	useCase.risks, useCase.now = risks, now
+	useCase.resolver = resolver
+	return useCase
+}
+
+// WithStopHistory ergänzt die Suche des ursprünglichen SL in der Order-Historie; nach WithRisk aufrufen.
+func (useCase *GetPositionChartUseCase) WithStopHistory(history positioninterfaces.StopOrderHistorySource) *GetPositionChartUseCase {
+	if useCase.resolver != nil {
+		useCase.resolver.WithHistory(history)
+	}
+	return useCase
 }
 
 // NewGetPositionChartUseCase baut den Use Case mit den injizierten Ports.
@@ -123,6 +150,7 @@ func (useCase *GetPositionChartUseCase) Execute(ctx context.Context, query Query
 		StopLoss:   stopLoss,
 		TakeProfit: takeProfit,
 		Markers:    []Marker{{Time: openPosition.OpenTime, Kind: MarkerEntry, Price: openPosition.AvgOpenPrice}},
+		Levels:     useCase.levels(ctx, openPosition, stopLoss),
 		FetchedAt:  ordersSnapshot.FetchedAt,
 	}, nil
 }
@@ -131,6 +159,13 @@ func (useCase *GetPositionChartUseCase) findPosition(ctx context.Context, positi
 	snapshot, err := useCase.positions.FetchOpenPositions(ctx)
 	if err != nil {
 		return position.OpenPosition{}, err
+	}
+	if useCase.resolver != nil {
+		openIDs := make([]string, 0, len(snapshot.Positions))
+		for _, openPosition := range snapshot.Positions {
+			openIDs = append(openIDs, openPosition.PositionID)
+		}
+		useCase.resolver.BeginRun(openIDs)
 	}
 	for _, openPosition := range snapshot.Positions {
 		if openPosition.PositionID == positionID {
@@ -164,4 +199,25 @@ func splitOrders(orders []chart.ProtectiveOrder, openPosition position.OpenPosit
 		}
 	}
 	return stopLoss, takeProfit, nil
+}
+
+// levels liefert 1R/2R/3R aus dem gespeicherten Risiko; nie nil, leer bei unbekanntem Risiko.
+func (useCase *GetPositionChartUseCase) levels(ctx context.Context, openPosition position.OpenPosition, stopLoss []ProtectiveOrderWithDistance) []position.RLevel {
+	if useCase.risks == nil {
+		return []position.RLevel{}
+	}
+	stopTriggers := make([]string, 0, len(stopLoss))
+	for _, order := range stopLoss {
+		stopTriggers = append(stopTriggers, order.TriggerPrice)
+	}
+	risk, known := useCase.resolver.Resolve(ctx, openPosition, stopTriggers)
+	if !known {
+		return []position.RLevel{}
+	}
+	levels, err := position.RLevels(openPosition.Side, risk.EntryPrice, risk.InitialStopLoss)
+	if err != nil {
+		useCase.logger.WarnContext(ctx, "R-Level nicht berechenbar", slog.String("positionId", openPosition.PositionID), slog.String("error", err.Error()))
+		return []position.RLevel{}
+	}
+	return levels
 }

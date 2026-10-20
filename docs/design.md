@@ -83,15 +83,15 @@ Kontrast: Text mindestens 4.5:1 (WCAG AA) in beiden Themes.
 ## Ansicht: Offene Positionen
 
 Standard-Reihenfolge (ColumnKeys): `symbol`, `positionValue`, `margin`, `unrealizedProfit`,
-`realisedProfit`, `entry`, `breakEven`, `tpSl`. Das Symbol bleibt immer fix links (sticky).
+`realisedProfit`, `entry`, `tpSl`, `beTarget`. Das Symbol bleibt immer fix links (sticky).
 Entfallen: Seite, Menge, Mark, Hebel, Eröffnet, SL/TP einzeln, PnL % (jetzt in Unreal. PnL).
 
 ### Positionstabelle (BingX-Stil, flach)
-Labels: Symbol, Positionswert, Margin, Unreal. PnL, Real. PnL, Einstieg, TP / SL.
+Labels: Symbol, Positionswert, Margin, Unreal. PnL, Real. PnL, Einstieg, TP / SL, BE / Ziel.
 Optik: keine Zebra-Streifen, nur 1px `border` zwischen Zeilen, Kopfzeile `font-size-x-small`,
 `text-muted`, auf `surface` (nicht raised), Zeilen luftig (`--table-row-padding-block` = `space-4`).
 Neue Tokens: `--font-size-x-small`, `--table-row-padding-block`, `--size-coin-icon` (20px),
-`--size-side-bar` (3px), `--radius-chip`, `--color-chip-surface`, `--color-chip-text` (hell und dunkel, >= 4.5:1).
+`--size-side-bar` (3px), `--radius-chip`, `--color-chip-surface`, `--color-chip-text` (hell und dunkel, >= 4.5:1), `--color-r-target-surface` (Ziel-Pille der BE / Ziel-Spalte, hell und dunkel).
 
 Zellaufbau (Klassen):
 - **Symbol** (`th.cell.symbolCell` + `.barLong`/`.barShort`, Balken links per inset box-shadow):
@@ -102,6 +102,7 @@ Zellaufbau (Klassen):
 - **Unreal. PnL**: `.twoLine` > Betrag (USDT, mit Vorzeichen, Ton `positive`/`negative`) + `.lineSub` "(+x,xx %)" gleicher Ton.
 - **TP / SL**: `.twoLine` > TP-Zeile, darunter `.slLine` (SL, rot); "–" wenn nicht gesetzt. Zeilen mit
   Präfix "TP"/"SL" als Text (`.lineMuted`), damit Farbe nicht einziges Merkmal ist.
+- **BE / Ziel**: `.levelStack` > zwei Tonpillen `.levelPill` (rechtsbündig, `font-size-small`, fett, `radius-chip`): "BE <2R-Preis>" in `.levelBe` (`warning-surface` + `warning`, wie die 2R-Linie im Chart) und "Ziel <3R-Preis>" in `.levelTarget` (`--color-r-target-surface` + `--color-chart-r-target`, wie die 3R-Linie). Preisformat wie Einstieg, tabular-nums. Ohne `levels` "–" mit `aria-label="Risiko unbekannt"`. Pille statt Präfix-Span, weil der Test "BE 1.08" als Text in einem Element erwartet. Kontrast (berechnet): BE hell 5.98:1, dunkel 8.12:1; Ziel hell 5.13:1, dunkel 7.48:1.
 - Mobile (<768 px): Karte wie bisher, jede Zelle mit `data-label`; `.twoLine` rechtsbündig neben dem Label.
   Abnahme (Design-Review, gerendert 1440/390 px hell und dunkel): Label (`::before`) hat `margin-inline-end: auto`,
   Wert und Einheit stehen als Gruppe rechtsbündig (`.cell` ohne `gap`, Abstand über `padding-inline-end`).
@@ -110,7 +111,19 @@ Zellaufbau (Klassen):
 - Kontrast (berechnet, hell und dunkel): Text und Chips alle >= 4.5:1 (kleinster Wert: Short-Chip hell 4.88:1,
   Muted hell/dunkel 6.87:1, Long-Chip dunkel 6.69:1). Die Farbtöne `positive`/`negative` brauchen als Text auf
   `surface` dunkel 6.2:1 bis 8.2:1.
+- Kontrast R-Elemente (berechnet, Review): R-Linie 3R (`chart-r-target`) hell 5.96:1 auf `surface`, dunkel 8.70:1;
+  2R-Linie (`warning`) hell 6.56:1, dunkel 9.22:1; Chip "2R · BE ziehen" hell 5.98:1, dunkel 8.12:1; 3R auf
+  `surface-raised` hell 5.00:1. Chart-Titel sind die Linienfarbe auf `surface`, Achsenlabel setzt lightweight-charts
+  selbst kontrastreich. Die 3R-Linie (Teal, Hue ~195°) und die TP-Linie (Grün, Hue ~152°) unterscheiden sich
+  zusätzlich durch Linienstil (3R gepunktet, TP gestrichelt) und Titel.
 - Fehlender SL: "SL –" ohne Klasse `.slLine`, also gedämpft; rot (`.slLine`) nur bei gesetztem SL.
+- **R-Spalte entfernt** (2026-10-21): Die Spalte „BE / Ziel“ mit den Preisen und der Chip ersetzen sie; `currentRMultiple` bleibt in der API (Journal, Stufe 3).
+- **Aktionschip "2R · BE ziehen"** (`.chipAction`, `warning-surface` mit Text `warning`) in der Chip-Zeile der
+  Symbolzelle, nur bei `breakEvenTriggerReached: true` und `breakEven` nicht `true`; bleibt auch mobil.
+- **R-Linien im Chart**: 1R `text-muted` gepunktet ("1R"), 2R `warning` gestrichelt ("2R · BE"), 3R neues Token
+  `--color-chart-r-target` gepunktet ("3R", ohne TP "3R Ziel"); liegt 3R innerhalb 0,1 % des Entry am TP, eine
+  TP-Linie "TP = 3R". Neues Token `--color-chart-r-target` (hell/dunkel); 2R nutzt `--color-warning`.
+  Keine Legendeneinträge für R-Linien, der Titel an der Linie genügt.
 - **BE-Badge und "kein SL"** in der SL-Zeile der TP/SL-Zelle: **Badge "BE"** (`.breakEvenBadge`, nur bei
   `breakEven: true`): `positive-surface`-Hintergrund, Text `positive`, `font-size-small`, fett,
   `radius-small`, mit `aria-label="Break-even"` und `role="img"`. Hinweis **"kein SL"** (`.noStopLossHint`, nur bei

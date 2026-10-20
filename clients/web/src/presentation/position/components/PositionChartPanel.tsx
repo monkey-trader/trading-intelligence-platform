@@ -4,12 +4,11 @@ import type { PositionChartGateway } from '@/domain/position/PositionChartGatewa
 import type {
   ChartCandle,
   ChartMarker,
-  ChartPriceLine,
   ChartRenderer,
   ChartRendererFactory,
 } from '@/presentation/position/chart/ChartRenderer';
 import { formatDecimal } from '@/presentation/position/format/formatDecimal';
-import { formatRatioAsPercent } from '@/presentation/position/format/formatRatioAsPercent';
+import { buildPriceLines, protectiveTitle } from '@/presentation/position/chart/buildPriceLines';
 import { usePositionChartViewModel } from '@/presentation/position/hooks/usePositionChartViewModel';
 import styles from '@/presentation/position/components/PositionChartPanel.module.css';
 
@@ -28,7 +27,8 @@ const SIDE_LABELS: Readonly<Record<PositionChart['side'], string>> = {
 /** Menge 0 heißt bei BingX: die ganze Position. */
 const WHOLE_POSITION_LABEL = 'ganze Position';
 
-type LegendEntry = Readonly<{ key: string; kind: ChartPriceLine['kind']; text: string }>;
+/** Legende nur für Entry, SL und TP; R-Linien tragen ihren Titel an der Linie. */
+type LegendEntry = Readonly<{ key: string; kind: 'entry' | 'stop' | 'target'; text: string }>;
 
 /** Chart-Panel einer offenen Position mit Intervallwahl und Legende. */
 export function PositionChartPanel({
@@ -73,14 +73,14 @@ export function PositionChartPanel({
     } else {
       renderer.updateCandles(toChartCandles(chart));
     }
-    const priceLines = legend.map(toPriceLine);
+    const priceLines = buildPriceLines(chart);
     const priceLinesKey = JSON.stringify(priceLines);
     if (priceLinesKeyRef.current !== priceLinesKey) {
       renderer.setPriceLines(priceLines);
       priceLinesKeyRef.current = priceLinesKey;
     }
     renderer.setMarkers(toChartMarkers(chart));
-  }, [chart, legend, positionId, interval]);
+  }, [chart, positionId, interval]);
 
   // Design folgt dem System (prefers-color-scheme): Farben im Renderer neu anwenden.
   useEffect(() => {
@@ -160,18 +160,12 @@ function toChartMarkers(chart: PositionChart): ChartMarker[] {
   }));
 }
 
-function toPriceLine(entry: LegendEntry & { price: number; title: string }): ChartPriceLine {
-  return { kind: entry.kind, price: entry.price, title: entry.title };
-}
-
-function buildLegend(chart: PositionChart): Array<LegendEntry & { price: number; title: string }> {
+function buildLegend(chart: PositionChart): LegendEntry[] {
   const entryTitle = `Entry ${formatDecimal(chart.entry.price)}`;
-  const entries: Array<LegendEntry & { price: number; title: string }> = [
+  const entries: LegendEntry[] = [
     {
       key: 'entry',
       kind: 'entry',
-      price: Number(chart.entry.price),
-      title: entryTitle,
       text: entryTitle,
     },
   ];
@@ -183,8 +177,6 @@ function buildLegend(chart: PositionChart): Array<LegendEntry & { price: number;
     entries.push({
       key: `sl-${order.orderId}`,
       kind: 'stop',
-      price: Number(order.triggerPrice),
-      title,
       text: `${title} · ${quantity}`,
     });
   }
@@ -196,17 +188,10 @@ function buildLegend(chart: PositionChart): Array<LegendEntry & { price: number;
     entries.push({
       key: `tp-${order.orderId}`,
       kind: 'target',
-      price: Number(order.triggerPrice),
-      title,
       text: `${title} · ${quantity}`,
     });
   }
   return entries;
-}
-
-function protectiveTitle(label: string, triggerPrice: string, distanceRatio: string): string {
-  const distance = formatRatioAsPercent(distanceRatio, { signDisplay: 'exceptZero' });
-  return `${label} ${formatDecimal(triggerPrice)} (${distance})`;
 }
 
 function isZeroQuantity(quantity: string): boolean {

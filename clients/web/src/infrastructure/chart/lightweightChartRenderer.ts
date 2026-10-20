@@ -23,9 +23,25 @@ function readToken(tokenName: string): string {
 }
 
 function lineColor(kind: ChartPriceLine['kind']): string {
-  if (kind === 'stop') return readToken('--color-chart-stop-loss');
-  if (kind === 'target') return readToken('--color-chart-take-profit');
-  return readToken('--color-chart-entry');
+  switch (kind) {
+    case 'stop':
+      return readToken('--color-chart-stop-loss');
+    case 'target':
+      return readToken('--color-chart-take-profit');
+    case 'entry':
+      return readToken('--color-chart-entry');
+    case 'r1':
+      return readToken('--color-text-muted');
+    case 'r2':
+      return readToken('--color-warning');
+    case 'r3':
+      return readToken('--color-chart-r-target');
+  }
+}
+
+/** 1R/3R gepunktet, 2R (Break-even-Trigger) gestrichelt, alles andere wie bisher gestrichelt. */
+function lineStyle(kind: ChartPriceLine['kind']): LineStyle {
+  return kind === 'r1' || kind === 'r3' ? LineStyle.Dotted : LineStyle.Dashed;
 }
 
 /** Adapter des ChartRenderer-Ports auf lightweight-charts (braucht Canvas, nicht per Unit-Test geprüft). */
@@ -77,7 +93,7 @@ export const createLightweightChartRenderer: ChartRendererFactory = (
           price: line.price,
           title: line.title,
           color: lineColor(line.kind),
-          lineStyle: LineStyle.Dashed,
+          lineStyle: lineStyle(line.kind),
           lineWidth: 1,
           axisLabelVisible: true,
         }),

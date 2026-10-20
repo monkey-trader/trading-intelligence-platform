@@ -8,6 +8,7 @@ export const DEFAULT_COLUMN_ORDER = [
   'realisedProfit',
   'entry',
   'tpSl',
+  'beTarget',
 ] as const;
 
 export type ColumnKey = (typeof DEFAULT_COLUMN_ORDER)[number];

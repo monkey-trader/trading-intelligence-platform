@@ -5,6 +5,7 @@ import {
   type ChartMarker,
   type PositionChart,
   type ProtectiveOrder,
+  type RLevel,
 } from '@/domain/position/PositionChart';
 import type { PositionChartGateway } from '@/domain/position/PositionChartGateway';
 import type {
@@ -114,6 +115,7 @@ function parseChart(body: unknown): PositionChart | undefined {
   const stopLoss = parseList(body['stopLoss'], parseProtectiveOrder);
   const takeProfit = parseList(body['takeProfit'], parseProtectiveOrder);
   const markers = parseList(body['markers'], parseMarker);
+  const levels = parseLevels(body['levels']);
   const parsedEntry = parseEntry(entry);
   if (
     typeof positionId !== 'string' ||
@@ -140,6 +142,7 @@ function parseChart(body: unknown): PositionChart | undefined {
     stopLoss,
     takeProfit,
     markers,
+    levels,
     fetchedAt,
   };
 }
@@ -156,6 +159,29 @@ function parseList<Item>(
     items.push(item);
   }
   return items;
+}
+
+/** Defensiv: fehlende oder kaputte Level-Liste heißt "keine Level", nie ein Fehler. */
+function parseLevels(candidate: unknown): RLevel[] | undefined {
+  if (!Array.isArray(candidate)) return undefined;
+  const levels: RLevel[] = [];
+  for (const rawLevel of candidate) {
+    const level = parseLevel(rawLevel);
+    if (level) levels.push(level);
+  }
+  return levels.length > 0 ? levels : undefined;
+}
+
+function parseLevel(candidate: unknown): RLevel | undefined {
+  if (!isRecord(candidate)) return undefined;
+  const { kind, rMultiple, price, percent } = candidate;
+  const multiple = typeof rMultiple === 'number' ? String(rMultiple) : rMultiple;
+  return (kind === 'ONE_R' || kind === 'TWO_R' || kind === 'THREE_R') &&
+    isDecimal(multiple) &&
+    isDecimal(price) &&
+    isDecimal(percent)
+    ? { kind, rMultiple: multiple, price, percent }
+    : undefined;
 }
 
 function parseEntry(candidate: unknown): PositionChart['entry'] | undefined {

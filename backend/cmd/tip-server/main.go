@@ -82,11 +82,18 @@ func run(logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	getOpenPositions := newGetOpenPositions(openPositionSource, orderSource)
-	getPositionChart, err := newGetPositionChart(logger, os.Getenv, openPositionSource, orderSource, database)
+	chartClient, err := newChartClient(os.Getenv, database)
 	if err != nil {
 		return err
 	}
+	// Ein gemeinsamer Resolver (Cooldown, Budget, Negativ-Cache) für Positionsliste und Chart.
+	var riskResolver *appposition.RiskResolver
+	if chartClient != nil {
+		riskResolver = appposition.NewRiskResolver(sqlite.NewPositionRiskRepository(database), time.Now().UnixMilli).
+			WithHistory(infrachart.NewBingXStopOrderHistorySource(chartClient))
+	}
+	getOpenPositions := newGetOpenPositions(openPositionSource, orderSource, database, riskResolver)
+	getPositionChart := newGetPositionChart(logger, chartClient, openPositionSource, orderSource, database, riskResolver)
 
 	iconClock := clock.SystemClock{}
 	getAssetIcons := appasset.NewGetAssetIconsUseCase(
@@ -259,25 +266,16 @@ func closeDatabase(logger *slog.Logger, database *sql.DB) {
 	}
 }
 
-// newGetPositionChart verdrahtet den Chart-Use-Case. Ohne Keys (database == nil) liefert die Funktion
-// immer not-configured, damit die Route wie GET /positions/open mit 503 antwortet.
-func newGetPositionChart(
-	logger *slog.Logger,
-	lookupEnv func(string) string,
-	openPositionSource interfaces.OpenPositionSource,
-	orderSource chartinterfaces.ProtectiveOrderSource,
-	database *sql.DB,
-) (func(context.Context, appchart.Query) (appchart.PositionChart, error), error) {
+// newChartClient baut den BingX-Client für Candles und Order-Historie. Ohne Keys oder Datenbank ist er nil.
+func newChartClient(lookupEnv func(string) string, database *sql.DB) (*bingx.Client, error) {
 	bingXConfig, configured, err := config.ReadBingXConfig(lookupEnv)
 	if err != nil {
 		return nil, err
 	}
 	if !configured || database == nil {
-		return func(context.Context, appchart.Query) (appchart.PositionChart, error) {
-			return appchart.PositionChart{}, &domainposition.OpenPositionsUnavailableError{Reason: domainposition.ReasonNotConfigured}
-		}, nil
+		return nil, nil
 	}
-	client := bingx.NewClient(bingx.ClientOptions{
+	return bingx.NewClient(bingx.ClientOptions{
 		APIKey:         bingXConfig.APIKey,
 		APISecret:      bingXConfig.APISecret,
 		BaseURL:        bingXConfig.BaseURL,
@@ -285,14 +283,31 @@ func newGetPositionChart(
 		RequestTimeout: bingXRequestTimeout,
 		RequestPause:   bingXRequestPause,
 		InitialBackoff: bingXInitialBackoff,
-	})
-	useCase := appchart.NewGetPositionChartUseCase(
+	}), nil
+}
+
+// newGetPositionChart verdrahtet den Chart-Use-Case. Ohne Client (keine Keys oder keine DB) antwortet die
+// Funktion immer not-configured, damit die Route wie GET /positions/open mit 503 antwortet.
+func newGetPositionChart(
+	logger *slog.Logger,
+	client *bingx.Client,
+	openPositionSource interfaces.OpenPositionSource,
+	orderSource chartinterfaces.ProtectiveOrderSource,
+	database *sql.DB,
+	riskResolver *appposition.RiskResolver,
+) func(context.Context, appchart.Query) (appchart.PositionChart, error) {
+	if client == nil {
+		return func(context.Context, appchart.Query) (appchart.PositionChart, error) {
+			return appchart.PositionChart{}, &domainposition.OpenPositionsUnavailableError{Reason: domainposition.ReasonNotConfigured}
+		}
+	}
+	return appchart.NewGetPositionChartUseCase(
 		openPositionSource,
 		orderSource,
 		infrachart.NewBingXCandleSource(client),
 		sqlite.NewCandleRepository(database),
-		logger)
-	return useCase.Execute, nil
+		logger).
+		WithRiskResolver(riskResolver, sqlite.NewPositionRiskRepository(database), time.Now().UnixMilli).Execute
 }
 
 // newOpenPositionSource baut mit Keys BingX-Client → BingX-Source → Cache, ohne Keys die
@@ -343,12 +358,22 @@ func newWebUI() http.Handler {
 	return webui.NewHandler(files)
 }
 
-// newGetOpenPositions nutzt SL/TP/Break-even nur, wenn eine Orders-Source existiert (Keys gesetzt).
-func newGetOpenPositions(source interfaces.OpenPositionSource, orderSource chartinterfaces.ProtectiveOrderSource) *appposition.GetOpenPositionsUseCase {
+// newGetOpenPositions nutzt SL/TP/Break-even nur, wenn eine Orders-Source existiert (Keys gesetzt),
+// und die R-Werte nur mit Datenbank.
+func newGetOpenPositions(source interfaces.OpenPositionSource, orderSource chartinterfaces.ProtectiveOrderSource, database *sql.DB, riskResolver *appposition.RiskResolver) *appposition.GetOpenPositionsUseCase {
+	var useCase *appposition.GetOpenPositionsUseCase
 	if orderSource == nil {
-		return appposition.NewGetOpenPositionsUseCase(source)
+		useCase = appposition.NewGetOpenPositionsUseCase(source)
+	} else {
+		useCase = appposition.NewGetOpenPositionsUseCaseWithProtection(source, orderSource)
 	}
-	return appposition.NewGetOpenPositionsUseCaseWithProtection(source, orderSource)
+	if database == nil {
+		return useCase
+	}
+	if riskResolver == nil {
+		return useCase.WithRisk(sqlite.NewPositionRiskRepository(database), sqlite.NewCandleRepository(database), time.Now().UnixMilli)
+	}
+	return useCase.WithRiskResolver(riskResolver, sqlite.NewPositionRiskRepository(database), sqlite.NewCandleRepository(database), time.Now().UnixMilli)
 }
 
 // newProtectiveOrderSource baut BingX-Orders-Source mit 5-s-Cache, der von Chart und Positionsliste geteilt wird.

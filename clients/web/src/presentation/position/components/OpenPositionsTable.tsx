@@ -20,6 +20,7 @@ const COLUMN_LABELS = {
   realisedProfit: 'Real. PnL',
   entry: 'Einstieg',
   tpSl: 'TP / SL',
+  beTarget: 'BE / Ziel',
 } as const;
 
 const SIDE_LABELS: Readonly<Record<OpenPosition['side'], string>> = {
@@ -191,6 +192,8 @@ function OpenPositionRow({
   const tickerFallback = (position.symbol.split('-')[0] ?? position.symbol).toUpperCase();
   const displayName = assetIcon?.displayName ?? tickerFallback;
 
+  const breakEvenLevel = position.levels?.find((level) => level.kind === 'TWO_R');
+  const targetLevel = position.levels?.find((level) => level.kind === 'THREE_R');
   const cells: Record<ColumnKey, ReactNode> = {
     symbol: (
       <th
@@ -222,6 +225,9 @@ function OpenPositionRow({
             </span>
             <span className={styles.chip}>{position.isolated ? 'Isolated' : 'Cross'}</span>
             <span className={styles.chip}>{`${position.leverage}X`}</span>
+            {position.breakEvenTriggerReached === true && position.breakEven !== true && (
+              <span className={`${styles.chip} ${styles.chipAction}`}>2R · BE ziehen</span>
+            )}
           </div>
         </div>
       </th>
@@ -283,6 +289,22 @@ function OpenPositionRow({
             )}
           </span>
         </div>
+      </td>
+    ),
+    beTarget: (
+      <td data-label={COLUMN_LABELS.beTarget} className={styles.cell}>
+        {breakEvenLevel && targetLevel ? (
+          <div className={styles.levelStack}>
+            <span className={`${styles.levelPill} ${styles.levelBe}`}>
+              {`BE ${formatDecimal(breakEvenLevel.price)}`}
+            </span>
+            <span className={`${styles.levelPill} ${styles.levelTarget}`}>
+              {`Ziel ${formatDecimal(targetLevel.price)}`}
+            </span>
+          </div>
+        ) : (
+          <span aria-label="Risiko unbekannt">{MISSING_VALUE}</span>
+        )}
       </td>
     ),
   };
