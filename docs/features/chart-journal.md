@@ -75,6 +75,8 @@ eigenen Analyse). Das Journal zeigt ihn als Link, ohne ihn einzubetten oder abzu
 
 ## Stufe 2 – Live-Update für offene Positionen
 
+**Stand 2026-10-20: Polling umgesetzt** (UI pollt `GET /positions/{id}/chart` alle 5 s ohne `since`, pausiert bei verstecktem Tab, Zoom bleibt erhalten, Chart folgt dem Theme). Orders-Cache 5 s, geteilt mit der Positionsliste. Streaming weiterhin offen.
+
 **Zuerst einfach:** Polling.
 - UI fragt alle 5 s `GET /positions/{id}/chart?since=<letzte Kerze>` ab.
 - Backend aktualisiert die laufende (noch offene) Kerze und hängt neue an.

@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	appposition "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/position"
+	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/chart"
+	chartinterfaces "github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/chart/interfaces"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/position"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/position/interfaces"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/shared/decimal"
@@ -361,4 +363,104 @@ func describeRatio(ratio *string) string {
 		return "<nil>"
 	}
 	return *ratio
+}
+
+// --- SL/TP/Break-even ---
+
+type fakeOrders struct {
+	orders []chart.ProtectiveOrder
+	err    error
+}
+
+func (source *fakeOrders) FetchProtectiveOrders(context.Context) (chart.ProtectiveOrdersSnapshot, error) {
+	if source.err != nil {
+		return chart.ProtectiveOrdersSnapshot{}, source.err
+	}
+	return chart.ProtectiveOrdersSnapshot{Orders: source.orders, FetchedAt: fetchedAt}, nil
+}
+
+var _ chartinterfaces.ProtectiveOrderSource = (*fakeOrders)(nil)
+
+func order(positionID string, kind chart.ProtectiveKind, trigger string) chart.ProtectiveOrder {
+	return chart.ProtectiveOrder{OrderID: positionID + trigger, PositionID: positionID, Kind: kind, TriggerPrice: trigger}
+}
+
+func executeWithOrders(t *testing.T, positions []position.OpenPosition, orders *fakeOrders) appposition.OpenPositionsOverview {
+	t.Helper()
+	overview, err := appposition.NewGetOpenPositionsUseCaseWithProtection(sourceWith(positions...), orders).Execute(context.Background())
+	if err != nil {
+		t.Fatalf("unerwarteter Fehler: %v", err)
+	}
+	return overview
+}
+
+func TestExecute_Schutzorders(t *testing.T) {
+	const ownID = "9100000000000000001"
+	short := func(p *position.OpenPosition) {
+		p.PositionID = "S1"
+		p.Side = position.Short
+		p.AvgOpenPrice = "1.0000"
+	}
+	testCases := []struct {
+		name       string
+		position   position.OpenPosition
+		orders     []chart.ProtectiveOrder
+		stopLoss   *string
+		takeProfit *string
+		breakEven  bool
+	}{
+		{"LONG SL im Gewinn, mehrere SLs: höchster", openPosition(nil),
+			[]chart.ProtectiveOrder{order(ownID, chart.StopLoss, "0.90"), order(ownID, chart.StopLoss, "0.97"), order(ownID, chart.TakeProfit, "1.50"), order(ownID, chart.TakeProfit, "1.20")},
+			ptr("0.97"), ptr("1.20"), true},
+		{"LONG SL exakt auf Entry ist Break-even", openPosition(nil),
+			[]chart.ProtectiveOrder{order(ownID, chart.StopLoss, "0.96")}, ptr("0.96"), nil, true},
+		{"LONG SL im Verlust", openPosition(nil),
+			[]chart.ProtectiveOrder{order(ownID, chart.StopLoss, "0.90")}, ptr("0.90"), nil, false},
+		{"LONG ohne SL, nur TP", openPosition(nil),
+			[]chart.ProtectiveOrder{order(ownID, chart.TakeProfit, "1.2")}, nil, ptr("1.2"), false},
+		{"LONG ohne Orders", openPosition(nil), nil, nil, nil, false},
+		{"SHORT mehrere SLs: niedrigster, im Gewinn", openPosition(short),
+			[]chart.ProtectiveOrder{order("S1", chart.StopLoss, "1.10"), order("S1", chart.StopLoss, "0.99"), order("S1", chart.TakeProfit, "0.70"), order("S1", chart.TakeProfit, "0.80")},
+			ptr("0.99"), ptr("0.80"), true},
+		{"SHORT SL im Verlust", openPosition(short),
+			[]chart.ProtectiveOrder{order("S1", chart.StopLoss, "1.10")}, ptr("1.10"), nil, false},
+		{"SHORT SL exakt auf Entry", openPosition(short),
+			[]chart.ProtectiveOrder{order("S1", chart.StopLoss, "1")}, ptr("1"), nil, true},
+		{"Orders anderer Position werden ignoriert", openPosition(nil),
+			[]chart.ProtectiveOrder{order("andere", chart.StopLoss, "0.99"), order("andere", chart.TakeProfit, "1.05"), order(ownID, chart.StopLoss, "0.90")},
+			ptr("0.90"), nil, false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			overview := executeWithOrders(t, []position.OpenPosition{testCase.position}, &fakeOrders{orders: testCase.orders})
+
+			entry := overview.Positions[0]
+			if describeRatio(entry.StopLoss) != describeRatio(testCase.stopLoss) {
+				t.Errorf("StopLoss = %s, erwartet %s", describeRatio(entry.StopLoss), describeRatio(testCase.stopLoss))
+			}
+			if describeRatio(entry.TakeProfit) != describeRatio(testCase.takeProfit) {
+				t.Errorf("TakeProfit = %s, erwartet %s", describeRatio(entry.TakeProfit), describeRatio(testCase.takeProfit))
+			}
+			if entry.BreakEven == nil || *entry.BreakEven != testCase.breakEven {
+				t.Errorf("BreakEven = %v, erwartet %v", entry.BreakEven, testCase.breakEven)
+			}
+		})
+	}
+}
+
+func TestExecute_OrdersFehlerLiefertListeMitNullFeldern(t *testing.T) {
+	orders := &fakeOrders{err: errors.New("orders nicht ladbar")}
+
+	overview := executeWithOrders(t, []position.OpenPosition{openPosition(nil)}, orders)
+
+	if len(overview.Positions) != 1 {
+		t.Fatalf("%d Positionen, erwartet 1", len(overview.Positions))
+	}
+	entry := overview.Positions[0]
+	if entry.StopLoss != nil || entry.TakeProfit != nil || entry.BreakEven != nil {
+		t.Errorf("SL/TP/BE = %v/%v/%v, erwartet alle nil", entry.StopLoss, entry.TakeProfit, entry.BreakEven)
+	}
+	if overview.TotalUnrealizedProfit != "25" {
+		t.Errorf("Summe = %q, erwartet 25", overview.TotalUnrealizedProfit)
+	}
 }

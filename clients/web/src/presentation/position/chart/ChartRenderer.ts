@@ -23,6 +23,10 @@ export type ChartMarker = Readonly<{
 /** Port zur Chart-Zeichenbibliothek, damit die Präsentation ohne Canvas testbar bleibt. */
 export type ChartRenderer = Readonly<{
   setCandles: (candles: readonly ChartCandle[]) => void;
+  /** Folge-Update desselben Charts: Daten ersetzen, Zoom/Scroll beibehalten (kein fitContent). */
+  updateCandles: (candles: readonly ChartCandle[]) => void;
+  /** Liest die Design-Tokens neu und färbt den Chart um (Theme-Wechsel). */
+  applyTheme: () => void;
   setPriceLines: (lines: readonly ChartPriceLine[]) => void;
   setMarkers: (markers: readonly ChartMarker[]) => void;
   destroy: () => void;

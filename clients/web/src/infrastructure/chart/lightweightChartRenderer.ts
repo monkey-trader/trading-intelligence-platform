@@ -32,8 +32,7 @@ function lineColor(kind: ChartPriceLine['kind']): string {
 export const createLightweightChartRenderer: ChartRendererFactory = (
   container: HTMLElement,
 ): ChartRenderer => {
-  const chart: IChartApi = createChart(container, {
-    autoSize: true,
+  const chartOptions = () => ({
     layout: {
       background: { type: ColorType.Solid, color: readToken('--color-surface') },
       textColor: readToken('--color-text'),
@@ -46,7 +45,7 @@ export const createLightweightChartRenderer: ChartRendererFactory = (
     rightPriceScale: { borderColor: readToken('--color-border') },
     timeScale: { borderColor: readToken('--color-border'), timeVisible: true },
   });
-  const series: ISeriesApi<'Candlestick'> = chart.addSeries(CandlestickSeries, {
+  const seriesOptions = () => ({
     upColor: readToken('--color-chart-up'),
     downColor: readToken('--color-chart-down'),
     borderUpColor: readToken('--color-chart-up'),
@@ -54,6 +53,8 @@ export const createLightweightChartRenderer: ChartRendererFactory = (
     wickUpColor: readToken('--color-chart-up'),
     wickDownColor: readToken('--color-chart-down'),
   });
+  const chart: IChartApi = createChart(container, { autoSize: true, ...chartOptions() });
+  const series: ISeriesApi<'Candlestick'> = chart.addSeries(CandlestickSeries, seriesOptions());
   const markersPlugin: ISeriesMarkersPluginApi<Time> = createSeriesMarkers(series, []);
   let priceLines: IPriceLine[] = [];
 
@@ -61,6 +62,13 @@ export const createLightweightChartRenderer: ChartRendererFactory = (
     setCandles(candles) {
       series.setData(candles.map((candle) => ({ ...candle, time: candle.time as UTCTimestamp })));
       chart.timeScale().fitContent();
+    },
+    updateCandles(candles) {
+      series.setData(candles.map((candle) => ({ ...candle, time: candle.time as UTCTimestamp })));
+    },
+    applyTheme() {
+      chart.applyOptions(chartOptions());
+      series.applyOptions(seriesOptions());
     },
     setPriceLines(lines) {
       priceLines.forEach((priceLine) => series.removePriceLine(priceLine));

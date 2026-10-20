@@ -19,6 +19,7 @@ import (
 
 	appchart "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/chart"
 	appposition "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/position"
+	chartinterfaces "github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/chart/interfaces"
 	domainposition "github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/position"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/position/interfaces"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/infrastructure/bingx"
@@ -64,8 +65,6 @@ func run(logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	getOpenPositions := appposition.NewGetOpenPositionsUseCase(openPositionSource)
-
 	database, err := openDatabaseIfConfigured(os.Getenv)
 	if err != nil {
 		return err
@@ -73,7 +72,12 @@ func run(logger *slog.Logger) error {
 	if database != nil {
 		defer closeDatabase(logger, database)
 	}
-	getPositionChart, err := newGetPositionChart(logger, os.Getenv, openPositionSource, database)
+	orderSource, err := newProtectiveOrderSource(os.Getenv)
+	if err != nil {
+		return err
+	}
+	getOpenPositions := newGetOpenPositions(openPositionSource, orderSource)
+	getPositionChart, err := newGetPositionChart(logger, os.Getenv, openPositionSource, orderSource, database)
 	if err != nil {
 		return err
 	}
@@ -250,6 +254,7 @@ func newGetPositionChart(
 	logger *slog.Logger,
 	lookupEnv func(string) string,
 	openPositionSource interfaces.OpenPositionSource,
+	orderSource chartinterfaces.ProtectiveOrderSource,
 	database *sql.DB,
 ) (func(context.Context, appchart.Query) (appchart.PositionChart, error), error) {
 	bingXConfig, configured, err := config.ReadBingXConfig(lookupEnv)
@@ -272,7 +277,7 @@ func newGetPositionChart(
 	})
 	useCase := appchart.NewGetPositionChartUseCase(
 		openPositionSource,
-		infrachart.NewBingXProtectiveOrderSource(client, clock.SystemClock{}),
+		orderSource,
 		infrachart.NewBingXCandleSource(client),
 		sqlite.NewCandleRepository(database),
 		logger)
@@ -325,4 +330,33 @@ func newWebUI() http.Handler {
 		return nil
 	}
 	return webui.NewHandler(files)
+}
+
+// newGetOpenPositions nutzt SL/TP/Break-even nur, wenn eine Orders-Source existiert (Keys gesetzt).
+func newGetOpenPositions(source interfaces.OpenPositionSource, orderSource chartinterfaces.ProtectiveOrderSource) *appposition.GetOpenPositionsUseCase {
+	if orderSource == nil {
+		return appposition.NewGetOpenPositionsUseCase(source)
+	}
+	return appposition.NewGetOpenPositionsUseCaseWithProtection(source, orderSource)
+}
+
+// newProtectiveOrderSource baut BingX-Orders-Source mit 5-s-Cache, der von Chart und Positionsliste geteilt wird.
+// Ohne Keys ist das Ergebnis nil.
+func newProtectiveOrderSource(lookupEnv func(string) string) (chartinterfaces.ProtectiveOrderSource, error) {
+	bingXConfig, configured, err := config.ReadBingXConfig(lookupEnv)
+	if err != nil || !configured {
+		return nil, err
+	}
+	client := bingx.NewClient(bingx.ClientOptions{
+		APIKey:         bingXConfig.APIKey,
+		APISecret:      bingXConfig.APISecret,
+		BaseURL:        bingXConfig.BaseURL,
+		MaxRetries:     bingXMaxRetries,
+		RequestTimeout: bingXRequestTimeout,
+		RequestPause:   bingXRequestPause,
+		InitialBackoff: bingXInitialBackoff,
+	})
+	systemClock := clock.SystemClock{}
+	return infrachart.NewCachingProtectiveOrderSource(
+		infrachart.NewBingXProtectiveOrderSource(client, systemClock), systemClock, openPositionsTTL), nil
 }

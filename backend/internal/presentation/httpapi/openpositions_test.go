@@ -25,7 +25,7 @@ const openPositionsFetchedAt int64 = 1791800000000
 var openPositionSchemaFields = []string{
 	"positionId", "symbol", "side", "isolated", "positionAmount", "avgOpenPrice", "markPrice",
 	"leverage", "initialMargin", "margin", "positionValue", "unrealizedProfit", "realisedProfit",
-	"pnlRatio", "liquidationPrice", "liquidationDistanceRatio", "openTime", "updateTime",
+	"pnlRatio", "liquidationPrice", "liquidationDistanceRatio", "stopLoss", "takeProfit", "breakEven", "openTime", "updateTime",
 }
 
 func ratio(value string) *string { return &value }
@@ -57,13 +57,13 @@ const goldJSON = `{"positionId":"9100000000000000002","symbol":"NCCOGOLD2USD-USD
 	`"positionAmount":"0.25","avgOpenPrice":"4150.00","markPrice":"4175.00","leverage":15,` +
 	`"initialMargin":"69.1667","margin":"65.0000","positionValue":"1043.75","unrealizedProfit":"-6.2500",` +
 	`"realisedProfit":"-0.5187","pnlRatio":"-0.0904","liquidationPrice":"4410.5",` +
-	`"liquidationDistanceRatio":"0.05640719","openTime":1791700000000,"updateTime":1791710000000}`
+	`"liquidationDistanceRatio":"0.05640719","stopLoss":null,"takeProfit":null,"breakEven":null,"openTime":1791700000000,"updateTime":1791710000000}`
 
 const crossJSON = `{"positionId":"9100000000000000001","symbol":"SUI-USDT","side":"LONG","isolated":false,` +
 	`"positionAmount":"500","avgOpenPrice":"0.9600","markPrice":"1.0100","leverage":2.5,` +
 	`"initialMargin":"48.0000","margin":"60.5000","positionValue":"505","unrealizedProfit":"25.0000",` +
 	`"realisedProfit":"-0.2400","pnlRatio":"0.5208","liquidationPrice":"0",` +
-	`"liquidationDistanceRatio":null,"openTime":1791500000000,"updateTime":1791600000000}`
+	`"liquidationDistanceRatio":null,"stopLoss":null,"takeProfit":null,"breakEven":null,"openTime":1791500000000,"updateTime":1791600000000}`
 
 func settingsWith(getOpenPositions func(context.Context) (appposition.OpenPositionsOverview, error)) Settings {
 	return Settings{AllowedHosts: testSettings.AllowedHosts, GetOpenPositions: getOpenPositions}
@@ -406,5 +406,32 @@ func TestOpenPositions_LogLaesstKurzenCauseUnveraendert(t *testing.T) {
 	}
 	if strings.Contains(logOutput.String(), "…") {
 		t.Errorf("kurze Meldung darf keinen Kürzungshinweis tragen: %q", logOutput.String())
+	}
+}
+
+func TestToOpenPositionsSnapshotDto_SchutzfelderWerdenAbgebildet(t *testing.T) {
+	yes, no := true, false
+	testCases := []struct {
+		name      string
+		stopLoss  *string
+		take      *string
+		breakEven *bool
+		expected  string
+	}{
+		{"alle gesetzt, BE true", ratio("0.97"), ratio("1.20"), &yes, `"stopLoss":"0.97","takeProfit":"1.20","breakEven":true`},
+		{"BE false", ratio("0.90"), nil, &no, `"stopLoss":"0.90","takeProfit":null,"breakEven":false`},
+		{"Orders unbekannt: alle null", nil, nil, nil, `"stopLoss":null,"takeProfit":null,"breakEven":null`},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			entry := goldEntry
+			entry.StopLoss, entry.TakeProfit, entry.BreakEven = testCase.stopLoss, testCase.take, testCase.breakEven
+
+			encoded, err := json.Marshal(toOpenPositionsSnapshotDto(appposition.OpenPositionsOverview{Positions: []appposition.OpenPositionWithDistance{entry}, TotalUnrealizedProfit: "0"}))
+
+			if err != nil || !strings.Contains(string(encoded), testCase.expected) {
+				t.Errorf("JSON = %s (%v), erwartet Teilstring %s", encoded, err, testCase.expected)
+			}
+		})
 	}
 }

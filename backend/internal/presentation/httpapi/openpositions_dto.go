@@ -21,6 +21,9 @@ type openPositionDto struct {
 	LiquidationPrice string  `json:"liquidationPrice"`
 	// LiquidationDistanceRatio ist null ohne Liquidationspreis.
 	LiquidationDistanceRatio *string `json:"liquidationDistanceRatio"`
+	StopLoss                 *string `json:"stopLoss"`
+	TakeProfit               *string `json:"takeProfit"`
+	BreakEven                *bool   `json:"breakEven"`
 	OpenTime                 int64   `json:"openTime"`
 	UpdateTime               int64   `json:"updateTime"`
 }
@@ -53,6 +56,9 @@ func toOpenPositionsSnapshotDto(overview appposition.OpenPositionsOverview) open
 			PnlRatio:                 entry.PnlRatio,
 			LiquidationPrice:         entry.LiquidationPrice,
 			LiquidationDistanceRatio: entry.LiquidationDistanceRatio,
+			StopLoss:                 entry.StopLoss,
+			TakeProfit:               entry.TakeProfit,
+			BreakEven:                entry.BreakEven,
 			OpenTime:                 entry.OpenTime,
 			UpdateTime:               entry.UpdateTime,
 		})

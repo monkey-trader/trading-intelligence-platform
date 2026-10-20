@@ -407,6 +407,9 @@ describe('docs/openapi.yaml', () => {
       liquidationDistanceRatio: null,
       openTime: 1791500000000,
       updateTime: 1791600000000,
+      stopLoss: null,
+      takeProfit: null,
+      breakEven: null,
     };
 
     expect(validator.validateSchema('OpenPosition', position).valid).toBe(true);

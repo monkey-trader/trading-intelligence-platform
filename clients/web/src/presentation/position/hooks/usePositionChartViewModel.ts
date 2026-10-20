@@ -8,6 +8,9 @@ import {
 import type { PositionChartGateway } from '@/domain/position/PositionChartGateway';
 import { mapPositionChartProblem } from '@/presentation/position/chartErrorMapper';
 
+/** Abstand zwischen zwei Live-Updates des Charts. */
+export const CHART_POLL_INTERVAL_MS = 5000;
+
 type ChartOutcome =
   | Readonly<{ status: 'ready'; chart: PositionChart }>
   | Readonly<{ status: 'error'; errorMessage: string }>;
@@ -34,35 +37,65 @@ export function usePositionChartViewModel(
 
   useEffect(() => {
     const controller = new AbortController();
-    gateway
-      .fetchChart(positionId, interval, DEFAULT_CHART_LIMIT, controller.signal)
-      .then((result) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let hasLoaded = false;
+    let isLoading = false;
+
+    const clearTimer = () => {
+      if (timer !== undefined) clearTimeout(timer);
+      timer = undefined;
+    };
+    const scheduleNext = () => {
+      clearTimer();
+      if (controller.signal.aborted || document.hidden) return;
+      timer = setTimeout(() => void load(), CHART_POLL_INTERVAL_MS);
+    };
+    // Poll-Fehler behalten den letzten Chart; nur vor dem ersten Erfolg wird ein Fehler gezeigt.
+    const showError = (errorMessage: string) => {
+      if (!hasLoaded) setState({ requestKey, outcome: { status: 'error', errorMessage } });
+    };
+    const load = async () => {
+      if (isLoading) return;
+      isLoading = true;
+      try {
+        const result = await gateway.fetchChart(
+          positionId,
+          interval,
+          DEFAULT_CHART_LIMIT,
+          controller.signal,
+        );
         if (controller.signal.aborted) return;
-        setState({
-          requestKey,
-          outcome:
-            result.kind === 'ok'
-              ? { status: 'ready', chart: result.chart }
-              : {
-                  status: 'error',
-                  errorMessage: mapPositionChartProblem(
-                    result.problemType,
-                    result.retryAfterSeconds,
-                  ),
-                },
-        });
-      })
-      .catch(() => {
+        if (result.kind === 'ok') {
+          hasLoaded = true;
+          // Neue Objekt-Identität pro Antwort, damit der Chart bei jedem Poll aktualisiert wird.
+          setState({ requestKey, outcome: { status: 'ready', chart: { ...result.chart } } });
+        } else {
+          showError(mapPositionChartProblem(result.problemType, result.retryAfterSeconds));
+        }
+      } catch {
         if (controller.signal.aborted) return;
-        setState({
-          requestKey,
-          outcome: {
-            status: 'error',
-            errorMessage: mapPositionChartProblem('backend-unreachable'),
-          },
-        });
-      });
-    return () => controller.abort();
+        showError(mapPositionChartProblem('backend-unreachable'));
+      } finally {
+        isLoading = false;
+      }
+      scheduleNext();
+    };
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        clearTimer();
+      } else {
+        clearTimer();
+        void load();
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    void load();
+    return () => {
+      controller.abort();
+      clearTimer();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, [positionId, interval, gateway, requestKey]);
 
   const selectInterval = useCallback(

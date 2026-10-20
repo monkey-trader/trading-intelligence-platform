@@ -146,6 +146,9 @@ function parseOpenPositionDto(candidate: unknown): OpenPositionDto | undefined {
     pnlRatio,
     liquidationPrice,
     liquidationDistanceRatio,
+    stopLoss,
+    takeProfit,
+    breakEven,
     openTime,
     updateTime,
   } = candidate;
@@ -167,6 +170,9 @@ function parseOpenPositionDto(candidate: unknown): OpenPositionDto | undefined {
     isDecimal(pnlRatio) &&
     isDecimal(liquidationPrice) &&
     (liquidationDistanceRatio === null || isDecimal(liquidationDistanceRatio)) &&
+    (stopLoss === null || isDecimal(stopLoss)) &&
+    (takeProfit === null || isDecimal(takeProfit)) &&
+    (breakEven === null || typeof breakEven === 'boolean') &&
     isFiniteNumber(openTime) &&
     isFiniteNumber(updateTime);
   if (!matchesContract) return undefined;
@@ -188,6 +194,9 @@ function parseOpenPositionDto(candidate: unknown): OpenPositionDto | undefined {
     pnlRatio,
     liquidationPrice,
     liquidationDistanceRatio,
+    stopLoss,
+    takeProfit,
+    breakEven,
     openTime,
     updateTime,
   };
@@ -219,6 +228,9 @@ function toOpenPosition(positionDto: OpenPositionDto): OpenPosition {
     pnlRatio: positionDto.pnlRatio,
     liquidationPrice: positionDto.liquidationPrice,
     liquidationDistanceRatio: positionDto.liquidationDistanceRatio,
+    stopLoss: positionDto.stopLoss,
+    takeProfit: positionDto.takeProfit,
+    breakEven: positionDto.breakEven,
     openTime: positionDto.openTime,
     updateTime: positionDto.updateTime,
   };

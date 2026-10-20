@@ -25,6 +25,9 @@ const snapshotBody: SnapshotBody = {
       pnlRatio: '-0.0904',
       liquidationPrice: '4410.5',
       liquidationDistanceRatio: '0.05640719',
+      stopLoss: '4200',
+      takeProfit: '4100',
+      breakEven: false,
       openTime: 1791700000000,
       updateTime: 1791710000000,
     },
@@ -45,6 +48,9 @@ const snapshotBody: SnapshotBody = {
       pnlRatio: '0.5208',
       liquidationPrice: '0',
       liquidationDistanceRatio: null,
+      stopLoss: null,
+      takeProfit: null,
+      breakEven: null,
       openTime: 1791500000000,
       updateTime: 1791600000000,
     },
@@ -124,6 +130,19 @@ describe('createHttpOpenPositionsGateway', () => {
       if (result.kind !== 'ok') throw new Error(`erwartet ok, erhalten ${result.kind}`);
       expect(result.snapshot.positions[1]?.liquidationDistanceRatio).toBeNull();
       expect(result.snapshot.positions[0]?.liquidationDistanceRatio).toBe('0.05640719');
+    });
+
+    it('übernimmt stopLoss, takeProfit und breakEven (auch null) unverändert', async () => {
+      const gateway = createHttpOpenPositionsGateway(
+        fakeFetchReturning(jsonResponse(snapshotBody)),
+      );
+
+      const result = await gateway.fetchOpenPositions(newSignal());
+
+      if (result.kind !== 'ok') throw new Error(`erwartet ok, erhalten ${result.kind}`);
+      const [withOrders, withoutOrders] = result.snapshot.positions;
+      expect(withOrders).toMatchObject({ stopLoss: '4200', takeProfit: '4100', breakEven: false });
+      expect(withoutOrders).toMatchObject({ stopLoss: null, takeProfit: null, breakEven: null });
     });
 
     it('liefert eine leere Liste, wenn keine Position offen ist', async () => {

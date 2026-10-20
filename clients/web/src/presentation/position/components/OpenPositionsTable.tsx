@@ -22,6 +22,8 @@ const COLUMN_LABELS = {
   realisedProfit: 'Real. PnL',
   liquidationPrice: 'Liq.-Preis',
   liquidationDistance: 'Liq.-Abstand',
+  stopLoss: 'SL',
+  takeProfit: 'TP',
   openTime: 'Eröffnet',
 } as const;
 
@@ -159,6 +161,22 @@ function OpenPositionRow({
       </td>
       <td data-label={COLUMN_LABELS.liquidationDistance} className={styles.cell}>
         {formatRatioAsPercent(position.liquidationDistanceRatio)}
+      </td>
+      <td data-label={COLUMN_LABELS.stopLoss} className={styles.cell}>
+        <span>
+          {position.stopLoss === null ? MISSING_VALUE : formatDecimal(position.stopLoss)}
+          {position.breakEven === true && (
+            <span className={styles.breakEvenBadge} role="img" aria-label="Break-even">
+              BE
+            </span>
+          )}
+          {position.breakEven === false && position.stopLoss === null && (
+            <span className={styles.noStopLossHint}>kein SL</span>
+          )}
+        </span>
+      </td>
+      <td data-label={COLUMN_LABELS.takeProfit} className={styles.cell}>
+        {position.takeProfit === null ? MISSING_VALUE : formatDecimal(position.takeProfit)}
       </td>
       <td data-label={COLUMN_LABELS.openTime} className={styles.cell}>
         {formatDateTime(position.openTime)}
