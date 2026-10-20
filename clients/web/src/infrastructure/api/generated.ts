@@ -354,11 +354,13 @@ export interface operations {
                      *         {
                      *           "symbol": "SUI-USDT",
                      *           "baseAsset": "SUI",
+                     *           "displayName": "SUI",
                      *           "iconUrl": "https://coin-images.coingecko.com/coins/images/26375/large/sui-ocean-square.png"
                      *         },
                      *         {
-                     *           "symbol": "XAU-USDT",
+                     *           "symbol": "NCCOGOLD2USD-USDT",
                      *           "baseAsset": "XAU",
+                     *           "displayName": "Gold",
                      *           "iconUrl": null
                      *         }
                      *       ]
