@@ -5,6 +5,8 @@ import type { ChartRenderer } from '@/presentation/position/chart/ChartRenderer'
 export function createFakeChartRenderer() {
   const renderer = {
     setCandles: vi.fn<ChartRenderer['setCandles']>(),
+    updateCandles: vi.fn<ChartRenderer['updateCandles']>(),
+    applyTheme: vi.fn<ChartRenderer['applyTheme']>(),
     setPriceLines: vi.fn<ChartRenderer['setPriceLines']>(),
     setMarkers: vi.fn<ChartRenderer['setMarkers']>(),
     destroy: vi.fn<ChartRenderer['destroy']>(),

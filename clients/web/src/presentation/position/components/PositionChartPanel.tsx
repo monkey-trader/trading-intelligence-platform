@@ -60,13 +60,35 @@ export function PositionChartPanel({
 
   const legend = useMemo(() => (chart ? buildLegend(chart) : []), [chart]);
 
+  const candlesKeyRef = useRef<string | null>(null);
+  const priceLinesKeyRef = useRef<string | null>(null);
+
   useEffect(() => {
     const renderer = rendererRef.current;
     if (!renderer || !chart) return;
-    renderer.setCandles(toChartCandles(chart));
-    renderer.setPriceLines(legend.map(toPriceLine));
+    const candlesKey = `${positionId}|${interval}`;
+    if (candlesKeyRef.current !== candlesKey) {
+      renderer.setCandles(toChartCandles(chart));
+      candlesKeyRef.current = candlesKey;
+    } else {
+      renderer.updateCandles(toChartCandles(chart));
+    }
+    const priceLines = legend.map(toPriceLine);
+    const priceLinesKey = JSON.stringify(priceLines);
+    if (priceLinesKeyRef.current !== priceLinesKey) {
+      renderer.setPriceLines(priceLines);
+      priceLinesKeyRef.current = priceLinesKey;
+    }
     renderer.setMarkers(toChartMarkers(chart));
-  }, [chart, legend]);
+  }, [chart, legend, positionId, interval]);
+
+  // Design folgt dem System (prefers-color-scheme): Farben im Renderer neu anwenden.
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const onThemeChange = () => rendererRef.current?.applyTheme();
+    mediaQuery.addEventListener('change', onThemeChange);
+    return () => mediaQuery.removeEventListener('change', onThemeChange);
+  }, []);
 
   return (
     <section className={styles.panel} aria-label="Chart">

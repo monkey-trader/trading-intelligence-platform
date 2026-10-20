@@ -82,8 +82,16 @@ Kontrast: Text mindestens 4.5:1 (WCAG AA) in beiden Themes.
 
 ## Ansicht: Offene Positionen
 
-Spalten in dieser Reihenfolge: Symbol, Seite, Menge, Einstieg, Mark, Hebel, Unreal. PnL, PnL %,
-Real. PnL, Liq.-Preis, Liq.-Abstand, Eröffnet.
+Spalten in dieser Reihenfolge: Symbol, Seite, Menge, Einstieg, Mark, Hebel, Margin, Unreal. PnL,
+PnL %, Real. PnL, Liq.-Preis, Liq.-Abstand, SL, TP, Eröffnet.
+
+- **SL / TP**: Zahl rechtsbündig, fehlt sie, steht `–` (`MISSING_VALUE`). **Badge "BE"** (nur bei
+  `breakEven: true`): `positive-surface`-Hintergrund, Text `positive`, `font-size-small`, fett,
+  `radius-small`, mit `aria-label="Break-even"` und `role="img"`. Hinweis **"kein SL"** (nur bei
+  `breakEven: false` und fehlendem SL): `text-muted`, `font-size-small`. Beide sind Text, nicht
+  nur Farbe. Kontrast BE: hell ca. 5.3:1, dunkel ca. 6.7:1; "kein SL" hell ca. 6.9:1, dunkel ca. 6.9:1.
+- **Mobile Karte**: Das Symbol ist der Kartentitel (links, ohne Spaltennamen), der Chart-Button
+  steht rechts (`margin-left: auto`). Ab 768 px steht der Chart-Button direkt neben dem Symbol.
 
 - **Unreal. PnL**, **PnL %**, **Real. PnL**: mit `+`/`-`, getönt über `pnlTone` (PnL auf 2 Stellen,
   PnL % auf 4 Stellen des Verhältnisses = 2 Prozent-Stellen).
@@ -97,8 +105,7 @@ Chart-Tokens angelegt in `design-tokens.css` (hell und dunkel):
 - `--color-chart-grid`, `--color-chart-crosshair`
 - `--color-chart-entry` (neutral, accent), `--color-chart-stop-loss` (negative), `--color-chart-take-profit` (positive)
 - Lightweight Charts liest Farben zur Laufzeit via `readToken()` aus CSS-Variablen.
-- **Bekannte Limitation:** Theme-Wechsel zur Laufzeit (ohne Neuladen) aktualisiert Chart-Farben nicht;
-  wird in Stufe 2 gelöst (Listener auf `prefers-color-scheme`-Wechsel).
+- Theme-Wechsel zur Laufzeit: Das Panel hört auf `prefers-color-scheme` und ruft `applyTheme()` des Renderers auf (liest die Tokens neu).
 - Read-only Chart mit Entry-Marker, SL/TP-Linien (gestrichelt). Linien-Labels (Preis + %): Stufe 2+.
 
 ## Offene Punkte

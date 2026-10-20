@@ -119,6 +119,12 @@ export interface components {
             openTime: number;
             /** @description Letzte Änderung in Epoch-Millisekunden. */
             updateTime: number;
+            /** @description Trigger-Preis des offenen Stop-Loss der Position (pro Trade gibt es einen; lieferte BingX dennoch mehrere, gilt defensiv der engste: LONG der höchste, SHORT der niedrigste). null ohne SL oder wenn die Orders nicht geladen werden konnten. */
+            stopLoss: components["schemas"]["Decimal"] | null;
+            /** @description Trigger-Preis des nächsten offenen Take-Profit (dem Entry am nächsten). null ohne TP oder wenn die Orders nicht geladen werden konnten. */
+            takeProfit: components["schemas"]["Decimal"] | null;
+            /** @description true, wenn ein SL existiert und der SL nicht im Verlust liegt (LONG SL >= Entry, SHORT SL <= Entry). false bei SL im Verlust oder ohne SL. null, wenn die offenen Orders nicht geladen werden konnten (die Liste wird trotzdem geliefert). */
+            breakEven: boolean | null;
         };
         PositionChart: {
             positionId: string;

@@ -53,9 +53,16 @@
   text-align: left;
 }
 
+/* Mobile: Das Symbol ist der Kartentitel (links, ohne Spaltenname), Chart-Button rechts. */
 .symbolCell {
+  justify-content: flex-start;
+  align-items: center;
   font-weight: var(--font-weight-strong);
   font-size: var(--font-size-large);
+}
+
+.symbolCell::before {
+  content: none;
 }
 
 .sideLong {
@@ -154,10 +161,14 @@
   .symbolCell {
     font-size: var(--font-size-base);
   }
+
+  .chartButton {
+    margin-left: var(--space-2);
+  }
 }
 
 .chartButton {
-  margin-left: var(--space-2);
+  margin-left: auto;
   padding: 0 var(--space-2);
   color: var(--color-accent);
   background: transparent;
@@ -175,4 +186,20 @@
 .chartButton:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+.breakEvenBadge {
+  margin-left: var(--space-1);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-small);
+  background: var(--color-positive-surface);
+  color: var(--color-positive);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-strong);
+}
+
+.noStopLossHint {
+  margin-left: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
 }

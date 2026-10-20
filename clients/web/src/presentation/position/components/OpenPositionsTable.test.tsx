@@ -3,7 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { OpenPosition } from '@/domain/position/OpenPosition';
 import {
+  breakEvenPosition,
   goldShortPosition,
+  noStopLossPosition,
+  unknownOrdersPosition,
   positionWithoutLiquidation,
   suiLongPosition,
 } from '@/test/fixtures/openPositions';
@@ -23,6 +26,8 @@ const COLUMN_LABELS = [
   'Real. PnL',
   'Liq.-Preis',
   'Liq.-Abstand',
+  'SL',
+  'TP',
   'Eröffnet',
 ] as const;
 
@@ -248,5 +253,56 @@ describe('OpenPositionsTable: Chart-Auswahl', () => {
       'aria-expanded',
       'false',
     );
+  });
+
+  describe('SL, TP und Break-even', () => {
+    it('zeigt SL und TP als Preis', () => {
+      const row = rowFor(renderTable([goldShortPosition]), 'NCCOGOLD2USD-USDT');
+
+      expect(cellOf(row, 'SL')).toHaveTextContent(/^4['’]200$/);
+      expect(cellOf(row, 'TP')).toHaveTextContent(/^4['’]100$/);
+    });
+
+    it('zeigt – bei SL und TP null', () => {
+      const row = rowFor(renderTable([unknownOrdersPosition]), 'SUI-USDT');
+
+      expect(cellOf(row, 'SL')).toHaveTextContent(/^[–-]$/);
+      expect(cellOf(row, 'TP')).toHaveTextContent(/^[–-]$/);
+    });
+
+    it('zeigt das Badge BE, wenn breakEven true ist', () => {
+      const row = rowFor(renderTable([breakEvenPosition]), 'SUI-USDT');
+
+      const badge = within(row).getByLabelText(/break-even/i);
+      expect(badge).toHaveTextContent('BE');
+    });
+
+    it('zeigt kein BE-Badge bei breakEven false', () => {
+      const row = rowFor(renderTable([goldShortPosition]), 'NCCOGOLD2USD-USDT');
+
+      expect(within(row).queryByLabelText(/break-even/i)).not.toBeInTheDocument();
+      expect(within(row).queryByText('BE')).not.toBeInTheDocument();
+    });
+
+    it('zeigt den Hinweis "kein SL", wenn Orders bekannt sind und kein SL existiert', () => {
+      const row = rowFor(renderTable([noStopLossPosition]), 'SUI-USDT');
+
+      expect(within(row).getByText('kein SL')).toBeInTheDocument();
+      expect(within(row).queryByLabelText(/break-even/i)).not.toBeInTheDocument();
+    });
+
+    it('zeigt bei vorhandenem SL keinen Hinweis "kein SL"', () => {
+      const row = rowFor(renderTable([goldShortPosition]), 'NCCOGOLD2USD-USDT');
+
+      expect(within(row).queryByText('kein SL')).not.toBeInTheDocument();
+    });
+
+    it('zeigt bei breakEven null (Orders unbekannt) weder Badge noch "kein SL"', () => {
+      const row = rowFor(renderTable([unknownOrdersPosition]), 'SUI-USDT');
+
+      expect(within(row).queryByLabelText(/break-even/i)).not.toBeInTheDocument();
+      expect(within(row).queryByText('BE')).not.toBeInTheDocument();
+      expect(within(row).queryByText('kein SL')).not.toBeInTheDocument();
+    });
   });
 });

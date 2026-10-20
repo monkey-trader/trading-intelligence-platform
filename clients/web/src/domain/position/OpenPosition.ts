@@ -24,6 +24,12 @@ export type OpenPosition = Readonly<{
   liquidationPrice: string;
   /** null ohne Liquidationspreis oder bei Mark-Preis 0. */
   liquidationDistanceRatio: string | null;
+  /** Stop-Loss-Preis; null = keiner gesetzt. */
+  stopLoss: string | null;
+  /** Take-Profit-Preis; null = keiner gesetzt. */
+  takeProfit: string | null;
+  /** true = SL auf/über Einstand; null = Orders unbekannt. */
+  breakEven: boolean | null;
   /** Epoch-Millisekunden. */
   openTime: number;
   /** Epoch-Millisekunden. */

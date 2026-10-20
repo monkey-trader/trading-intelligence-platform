@@ -21,6 +21,9 @@ export const suiLongPosition: OpenPosition = {
   pnlRatio: '0.5208',
   liquidationPrice: '0.865',
   liquidationDistanceRatio: '0.14356436',
+  stopLoss: '0.90',
+  takeProfit: '1.20',
+  breakEven: false,
   openTime: 1791500000000,
   updateTime: 1791600000000,
 };
@@ -42,6 +45,9 @@ export const goldShortPosition: OpenPosition = {
   pnlRatio: '-0.0904',
   liquidationPrice: '4410.5',
   liquidationDistanceRatio: '0.05640719',
+  stopLoss: '4200',
+  takeProfit: '4100',
+  breakEven: false,
   openTime: 1791700000000,
   updateTime: 1791710000000,
 };
@@ -64,6 +70,9 @@ export const positionWithoutLiquidation: OpenPosition = {
   pnlRatio: '0',
   liquidationPrice: '0',
   liquidationDistanceRatio: null,
+  stopLoss: null,
+  takeProfit: null,
+  breakEven: null,
   openTime: 1791400000000,
   updateTime: 1791400000000,
 };
@@ -79,4 +88,27 @@ export const emptySnapshot: OpenPositionsSnapshot = {
   positions: [],
   totalUnrealizedProfit: '0',
   fetchedAt: FETCHED_AT,
+};
+
+/** Stop-Loss über dem Einstieg (LONG): Break-even. */
+export const breakEvenPosition: OpenPosition = {
+  ...suiLongPosition,
+  stopLoss: '0.97',
+  breakEven: true,
+};
+
+/** Orders konnten nicht gelesen werden: alles unbekannt. */
+export const unknownOrdersPosition: OpenPosition = {
+  ...suiLongPosition,
+  stopLoss: null,
+  takeProfit: null,
+  breakEven: null,
+};
+
+/** Orders bekannt, aber kein Stop-Loss gesetzt. */
+export const noStopLossPosition: OpenPosition = {
+  ...suiLongPosition,
+  stopLoss: null,
+  takeProfit: null,
+  breakEven: false,
 };

@@ -38,6 +38,25 @@ describe(OPERATION_TEST_NAMES.getOpenPositions, () => {
 
       expect(openTimes).toEqual([...openTimes].sort((left, right) => right - left));
     });
+
+    it('liefert stopLoss, takeProfit und breakEven je Position (nullable) und Dezimal-Strings', async () => {
+      const response = await send({ method: 'GET', path: '/positions/open' });
+      const body = expectDocumentedResponse(validator, 'getOpenPositions', response);
+
+      const positions = isJsonObject(body) && Array.isArray(body['positions']) ? body['positions'] : [];
+      for (const position of positions) {
+        expect(isJsonObject(position)).toBe(true);
+        if (!isJsonObject(position)) continue;
+        for (const field of ['stopLoss', 'takeProfit']) {
+          expect(position).toHaveProperty(field);
+          const value = position[field];
+          expect(value === null || (typeof value === 'string' && /^-?\d+(\.\d+)?$/.test(value))).toBe(true);
+        }
+        expect(position).toHaveProperty('breakEven');
+        expect(position['breakEven'] === null || typeof position['breakEven'] === 'boolean').toBe(true);
+        if (position['stopLoss'] === null) expect(position['breakEven']).not.toBe(true);
+      }
+    });
   } else {
     it('liefert ohne Keys 503 not-configured ohne Retry-After', async () => {
       const response = await send({ method: 'GET', path: '/positions/open' });
