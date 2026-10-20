@@ -12,8 +12,14 @@ const levelsBody = [
 ];
 
 async function fetchWith(levels: unknown) {
-  const { initialStopLoss, riskDistance, currentRMultiple, breakEvenTriggerReached, reached2RAt, ...base } =
-    suiLongPosition;
+  const {
+    initialStopLoss,
+    riskDistance,
+    currentRMultiple,
+    breakEvenTriggerReached,
+    reached2RAt,
+    ...base
+  } = suiLongPosition;
   void [initialStopLoss, riskDistance, currentRMultiple, breakEvenTriggerReached, reached2RAt];
   const body = {
     positions: [levels === undefined ? base : { ...base, levels }],
