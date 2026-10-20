@@ -10,6 +10,7 @@ import (
 
 	appchart "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/chart"
 	appposition "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/position"
+	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/asset"
 )
 
 // Settings enthält die Einstellungen der HTTP-API.
@@ -20,6 +21,8 @@ type Settings struct {
 	GetOpenPositions func(ctx context.Context) (appposition.OpenPositionsOverview, error)
 	// GetPositionChart liefert den Chart einer offenen Position (optional; nil = Route nicht registriert).
 	GetPositionChart func(ctx context.Context, query appchart.Query) (appchart.PositionChart, error)
+	// GetAssetIcons liefert Coin-Icons (optional; nil = Route nicht registriert).
+	GetAssetIcons func(ctx context.Context, list asset.SymbolList) ([]asset.CoinIcon, error)
 	// WebUI bedient alle Pfade, die die API nicht kennt (optional; nil = 404 not-found).
 	WebUI http.Handler
 }
@@ -39,6 +42,9 @@ func newHandlerWithRoutes(settings Settings, logger *slog.Logger, extraRoutes ma
 	routes := map[string]http.HandlerFunc{
 		"GET /health":         handleHealth,
 		"GET /positions/open": newOpenPositionsHandler(settings.GetOpenPositions, logger),
+	}
+	if settings.GetAssetIcons != nil {
+		routes["GET /assets/icons"] = newAssetIconsHandler(settings.GetAssetIcons, logger)
 	}
 	maps.Copy(routes, extraRoutes)
 	var chartRoute http.HandlerFunc
@@ -72,7 +78,7 @@ func newRouter(routes map[string]http.HandlerFunc, chartRoute http.HandlerFunc, 
 }
 
 // apiPathPrefixes sind Pfade, die nie vom Web-UI bedient werden (immer 404 not-found).
-var apiPathPrefixes = []string{"/health", "/positions", "/api"}
+var apiPathPrefixes = []string{"/health", "/positions", "/assets", "/api"}
 
 // wantsWebUI: Das UI bedient nur GET/HEAD, nie API-Pfade, und nur "/", Dateien (mit Endung) und
 // Browser-Navigationen (Accept: text/html). Alles andere bleibt 404 not-found im API-Vertrag.

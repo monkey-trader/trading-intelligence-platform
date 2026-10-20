@@ -82,8 +82,45 @@ Kontrast: Text mindestens 4.5:1 (WCAG AA) in beiden Themes.
 
 ## Ansicht: Offene Positionen
 
-Standard-Reihenfolge: Symbol, Seite, Menge, Einstieg, Mark, Hebel, Margin, Unreal. PnL,
-PnL %, Real. PnL, SL, TP, Eröffnet. Das Symbol bleibt immer die erste Spalte.
+Standard-Reihenfolge (ColumnKeys): `symbol`, `positionValue`, `margin`, `unrealizedProfit`,
+`realisedProfit`, `entry`, `breakEven`, `tpSl`. Das Symbol bleibt immer fix links (sticky).
+Entfallen: Seite, Menge, Mark, Hebel, Eröffnet, SL/TP einzeln, PnL % (jetzt in Unreal. PnL).
+
+### Positionstabelle (BingX-Stil, flach)
+Labels: Symbol, Positionswert, Margin, Unreal. PnL, Real. PnL, Einstieg, TP / SL.
+Optik: keine Zebra-Streifen, nur 1px `border` zwischen Zeilen, Kopfzeile `font-size-x-small`,
+`text-muted`, auf `surface` (nicht raised), Zeilen luftig (`--table-row-padding-block` = `space-4`).
+Neue Tokens: `--font-size-x-small`, `--table-row-padding-block`, `--size-coin-icon` (20px),
+`--size-side-bar` (3px), `--radius-chip`, `--color-chip-surface`, `--color-chip-text` (hell und dunkel, >= 4.5:1).
+
+Zellaufbau (Klassen):
+- **Symbol** (`th.cell.symbolCell` + `.barLong`/`.barShort`, Balken links per inset box-shadow):
+  `.symbolMain` > `.coinIcon` (img) oder `.coinFallback` (Kreis mit Anfangsbuchstabe) + `.symbolName`
+  (nur der Anzeigename, z.B. "ONDO", "Gold"; kein "-USDT") + `.chartButton` (dezent, rechts);
+  darunter `.chips` > `.chip.chipLong|chipShort` (Text Long/Short), `.chip` "Isolated"/"Cross", `.chip` "7X".
+- **Positionswert / Margin**: Zahl + `<span .unit>USDT</span>`.
+- **Unreal. PnL**: `.twoLine` > Betrag (USDT, mit Vorzeichen, Ton `positive`/`negative`) + `.lineSub` "(+x,xx %)" gleicher Ton.
+- **TP / SL**: `.twoLine` > TP-Zeile, darunter `.slLine` (SL, rot); "–" wenn nicht gesetzt. Zeilen mit
+  Präfix "TP"/"SL" als Text (`.lineMuted`), damit Farbe nicht einziges Merkmal ist.
+- Mobile (<768 px): Karte wie bisher, jede Zelle mit `data-label`; `.twoLine` rechtsbündig neben dem Label.
+  Abnahme (Design-Review, gerendert 1440/390 px hell und dunkel): Label (`::before`) hat `margin-inline-end: auto`,
+  Wert und Einheit stehen als Gruppe rechtsbündig (`.cell` ohne `gap`, Abstand über `padding-inline-end`).
+  Der Long/Short-Balken sitzt mobile am Kartenrand (`.row:has(> .barLong|.barShort)`), desktop an der Symbol-Zelle.
+- Desktop: Sticky Symbol-Spalte (auch Kopfzelle) hat ab 768 px eine 1px-`border`-Trennlinie rechts, damit gescrollte Werte nicht abgeschnitten wirken (Abnahme: 768 px gescrollt). Symbol-Zelle `width: 1%`, damit der Chart-Button nah am Namen steht und nicht am Spaltenende schwebt.
+- Kontrast (berechnet, hell und dunkel): Text und Chips alle >= 4.5:1 (kleinster Wert: Short-Chip hell 4.88:1,
+  Muted hell/dunkel 6.87:1, Long-Chip dunkel 6.69:1). Die Farbtöne `positive`/`negative` brauchen als Text auf
+  `surface` dunkel 6.2:1 bis 8.2:1.
+- Fehlender SL: "SL –" ohne Klasse `.slLine`, also gedämpft; rot (`.slLine`) nur bei gesetztem SL.
+- **BE-Badge und "kein SL"** in der SL-Zeile der TP/SL-Zelle: **Badge "BE"** (`.breakEvenBadge`, nur bei
+  `breakEven: true`): `positive-surface`-Hintergrund, Text `positive`, `font-size-small`, fett,
+  `radius-small`, mit `aria-label="Break-even"` und `role="img"`. Hinweis **"kein SL"** (`.noStopLossHint`, nur bei
+  `breakEven: false` und fehlendem SL): `text-muted`, `font-size-small`. Beide sind Text, nicht
+  nur Farbe. Kontrast BE: hell ca. 5.3:1, dunkel ca. 6.7:1; "kein SL" hell ca. 6.9:1, dunkel ca. 6.9:1.
+- **Coin-Icons**: `CoinIcon` zeigt die `iconUrl` der API (CoinGecko), für Gold/Silber (XAU/XAG) lokale SVGs
+  (`src/assets/commodities/`); ohne URL oder bei Ladefehler einen Kreis mit dem Anfangsbuchstaben des Anzeigenamens.
+  Icons (20 px) haben einen 1px-`border`-Innenrand (`box-shadow inset`), damit dunkle Logos im dunklen Theme sichtbar bleiben.
+  Gold/Silber: Münze (Kreis mit dunklem Rand, ca. 1.5 px) mit Barren; der Rand sorgt auf hellem und dunklem Grund für die Kontur.
+- **App-Kopfzeile** (`AppHeader`): `<header>` mit "Trading Intelligence Platform" über der Seite, `surface` mit 1px `border` unten, `font-size-base` fett. Der Titel steht bündig zur Seiteninhalt-Kante (gleiche Formel wie `.page`: `max(space-3, (100% - layout-max-width) / 2 + space-3)`, ab 768 px `space-5` statt `space-3`). Abnahme gerendert 390/768/1440 px: Titel und Überschrift haben dieselbe linke Kante.
 
 - **Spalten umordnen (ab 768 px)**: Jeder Spaltenkopf (außer Symbol) hat einen Griff `.dragHandle`
   (Glyphe ⠇, `cursor: grab`, `text-muted`, 16px-Box = `--space-4`, ohne Abstand zum Label). Hover:
@@ -96,16 +133,10 @@ PnL %, Real. PnL, SL, TP, Eröffnet. Das Symbol bleibt immer die erste Spalte.
   nicht-Standard-Reihenfolge). Rechtsbündig, `surface-raised`, 1px `border`, `radius-small`,
   `font-size-small`, Fokusrahmen 2px. Auf Mobile ohne Inhalt ausgeblendet.
 
-- **SL / TP**: Zahl rechtsbündig, fehlt sie, steht `–` (`MISSING_VALUE`). **Badge "BE"** (nur bei
-  `breakEven: true`): `positive-surface`-Hintergrund, Text `positive`, `font-size-small`, fett,
-  `radius-small`, mit `aria-label="Break-even"` und `role="img"`. Hinweis **"kein SL"** (nur bei
-  `breakEven: false` und fehlendem SL): `text-muted`, `font-size-small`. Beide sind Text, nicht
-  nur Farbe. Kontrast BE: hell ca. 5.3:1, dunkel ca. 6.7:1; "kein SL" hell ca. 6.9:1, dunkel ca. 6.9:1.
 - **Mobile Karte**: Das Symbol ist der Kartentitel (links, ohne Spaltennamen), der Chart-Button
   steht rechts (`margin-left: auto`). Ab 768 px steht der Chart-Button direkt neben dem Symbol.
 
-- **Unreal. PnL**, **PnL %**, **Real. PnL**: mit `+`/`-`, getönt über `pnlTone` (PnL auf 2 Stellen,
-  PnL % auf 4 Stellen des Verhältnisses = 2 Prozent-Stellen).
+- **Unreal. PnL**, **Real. PnL**: mit `+`/`-`, getönt über `pnlTone` (PnL auf 2 Stellen).
 - **Real. PnL** (`realisedProfit`): bereits realisierter Anteil der offenen Position. Nach den echten Daten
   vermutlich vor allem Gebühren und Funding, daher oft leicht negativ. 2 Nachkommastellen.
 - Header: Summe des unrealisierten PnL in `font-size-x-large`, mit `+`/`-` und Tönung.

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "sui",
+    "symbol": "sui",
+    "name": "Sui",
+    "image": "https://coin-images.coingecko.com/coins/images/26375/large/sui-ocean-square.png?1727791290",
+    "market_cap_rank": 28
+  },
+  {
+    "id": "sui-fake-clone",
+    "symbol": "sui",
+    "name": "Sui Clone",
+    "image": "https://coin-images.coingecko.com/coins/images/99999/large/sui-clone.png",
+    "market_cap_rank": 900
+  },
+  {
+    "id": "sui-unranked",
+    "symbol": "sui",
+    "name": "Sui Unranked",
+    "image": "https://coin-images.coingecko.com/coins/images/99998/large/sui-unranked.png",
+    "market_cap_rank": null
+  },
+  {
+    "id": "only-unranked",
+    "symbol": "ond",
+    "name": "Only Unranked",
+    "image": "https://coin-images.coingecko.com/coins/images/99997/large/ond.png",
+    "market_cap_rank": null
+  },
+  {
+    "id": "evil-host-coin",
+    "symbol": "evil",
+    "name": "Evil Host",
+    "image": "https://evil.example.com/coins/evil.png",
+    "market_cap_rank": 10
+  },
+  {
+    "id": "http-coin",
+    "symbol": "plain",
+    "name": "Plain Http",
+    "image": "http://coin-images.coingecko.com/coins/images/1/large/plain.png",
+    "market_cap_rank": 11
+  }
+]

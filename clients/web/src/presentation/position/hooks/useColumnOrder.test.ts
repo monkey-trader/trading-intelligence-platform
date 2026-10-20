@@ -18,6 +18,9 @@ function fakeStorage(initial?: string) {
 }
 
 describe('useColumnOrder', () => {
+  it('nutzt den v2-Storage-Key', () => {
+    expect(COLUMN_ORDER_STORAGE_KEY).toBe('tip_open_positions_column_order_v2');
+  });
   it('liefert ohne Eintrag die Standardreihenfolge', () => {
     const { result } = renderHook(() => useColumnOrder(fakeStorage()));
     expect(result.current.order).toEqual([...DEFAULT_COLUMN_ORDER]);
@@ -26,11 +29,11 @@ describe('useColumnOrder', () => {
   it('liest gespeicherte Reihenfolge', () => {
     const stored = [
       'symbol',
-      'mark',
-      ...DEFAULT_COLUMN_ORDER.filter((k) => k !== 'symbol' && k !== 'mark'),
+      'entry',
+      ...DEFAULT_COLUMN_ORDER.filter((k) => k !== 'symbol' && k !== 'entry'),
     ];
     const { result } = renderHook(() => useColumnOrder(fakeStorage(JSON.stringify(stored))));
-    expect(result.current.order.slice(0, 2)).toEqual(['symbol', 'mark']);
+    expect(result.current.order.slice(0, 2)).toEqual(['symbol', 'entry']);
     expect(result.current.isDefault).toBe(false);
   });
   it('kaputtes JSON -> Standard, kein Absturz', () => {
@@ -48,8 +51,8 @@ describe('useColumnOrder', () => {
   it('move speichert als JSON-Array', () => {
     const storage = fakeStorage();
     const { result } = renderHook(() => useColumnOrder(storage));
-    act(() => result.current.move('mark', 'side'));
-    expect(result.current.order.slice(0, 3)).toEqual(['symbol', 'mark', 'side']);
+    act(() => result.current.move('margin', 'positionValue'));
+    expect(result.current.order.slice(0, 3)).toEqual(['symbol', 'margin', 'positionValue']);
     const saved: unknown = JSON.parse(storage.data.get(COLUMN_ORDER_STORAGE_KEY) ?? 'null');
     expect(saved).toEqual(result.current.order);
   });
@@ -59,13 +62,13 @@ describe('useColumnOrder', () => {
       throw new Error('voll');
     });
     const { result } = renderHook(() => useColumnOrder(storage));
-    act(() => result.current.move('mark', 'side'));
-    expect(result.current.order[1]).toBe('mark');
+    act(() => result.current.move('margin', 'positionValue'));
+    expect(result.current.order[1]).toBe('margin');
   });
   it('reset stellt Standard her und löscht den Eintrag', () => {
     const storage = fakeStorage();
     const { result } = renderHook(() => useColumnOrder(storage));
-    act(() => result.current.move('mark', 'side'));
+    act(() => result.current.move('margin', 'positionValue'));
     act(() => result.current.reset());
     expect(result.current.order).toEqual([...DEFAULT_COLUMN_ORDER]);
     expect(result.current.isDefault).toBe(true);
@@ -78,7 +81,7 @@ describe('useColumnOrder', () => {
       throw new Error('gesperrt');
     });
     const { result } = renderHook(() => useColumnOrder(storage));
-    act(() => result.current.move('mark', 'side'));
+    act(() => result.current.move('margin', 'positionValue'));
     act(() => result.current.reset());
     expect(result.current.isDefault).toBe(true);
   });

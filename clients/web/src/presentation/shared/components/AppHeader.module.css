@@ -1,0 +1,20 @@
+/* Innenabstand wie die Seite: Der Titel steht bündig zur Seiteninhalt-Kante (gleiche Formel wie .page). */
+.header {
+  --header-inline: var(--space-3);
+  padding: var(--space-3)
+    max(var(--header-inline), calc((100% - var(--layout-max-width)) / 2 + var(--header-inline)));
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+@media (min-width: 768px) {
+  .header {
+    --header-inline: var(--space-5);
+  }
+}
+
+.title {
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-strong);
+}

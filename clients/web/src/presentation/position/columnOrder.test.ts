@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  COLUMN_ORDER_STORAGE_KEY,
   DEFAULT_COLUMN_ORDER,
   isDefaultColumnOrder,
   moveColumn,
@@ -10,44 +11,55 @@ import {
 const DEFAULT = [...DEFAULT_COLUMN_ORDER];
 
 describe('DEFAULT_COLUMN_ORDER', () => {
-  it('beginnt mit symbol und enthält 13 eindeutige Spalten', () => {
-    expect(DEFAULT_COLUMN_ORDER[0]).toBe('symbol');
-    expect(new Set(DEFAULT_COLUMN_ORDER).size).toBe(13);
+  it('hat die BingX-Stil-Reihenfolge mit 7 eindeutigen Spalten', () => {
+    expect([...DEFAULT_COLUMN_ORDER]).toEqual([
+      'symbol',
+      'positionValue',
+      'margin',
+      'unrealizedProfit',
+      'realisedProfit',
+      'entry',
+      'tpSl',
+    ]);
+    expect(new Set(DEFAULT_COLUMN_ORDER).size).toBe(7);
+  });
+  it('Storage-Key ist v2', () => {
+    expect(COLUMN_ORDER_STORAGE_KEY).toBe('tip_open_positions_column_order_v2');
   });
 });
 
 describe('moveColumn', () => {
   it('schiebt eine Spalte nach vorn auf die Position der Zielspalte', () => {
-    const result = moveColumn(DEFAULT, 'mark', 'side');
-    expect(result.slice(0, 4)).toEqual(['symbol', 'mark', 'side', 'amount']);
-    expect(result).toHaveLength(13);
+    const result = moveColumn(DEFAULT, 'entry', 'margin');
+    expect(result.slice(0, 4)).toEqual(['symbol', 'positionValue', 'entry', 'margin']);
+    expect(result).toHaveLength(7);
   });
   it('schiebt eine Spalte nach hinten auf die Position der Zielspalte', () => {
-    const result = moveColumn(DEFAULT, 'side', 'entry');
-    expect(result.slice(0, 5)).toEqual(['symbol', 'amount', 'entry', 'side', 'mark']);
+    const result = moveColumn(DEFAULT, 'positionValue', 'unrealizedProfit');
+    expect(result.slice(0, 4)).toEqual(['symbol', 'margin', 'unrealizedProfit', 'positionValue']);
   });
   it('mutiert die Eingabe nicht', () => {
     const input = [...DEFAULT];
-    moveColumn(input, 'mark', 'side');
+    moveColumn(input, 'entry', 'margin');
     expect(input).toEqual(DEFAULT);
   });
   it('from === to ändert nichts', () => {
-    expect(moveColumn(DEFAULT, 'mark', 'mark')).toEqual(DEFAULT);
+    expect(moveColumn(DEFAULT, 'entry', 'entry')).toEqual(DEFAULT);
   });
   it('symbol ist als Quelle nicht verschiebbar', () => {
-    expect(moveColumn(DEFAULT, 'symbol', 'mark')).toEqual(DEFAULT);
+    expect(moveColumn(DEFAULT, 'symbol', 'entry')).toEqual(DEFAULT);
   });
   it('symbol ist als Ziel nicht erlaubt: Symbol bleibt erste Spalte', () => {
-    expect(moveColumn(DEFAULT, 'mark', 'symbol')).toEqual(DEFAULT);
+    expect(moveColumn(DEFAULT, 'entry', 'symbol')).toEqual(DEFAULT);
   });
   it('unbekannte Keys ändern nichts', () => {
-    expect(moveColumn(DEFAULT, 'nope' as ColumnKey, 'mark')).toEqual(DEFAULT);
+    expect(moveColumn(DEFAULT, 'nope' as ColumnKey, 'entry')).toEqual(DEFAULT);
   });
 });
 
 describe('sanitizeColumnOrder', () => {
   it('gültige vollständige Reihenfolge bleibt erhalten', () => {
-    const custom = moveColumn(DEFAULT, 'mark', 'side');
+    const custom = moveColumn(DEFAULT, 'entry', 'margin');
     expect(sanitizeColumnOrder(custom)).toEqual(custom);
   });
   it.each([null, undefined, 'x', 42, {}, [], ['a', 1]])(
@@ -60,28 +72,36 @@ describe('sanitizeColumnOrder', () => {
     expect(sanitizeColumnOrder(['symbol', 'foo', ...DEFAULT.slice(1)])).toEqual(DEFAULT);
   });
   it('entfernt Duplikate (erstes Vorkommen zählt)', () => {
-    const result = sanitizeColumnOrder(['symbol', 'mark', 'mark', 'side']);
-    expect(result.filter((key) => key === 'mark')).toHaveLength(1);
-    expect(result.slice(0, 3)).toEqual(['symbol', 'mark', 'side']);
-    expect(result).toHaveLength(13);
+    const result = sanitizeColumnOrder(['symbol', 'entry', 'entry', 'margin']);
+    expect(result.filter((key) => key === 'entry')).toHaveLength(1);
+    expect(result.slice(0, 3)).toEqual(['symbol', 'entry', 'margin']);
+    expect(result).toHaveLength(7);
   });
   it('hängt fehlende Keys in Standardposition-Reihenfolge an', () => {
-    const result = sanitizeColumnOrder(['symbol', 'openTime', 'mark']);
-    expect(result.slice(0, 3)).toEqual(['symbol', 'openTime', 'mark']);
+    const result = sanitizeColumnOrder(['symbol', 'tpSl', 'entry']);
+    expect(result.slice(0, 3)).toEqual(['symbol', 'tpSl', 'entry']);
     expect(result.slice(3)).toEqual(
-      DEFAULT.filter((key) => !['symbol', 'openTime', 'mark'].includes(key)),
+      DEFAULT.filter((key) => !['symbol', 'tpSl', 'entry'].includes(key)),
     );
   });
   it('erzwingt symbol als erste Spalte', () => {
-    const result = sanitizeColumnOrder(['mark', 'symbol', 'side']);
+    const result = sanitizeColumnOrder(['entry', 'symbol', 'margin']);
     expect(result[0]).toBe('symbol');
-    expect(result).toHaveLength(13);
+    expect(result).toHaveLength(7);
+  });
+  it('ignoriert entfernte alte Keys (side, mark, openTime, breakEven) und ergänzt fehlende', () => {
+    const result = sanitizeColumnOrder(['symbol', 'side', 'mark', 'openTime', 'breakEven', 'tpSl']);
+    expect(result).toEqual([
+      'symbol',
+      'tpSl',
+      ...DEFAULT.filter((k) => k !== 'symbol' && k !== 'tpSl'),
+    ]);
   });
 });
 
 describe('isDefaultColumnOrder', () => {
   it('true für Standard, false nach Verschieben', () => {
     expect(isDefaultColumnOrder(DEFAULT)).toBe(true);
-    expect(isDefaultColumnOrder(moveColumn(DEFAULT, 'mark', 'side'))).toBe(false);
+    expect(isDefaultColumnOrder(moveColumn(DEFAULT, 'entry', 'margin'))).toBe(false);
   });
 });

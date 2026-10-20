@@ -64,6 +64,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/assets/icons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Coin-Icons für BingX-Symbole
+         * @description Löst die Basis-Assets der angefragten Symbole über CoinGecko (`coins/markets`, ein Abruf für alle Symbole) in Icon-URLs auf. Bei mehreren Coins mit demselben Symbol gewinnt der mit dem besten Marktkapitalisierungs-Rang. Treffer werden 24 h zwischengespeichert, fehlende 10 min. Metalle (XAU, XAG) und nicht auflösbare Symbole liefern `iconUrl: null`. Ist CoinGecko nicht erreichbar oder drosselt es, antwortet die API trotzdem mit 200 und `iconUrl: null` (kein Icon ist kein Fehler). Es werden nur HTTPS-URLs von `coin-images.coingecko.com` ausgeliefert.
+         */
+        get: operations["getAssetIcons"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -173,6 +193,33 @@ export interface components {
             kind: "ENTRY";
             price: components["schemas"]["Decimal"];
         };
+        AssetIcons: {
+            /** @description Ein Eintrag je angefragtem Symbol, in der Reihenfolge der Anfrage, ohne Duplikate. */
+            icons: components["schemas"]["AssetIcon"][];
+        };
+        AssetIcon: {
+            /**
+             * @description Das angefragte BingX-Symbol, unverändert.
+             * @example SUI-USDT
+             */
+            symbol: string;
+            /**
+             * @description Basis-Asset in Großbuchstaben (Teil vor dem ersten "-"). Rohstoff-Kontrakte nach dem Muster `NCCO<Name>2USD` werden auf den Rohstoff-Code normalisiert: `NCCOGOLD2USD` wird `XAU`, `NCCOXAG2USD` bleibt `XAG`, `NCCONICKEL2USD` wird `NICKEL`.
+             * @example SUI
+             */
+            baseAsset: string;
+            /**
+             * @description Anzeigename ohne Quote (kein "-USDT"). Coins: der Ticker in Großbuchstaben (`ONDO`). Rohstoffe: deutscher Name (`XAU` Gold, `XAG` Silber, sonst der Rohstoff-Name mit großem Anfangsbuchstaben, z.B. `Nickel`).
+             * @example SUI
+             */
+            displayName: string;
+            /**
+             * Format: uri
+             * @description HTTPS-URL des Icons (nur Host `coin-images.coingecko.com`), `null` wenn kein Icon bekannt ist, die Quelle nicht erreichbar war oder das Asset ein Rohstoff ist (Muster `NCCO<Name>2USD`, XAU, XAG). Für Gold und Silber zeigt der Client lokale Icons.
+             * @example https://coin-images.coingecko.com/coins/images/26375/large/sui-ocean-square.png
+             */
+            iconUrl: string | null;
+        };
     };
     responses: {
         /** @description Fehlerantwort ohne interne Details: 400 bad-request, 403 forbidden-host, 404 not-found, 502 upstream-error/invalid-response, 503 not-configured/rate-limited, 504 unreachable, 500 internal. */
@@ -278,6 +325,53 @@ export interface operations {
             502: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
+        };
+    };
+    getAssetIcons: {
+        parameters: {
+            query: {
+                /**
+                 * @description Kommaseparierte BingX-Symbole, z.B. `BTC-USDT,SUI-USDT` (1 bis 50, Duplikate werden entfernt, nur Großbuchstaben, Ziffern und "-"). Sonst 400.
+                 * @example BTC-USDT,SUI-USDT
+                 */
+                symbols: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Icons je Symbol. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "icons": [
+                     *         {
+                     *           "symbol": "SUI-USDT",
+                     *           "baseAsset": "SUI",
+                     *           "displayName": "SUI",
+                     *           "iconUrl": "https://coin-images.coingecko.com/coins/images/26375/large/sui-ocean-square.png"
+                     *         },
+                     *         {
+                     *           "symbol": "NCCOGOLD2USD-USDT",
+                     *           "baseAsset": "XAU",
+                     *           "displayName": "Gold",
+                     *           "iconUrl": null
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AssetIcons"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            500: components["responses"]["Problem"];
         };
     };
 }
