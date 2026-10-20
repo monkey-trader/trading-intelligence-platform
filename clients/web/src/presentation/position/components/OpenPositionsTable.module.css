@@ -37,8 +37,8 @@
 
 .cell {
   display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
+  justify-content: flex-start;
+  gap: 0;
   padding: var(--space-1) 0;
   text-align: right;
   font-weight: var(--font-weight-regular);
@@ -46,6 +46,9 @@
 
 .cell::before {
   content: attr(data-label);
+  /* Label links, Wert und Einheit bleiben als Gruppe rechtsbündig (Abstand über padding, nicht gap). */
+  margin-inline-end: auto;
+  padding-inline-end: var(--space-3);
   /* Die Zelle kann fett sein (z.B. Seite), das Label bleibt normal. */
   font-weight: var(--font-weight-regular);
   color: var(--color-text-muted);
@@ -58,21 +61,11 @@
   justify-content: flex-start;
   align-items: center;
   font-weight: var(--font-weight-strong);
-  font-size: var(--font-size-large);
+  font-size: var(--font-size-base);
 }
 
 .symbolCell::before {
   content: none;
-}
-
-.sideLong {
-  color: var(--color-positive);
-  font-weight: var(--font-weight-strong);
-}
-
-.sideShort {
-  color: var(--color-negative);
-  font-weight: var(--font-weight-strong);
 }
 
 .positive {
@@ -131,10 +124,11 @@
   }
 
   .headerCell {
-    padding: var(--table-cell-padding-block) var(--table-cell-padding-inline);
+    padding: var(--space-3) var(--table-cell-padding-inline);
+    background: var(--color-surface);
     color: var(--color-text-muted);
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-strong);
+    font-size: var(--font-size-x-small);
+    font-weight: var(--font-weight-regular);
     text-align: right;
     white-space: nowrap;
     border-bottom: 1px solid var(--color-border);
@@ -151,6 +145,8 @@
     position: sticky;
     left: 0;
     background: var(--color-surface);
+    /* Trennlinie zum scrollenden Teil: ohne sie wirken Werte unter der Spalte abgeschnitten. */
+    border-right: 1px solid var(--color-border);
   }
 
   .row {
@@ -168,20 +164,36 @@
 
   .cell {
     display: table-cell;
-    padding: var(--table-cell-padding-block) var(--table-cell-padding-inline);
+    padding: var(--table-row-padding-block) var(--table-cell-padding-inline);
     white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  /* Symbol-Zelle: Balken links (Desktop), Inhalt als Spalte (Name+Chart, darunter Chips). */
+  .symbolCell {
+    display: table-cell;
+    /* Schmal: die Spalte wächst nur so weit wie Name, Chart und Chips; sonst klafft der Chart-Button weit weg. */
+    width: 1%;
+    padding-inline-start: var(--space-3);
+    box-shadow: inset var(--size-side-bar) 0 0 var(--bar-color, transparent);
+  }
+
+  /* Desktop: Der Balken sitzt an der Symbol-Zelle, nicht an der Zeile. */
+  .row:has(> .barLong),
+  .row:has(> .barShort) {
+    box-shadow: none;
   }
 
   .cell::before {
     content: none;
   }
 
-  .symbolCell {
-    font-size: var(--font-size-base);
+  .twoLine {
+    align-items: flex-end;
   }
 
-  .chartButton {
-    margin-left: var(--space-2);
+  .symbolCell {
+    font-size: var(--font-size-base);
   }
 
   /* Am Desktop bleibt die Toolbar auch leer sichtbar und reserviert ihre Höhe. */
@@ -229,10 +241,10 @@
 
 .chartButton {
   margin-left: auto;
-  padding: 0 var(--space-2);
-  color: var(--color-accent);
+  padding: 0 var(--space-1);
+  color: var(--color-text-muted);
   background: transparent;
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: var(--radius-small);
   font-size: var(--font-size-small);
   cursor: pointer;
@@ -246,22 +258,6 @@
 .chartButton:focus-visible {
   outline: var(--border-width-emphasis) solid var(--color-accent);
   outline-offset: var(--border-width-emphasis);
-}
-
-.breakEvenBadge {
-  margin-left: var(--space-1);
-  padding: 0 var(--space-1);
-  border-radius: var(--radius-small);
-  background: var(--color-positive-surface);
-  color: var(--color-positive);
-  font-size: var(--font-size-small);
-  font-weight: var(--font-weight-strong);
-}
-
-.noStopLossHint {
-  margin-left: var(--space-1);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-small);
 }
 
 .dropTarget {
@@ -291,4 +287,113 @@
 
 .dragHandle::before {
   content: '\2807';
+}
+
+/* ---- BingX-Stil: Zellaufbau ---- */
+/* Balken am linken Zeilenrand: Long grün, Short rot (zusätzlich zum Chip-Text "Long"/"Short").
+   Mobile: Balken am Kartenrand (Zeile, :has), damit er die ganze Karte begleitet.
+   Desktop: Balken an der Symbol-Zelle (siehe Media Query unten). */
+.row:has(> .barLong) {
+  box-shadow: inset var(--size-side-bar) 0 0 var(--color-positive);
+}
+.row:has(> .barShort) {
+  box-shadow: inset var(--size-side-bar) 0 0 var(--color-negative);
+}
+.barLong {
+  --bar-color: var(--color-positive);
+}
+.barShort {
+  --bar-color: var(--color-negative);
+}
+
+.symbolMain {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.symbolName {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-strong);
+  color: var(--color-text);
+}
+.coinIcon,
+.coinFallback {
+  flex: none;
+  inline-size: var(--size-coin-icon);
+  block-size: var(--size-coin-icon);
+  border-radius: 50%;
+  /* Dezenter Rand: dunkle Icons (z.B. ONDO) heben sich vom dunklen Theme sonst kaum ab. */
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+.coinIcon {
+  object-fit: cover;
+}
+.coinFallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-chip-surface);
+  color: var(--color-chip-text);
+  font-size: var(--font-size-x-small);
+  font-weight: var(--font-weight-strong);
+  line-height: 1;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+.chip {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-chip);
+  background: var(--color-chip-surface);
+  color: var(--color-chip-text);
+  font-size: var(--font-size-x-small);
+  font-weight: var(--font-weight-strong);
+  line-height: var(--line-height-base);
+}
+.chipLong {
+  background: var(--color-positive-surface);
+  color: var(--color-positive);
+}
+.chipShort {
+  background: var(--color-negative-surface);
+  color: var(--color-negative);
+}
+
+/* Zweizeilige Zellen: .twoLine > .lineMain + .lineSub. */
+.twoLine {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.lineSub {
+  font-size: var(--font-size-small);
+}
+.lineMuted {
+  color: var(--color-text-muted);
+}
+.unit {
+  margin-left: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+.slLine {
+  color: var(--color-negative);
+}
+.breakEvenBadge {
+  margin-left: var(--space-1);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-small);
+  background: var(--color-positive-surface);
+  color: var(--color-positive);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-strong);
+}
+.noStopLossHint {
+  margin-left: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
 }

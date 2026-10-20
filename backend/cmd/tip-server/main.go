@@ -17,14 +17,17 @@ import (
 	"syscall"
 	"time"
 
+	appasset "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/asset"
 	appchart "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/chart"
 	appposition "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/position"
 	chartinterfaces "github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/chart/interfaces"
 	domainposition "github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/position"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/position/interfaces"
+	infraasset "github.com/monkey-trader/trading-intelligence-platform/backend/internal/infrastructure/asset"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/infrastructure/bingx"
 	infrachart "github.com/monkey-trader/trading-intelligence-platform/backend/internal/infrastructure/chart"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/infrastructure/clock"
+	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/infrastructure/coingecko"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/infrastructure/config"
 	infraposition "github.com/monkey-trader/trading-intelligence-platform/backend/internal/infrastructure/position"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/infrastructure/scheduler"
@@ -34,6 +37,9 @@ import (
 )
 
 // shutdownTimeout begrenzt, wie lange laufende Anfragen beim Beenden noch abgeschlossen werden.
+// coinGeckoBaseURL ist die öffentliche CoinGecko-API für Coin-Icons.
+const coinGeckoBaseURL = "https://api.coingecko.com"
+
 const shutdownTimeout = 10 * time.Second
 
 // Einstellungen für GET /positions/open. Gesamtfrist: FetchTimeout 8 s liegt unter dem
@@ -82,6 +88,10 @@ func run(logger *slog.Logger) error {
 		return err
 	}
 
+	iconClock := clock.SystemClock{}
+	getAssetIcons := appasset.NewGetAssetIconsUseCase(
+		coingecko.NewClient(coinGeckoBaseURL), infraasset.NewMemoryIconCache(iconClock), iconClock)
+
 	listener, err := net.Listen("tcp", net.JoinHostPort(serverConfig.Host, strconv.Itoa(serverConfig.Port)))
 	if err != nil {
 		return err
@@ -91,6 +101,7 @@ func run(logger *slog.Logger) error {
 		AllowedHosts:     serverConfig.AllowedHosts,
 		GetOpenPositions: getOpenPositions.Execute,
 		GetPositionChart: getPositionChart,
+		GetAssetIcons:    getAssetIcons.Execute,
 		WebUI:            newWebUI(),
 	}, logger)
 	server := httpapi.NewServer(handler, logger)

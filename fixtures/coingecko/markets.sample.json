@@ -1,0 +1,44 @@
+[
+  {
+    "id": "bitcoin",
+    "symbol": "btc",
+    "name": "Bitcoin",
+    "image": "https://coin-images.coingecko.com/coins/images/1/large/bitcoin.png?1696501400",
+    "market_cap_rank": 1
+  },
+  {
+    "id": "ripple",
+    "symbol": "xrp",
+    "name": "XRP",
+    "image": "https://coin-images.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png?1696501442",
+    "market_cap_rank": 5
+  },
+  {
+    "id": "sui",
+    "symbol": "sui",
+    "name": "Sui",
+    "image": "https://coin-images.coingecko.com/coins/images/26375/large/sui-ocean-square.png?1727791290",
+    "market_cap_rank": 28
+  },
+  {
+    "id": "ethena",
+    "symbol": "ena",
+    "name": "Ethena",
+    "image": "https://coin-images.coingecko.com/coins/images/36530/large/ethena.png?1711701436",
+    "market_cap_rank": 40
+  },
+  {
+    "id": "ondo-finance",
+    "symbol": "ondo",
+    "name": "Ondo",
+    "image": "https://coin-images.coingecko.com/coins/images/26580/large/ONDO.png?1696525656",
+    "market_cap_rank": 48
+  },
+  {
+    "id": "algorand",
+    "symbol": "algo",
+    "name": "Algorand",
+    "image": "https://coin-images.coingecko.com/coins/images/4380/large/download.png?1696504978",
+    "market_cap_rank": 76
+  }
+]

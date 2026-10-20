@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { AssetIconsGateway } from '@/domain/asset/AssetIconsGateway';
+import { useAssetIcons } from '@/presentation/position/hooks/useAssetIcons';
 import type { PositionChartGateway } from '@/domain/position/PositionChartGateway';
 import type { ChartRendererFactory } from '@/presentation/position/chart/ChartRenderer';
 import { PositionChartPanel } from '@/presentation/position/components/PositionChartPanel';
@@ -13,6 +15,8 @@ type OpenPositionsPageProps = Readonly<{
   /** Ohne Chart-Gateway und Renderer gibt es keine Chart-Auswahl. */
   chartGateway?: PositionChartGateway;
   createChartRenderer?: ChartRendererFactory;
+  /** Ohne Gateway zeigt die Tabelle Ticker statt Icons. */
+  assetIconsGateway?: AssetIconsGateway;
 }>;
 
 /** Seite "Offene Positionen": lädt über das injizierte Gateway und pollt. */
@@ -20,8 +24,14 @@ export function OpenPositionsPage({
   gateway,
   chartGateway,
   createChartRenderer,
+  assetIconsGateway,
 }: OpenPositionsPageProps) {
   const { status, snapshot, errorMessage, isStale, refresh } = useOpenPositionsViewModel(gateway);
+  const symbols = useMemo(
+    () => snapshot?.positions.map((position) => position.symbol) ?? [],
+    [snapshot],
+  );
+  const iconsBySymbol = useAssetIcons(assetIconsGateway, symbols);
 
   const [chartPositionId, setChartPositionId] = useState<string>();
   const toggleChart = (positionId: string) =>
@@ -64,6 +74,7 @@ export function OpenPositionsPage({
           {snapshot.positions.length > 0 ? (
             <OpenPositionsTable
               positions={snapshot.positions}
+              iconsBySymbol={iconsBySymbol}
               selectedPositionId={chartPositionId}
               onSelectPosition={chartGateway && createChartRenderer ? toggleChart : undefined}
             />

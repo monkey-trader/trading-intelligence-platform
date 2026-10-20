@@ -4,7 +4,8 @@ import {
   formatRatioAsPercent,
   MISSING_VALUE,
 } from '@/presentation/position/format/formatRatioAsPercent';
-import { formatDateTime } from '@/presentation/position/format/formatTimestamp';
+import type { AssetIcon } from '@/domain/asset/AssetIcon';
+import { CoinIcon } from '@/presentation/position/components/CoinIcon';
 import { pnlTone } from '@/presentation/position/format/pnlTone';
 import { Fragment, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react';
 import type { ColumnKey } from '@/presentation/position/columnOrder';
@@ -13,18 +14,12 @@ import styles from '@/presentation/position/components/OpenPositionsTable.module
 
 const COLUMN_LABELS = {
   symbol: 'Symbol',
-  side: 'Seite',
-  amount: 'Menge',
-  entry: 'Einstieg',
-  mark: 'Mark',
-  leverage: 'Hebel',
+  positionValue: 'Positionswert',
   margin: 'Margin',
   unrealizedProfit: 'Unreal. PnL',
-  pnlRatio: 'PnL %',
   realisedProfit: 'Real. PnL',
-  stopLoss: 'SL',
-  takeProfit: 'TP',
-  openTime: 'Eröffnet',
+  entry: 'Einstieg',
+  tpSl: 'TP / SL',
 } as const;
 
 const SIDE_LABELS: Readonly<Record<OpenPosition['side'], string>> = {
@@ -37,10 +32,12 @@ type OpenPositionsTableProps = Readonly<{
   /** Position, deren Chart gerade offen ist. */
   selectedPositionId?: string | undefined;
   onSelectPosition?: ((positionId: string) => void) | undefined;
+  /** Icons und Anzeigenamen je Symbol; fehlt ein Eintrag, gilt der Ticker als Name. */
+  iconsBySymbol?: ReadonlyMap<string, AssetIcon> | undefined;
 }>;
 
-/** Margin in USDT: 2 Nachkommastellen. */
-const MARGIN_FORMAT = { minimumFractionDigits: 2, maximumFractionDigits: 2 } as const;
+/** Beträge in USDT: 2 Nachkommastellen. */
+const USDT_FORMAT = { minimumFractionDigits: 2, maximumFractionDigits: 2 } as const;
 
 /** PnL-Werte: 2 Nachkommastellen, positive mit "+", damit Gewinn nicht nur an der Farbe hängt. */
 const PNL_FORMAT = {
@@ -54,6 +51,7 @@ export function OpenPositionsTable({
   positions,
   selectedPositionId,
   onSelectPosition,
+  iconsBySymbol,
 }: OpenPositionsTableProps) {
   const { order, move, reset, isDefault } = useColumnOrder();
   const [draggedKey, setDraggedKey] = useState<ColumnKey | null>(null);
@@ -164,6 +162,7 @@ export function OpenPositionsTable({
                 order={order}
                 isSelected={position.positionId === selectedPositionId}
                 onSelectPosition={onSelectPosition}
+                assetIcon={iconsBySymbol?.get(position.symbol)}
               />
             ))}
           </tbody>
@@ -178,65 +177,64 @@ function OpenPositionRow({
   order,
   isSelected,
   onSelectPosition,
+  assetIcon,
 }: Readonly<{
+  assetIcon?: AssetIcon | undefined;
   position: OpenPosition;
   order: readonly ColumnKey[];
   isSelected: boolean;
   onSelectPosition?: ((positionId: string) => void) | undefined;
 }>) {
-  // Tönung passend zur Anzeige: PnL mit 2 Stellen, Verhältnis als Prozent mit 2 Stellen (= 4 Stellen).
   const profitToneClass = styles[pnlTone(position.unrealizedProfit, 2)];
-  const ratioToneClass = styles[pnlTone(position.pnlRatio, 4)];
   const realisedToneClass = styles[pnlTone(position.realisedProfit, 2)];
-  const sideClass = position.side === 'LONG' ? styles.sideLong : styles.sideShort;
+  const isLong = position.side === 'LONG';
+  const tickerFallback = (position.symbol.split('-')[0] ?? position.symbol).toUpperCase();
+  const displayName = assetIcon?.displayName ?? tickerFallback;
 
   const cells: Record<ColumnKey, ReactNode> = {
     symbol: (
       <th
         scope="row"
         data-label={COLUMN_LABELS.symbol}
-        className={`${styles.cell} ${styles.symbolCell}`}
+        className={`${styles.cell} ${styles.symbolCell} ${isLong ? styles.barLong : styles.barShort}`}
       >
-        {position.symbol}
-        <button
-          type="button"
-          className={styles.chartButton}
-          aria-label={`Chart ${isSelected ? 'ausblenden' : 'anzeigen'}: ${position.symbol}`}
-          aria-expanded={isSelected}
-          onClick={() => onSelectPosition?.(position.positionId)}
-        >
-          Chart
-        </button>
+        <div>
+          <div className={styles.symbolMain}>
+            <CoinIcon
+              baseAsset={assetIcon?.baseAsset ?? tickerFallback}
+              displayName={displayName}
+              iconUrl={assetIcon?.iconUrl ?? null}
+            />
+            <span className={styles.symbolName}>{displayName}</span>
+            <button
+              type="button"
+              className={styles.chartButton}
+              aria-label={`Chart ${isSelected ? 'ausblenden' : 'anzeigen'}: ${displayName}`}
+              aria-expanded={isSelected}
+              onClick={() => onSelectPosition?.(position.positionId)}
+            >
+              Chart
+            </button>
+          </div>
+          <div className={styles.chips}>
+            <span className={`${styles.chip} ${isLong ? styles.chipLong : styles.chipShort}`}>
+              {SIDE_LABELS[position.side]}
+            </span>
+            <span className={styles.chip}>{position.isolated ? 'Isolated' : 'Cross'}</span>
+            <span className={styles.chip}>{`${position.leverage}X`}</span>
+          </div>
+        </div>
       </th>
     ),
-    side: (
-      <td data-label={COLUMN_LABELS.side} className={`${styles.cell} ${sideClass}`}>
-        {SIDE_LABELS[position.side]}
-      </td>
-    ),
-    amount: (
-      <td data-label={COLUMN_LABELS.amount} className={styles.cell}>
-        {formatDecimal(position.positionAmount)}
-      </td>
-    ),
-    entry: (
-      <td data-label={COLUMN_LABELS.entry} className={styles.cell}>
-        {formatDecimal(position.avgOpenPrice)}
-      </td>
-    ),
-    mark: (
-      <td data-label={COLUMN_LABELS.mark} className={styles.cell}>
-        {formatDecimal(position.markPrice)}
-      </td>
-    ),
-    leverage: (
-      <td data-label={COLUMN_LABELS.leverage} className={styles.cell}>
-        {`${position.leverage}×`}
+    positionValue: (
+      <td data-label={COLUMN_LABELS.positionValue} className={styles.cell}>
+        {formatDecimal(position.positionValue, USDT_FORMAT)}{' '}
+        <span className={styles.unit}>USDT</span>
       </td>
     ),
     margin: (
       <td data-label={COLUMN_LABELS.margin} className={styles.cell}>
-        {formatDecimal(position.margin, MARGIN_FORMAT)}
+        {formatDecimal(position.margin, USDT_FORMAT)} <span className={styles.unit}>USDT</span>
       </td>
     ),
     unrealizedProfit: (
@@ -244,12 +242,12 @@ function OpenPositionRow({
         data-label={COLUMN_LABELS.unrealizedProfit}
         className={`${styles.cell} ${profitToneClass}`}
       >
-        {formatDecimal(position.unrealizedProfit, PNL_FORMAT)}
-      </td>
-    ),
-    pnlRatio: (
-      <td data-label={COLUMN_LABELS.pnlRatio} className={`${styles.cell} ${ratioToneClass}`}>
-        {formatRatioAsPercent(position.pnlRatio, { signDisplay: 'exceptZero' })}
+        <div className={styles.twoLine}>
+          <span>{formatDecimal(position.unrealizedProfit, PNL_FORMAT)}</span>
+          <span className={styles.lineSub}>
+            ({formatRatioAsPercent(position.pnlRatio, { signDisplay: 'exceptZero' })})
+          </span>
+        </div>
       </td>
     ),
     realisedProfit: (
@@ -260,29 +258,31 @@ function OpenPositionRow({
         {formatDecimal(position.realisedProfit, PNL_FORMAT)}
       </td>
     ),
-    stopLoss: (
-      <td data-label={COLUMN_LABELS.stopLoss} className={styles.cell}>
-        <span>
-          {position.stopLoss === null ? MISSING_VALUE : formatDecimal(position.stopLoss)}
-          {position.breakEven === true && (
-            <span className={styles.breakEvenBadge} role="img" aria-label="Break-even">
-              BE
-            </span>
-          )}
-          {position.breakEven === false && position.stopLoss === null && (
-            <span className={styles.noStopLossHint}>kein SL</span>
-          )}
-        </span>
+    entry: (
+      <td data-label={COLUMN_LABELS.entry} className={styles.cell}>
+        {formatDecimal(position.avgOpenPrice)}
       </td>
     ),
-    takeProfit: (
-      <td data-label={COLUMN_LABELS.takeProfit} className={styles.cell}>
-        {position.takeProfit === null ? MISSING_VALUE : formatDecimal(position.takeProfit)}
-      </td>
-    ),
-    openTime: (
-      <td data-label={COLUMN_LABELS.openTime} className={styles.cell}>
-        {formatDateTime(position.openTime)}
+    tpSl: (
+      <td data-label={COLUMN_LABELS.tpSl} className={styles.cell}>
+        <div className={styles.twoLine}>
+          <span>
+            <span className={styles.lineMuted}>TP </span>
+            {position.takeProfit === null ? MISSING_VALUE : formatDecimal(position.takeProfit)}
+          </span>
+          <span className={position.stopLoss === null ? undefined : styles.slLine}>
+            <span className={styles.lineMuted}>SL </span>
+            {position.stopLoss === null ? MISSING_VALUE : formatDecimal(position.stopLoss)}
+            {position.breakEven === true && (
+              <span className={styles.breakEvenBadge} role="img" aria-label="Break-even">
+                BE
+              </span>
+            )}
+            {position.breakEven === false && position.stopLoss === null && (
+              <span className={styles.noStopLossHint}>kein SL</span>
+            )}
+          </span>
+        </div>
       </td>
     ),
   };

@@ -2,37 +2,54 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { OpenPosition } from '@/domain/position/OpenPosition';
+import type { AssetIcon } from '@/domain/asset/AssetIcon';
 import {
   breakEvenPosition,
-  goldShortPosition,
   noStopLossPosition,
+  goldShortPosition,
   unknownOrdersPosition,
   flatPosition,
   suiLongPosition,
 } from '@/test/fixtures/openPositions';
-import { formatDateTime } from '@/presentation/position/format/formatTimestamp';
 import { OpenPositionsTable } from '@/presentation/position/components/OpenPositionsTable';
 
 const COLUMN_LABELS = [
   'Symbol',
-  'Seite',
-  'Menge',
-  'Einstieg',
-  'Mark',
-  'Hebel',
+  'Positionswert',
   'Margin',
   'Unreal. PnL',
-  'PnL %',
   'Real. PnL',
-  'SL',
-  'TP',
-  'Eröffnet',
+  'Einstieg',
+  'TP / SL',
 ] as const;
 
 type ColumnLabel = (typeof COLUMN_LABELS)[number];
 
-function renderTable(positions: readonly OpenPosition[]) {
-  render(<OpenPositionsTable positions={positions} />);
+const goldIcon: AssetIcon = {
+  symbol: 'NCCOGOLD2USD-USDT',
+  baseAsset: 'XAU',
+  displayName: 'Gold',
+  iconUrl: null,
+};
+const suiIcon: AssetIcon = {
+  symbol: 'SUI-USDT',
+  baseAsset: 'SUI',
+  displayName: 'SUI',
+  iconUrl: 'https://coin-images.coingecko.com/coins/images/26375/large/sui.png',
+};
+const silverIcon: AssetIcon = {
+  symbol: 'NCCOXAG2USD-USDT',
+  baseAsset: 'XAG',
+  displayName: 'Silber',
+  iconUrl: null,
+};
+
+function iconMap(...icons: readonly AssetIcon[]): ReadonlyMap<string, AssetIcon> {
+  return new Map(icons.map((icon) => [icon.symbol, icon]));
+}
+
+function renderTable(positions: readonly OpenPosition[], icons?: ReadonlyMap<string, AssetIcon>) {
+  render(<OpenPositionsTable positions={positions} iconsBySymbol={icons} />);
   return screen.getByRole('table', { name: /offene positionen/i });
 }
 
@@ -53,7 +70,9 @@ function cellOf(row: HTMLElement, columnLabel: ColumnLabel): HTMLElement {
 }
 
 function rowFor(table: HTMLElement, symbol: string): HTMLElement {
-  const row = bodyRows(table).find((candidate) => within(candidate).queryByText(symbol));
+  const row = bodyRows(table).find((candidate) =>
+    (cellsOf(candidate)[0]?.textContent ?? '').includes(symbol),
+  );
   if (!row) throw new Error(`Zeile für ${symbol} fehlt`);
   return row;
 }
@@ -63,7 +82,7 @@ function hasTone(cell: HTMLElement, tone: 'positive' | 'negative' | 'neutral'): 
 }
 
 describe('OpenPositionsTable', () => {
-  it('ist eine semantische Tabelle mit den Spalten in fester Reihenfolge', () => {
+  it('ist eine semantische Tabelle mit den 7 Spalten in fester Reihenfolge', () => {
     const table = renderTable([suiLongPosition]);
 
     const headers = within(table)
@@ -77,8 +96,8 @@ describe('OpenPositionsTable', () => {
 
     const rows = bodyRows(table);
     expect(rows).toHaveLength(2);
-    expect(within(rows[0] as HTMLElement).getByText('NCCOGOLD2USD-USDT')).toBeInTheDocument();
-    expect(within(rows[1] as HTMLElement).getByText('SUI-USDT')).toBeInTheDocument();
+    expect(cellOf(rows[0] as HTMLElement, 'Symbol')).toHaveTextContent('NCCOGOLD2USD');
+    expect(cellOf(rows[1] as HTMLElement, 'Symbol')).toHaveTextContent('SUI');
   });
 
   it('versieht jede Zelle mit data-label für die mobile Kartenansicht', () => {
@@ -91,47 +110,136 @@ describe('OpenPositionsTable', () => {
     }
   });
 
+  it('entfernte Spalten und Texte kommen nicht mehr vor', () => {
+    const table = renderTable([suiLongPosition]);
+    const headers = within(table)
+      .getAllByRole('columnheader')
+      .map((header) => header.textContent?.trim() ?? '');
+    for (const removed of [
+      'Seite',
+      'Menge',
+      'Mark',
+      'Hebel',
+      'PnL %',
+      'Eröffnet',
+      'Auto Break-even',
+    ]) {
+      expect(headers).not.toContain(removed);
+    }
+  });
+
+  it('zeigt in der Symbol-Zelle nur den Anzeigenamen, kein -USDT und keinen Quote-Span', () => {
+    const table = renderTable([suiLongPosition], iconMap(suiIcon));
+    const symbolCell = cellOf(rowFor(table, 'SUI'), 'Symbol');
+
+    expect(symbolCell).toHaveTextContent('SUI');
+    expect(symbolCell.textContent).not.toContain('USDT');
+    expect(within(symbolCell).queryByText('-USDT')).not.toBeInTheDocument();
+    expect(within(symbolCell).getByText('Long')).toBeInTheDocument();
+    expect(within(symbolCell).getByText('Isolated')).toBeInTheDocument();
+    expect(within(symbolCell).getByText('10X')).toBeInTheDocument();
+  });
+
+  it('zeigt Rohstoffe mit deutschem Anzeigenamen', () => {
+    const silverPosition: OpenPosition = {
+      ...goldShortPosition,
+      positionId: '9100000000000000009',
+      symbol: 'NCCOXAG2USD-USDT',
+    };
+    const table = renderTable([goldShortPosition, silverPosition], iconMap(goldIcon, silverIcon));
+
+    const goldCell = cellOf(bodyRows(table)[0] as HTMLElement, 'Symbol');
+    const silverCell = cellOf(bodyRows(table)[1] as HTMLElement, 'Symbol');
+    expect(goldCell).toHaveTextContent('Gold');
+    expect(goldCell.textContent).not.toContain('NCCO');
+    expect(goldCell.textContent).not.toContain('USDT');
+    expect(silverCell).toHaveTextContent('Silber');
+    expect(silverCell.textContent).not.toContain('USDT');
+  });
+
+  it('nutzt ohne Icon-Daten den Teil des Symbols vor dem ersten "-" in Großbuchstaben', () => {
+    const lowerCasePosition: OpenPosition = {
+      ...suiLongPosition,
+      positionId: '9100000000000000010',
+      symbol: 'ondo-usdt',
+    };
+    const table = renderTable([goldShortPosition, lowerCasePosition]);
+
+    const goldCell = cellOf(bodyRows(table)[0] as HTMLElement, 'Symbol');
+    expect(goldCell).toHaveTextContent('NCCOGOLD2USD');
+    expect(goldCell.textContent).not.toContain('USDT');
+    const ondoCell = cellOf(bodyRows(table)[1] as HTMLElement, 'Symbol');
+    expect(ondoCell).toHaveTextContent('ONDO');
+    expect(ondoCell.textContent).not.toContain('USDT');
+  });
+
+  it('nutzt für Symbole ohne Eintrag in der Map den Fallback-Namen', () => {
+    const table = renderTable([goldShortPosition, suiLongPosition], iconMap(suiIcon));
+
+    expect(cellOf(rowFor(table, 'NCCOGOLD2USD'), 'Symbol').textContent).not.toContain('USDT');
+    expect(cellOf(rowFor(table, 'SUI'), 'Symbol')).toHaveTextContent('SUI');
+  });
+
+  it('zeigt bei SHORT und Cross die passenden Chips', () => {
+    const table = renderTable([goldShortPosition, flatPosition]);
+
+    const goldCell = cellOf(rowFor(table, 'NCCOGOLD2USD'), 'Symbol');
+    expect(within(goldCell).getByText('Short')).toBeInTheDocument();
+    expect(within(goldCell).getByText('15X')).toBeInTheDocument();
+    const flatCell = cellOf(rowFor(table, 'BTC'), 'Symbol');
+    expect(within(flatCell).getByText('Cross')).toBeInTheDocument();
+    expect(within(flatCell).getByText('1X')).toBeInTheDocument();
+  });
+
   it('formatiert die Werte einer LONG-Position', () => {
     const table = renderTable([suiLongPosition]);
-    const row = rowFor(table, 'SUI-USDT');
+    const row = rowFor(table, 'SUI');
 
-    expect(cellOf(row, 'Seite')).toHaveTextContent(/long/i);
-    expect(cellOf(row, 'Menge')).toHaveTextContent(/^500$/);
-    expect(cellOf(row, 'Einstieg')).toHaveTextContent(/^0\.96$/);
-    expect(cellOf(row, 'Mark')).toHaveTextContent(/^1\.01$/);
-    expect(cellOf(row, 'Hebel')).toHaveTextContent(/^10\s?[x×]$/);
-    expect(cellOf(row, 'Margin')).toHaveTextContent(/^60\.50$/);
-    expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^\+25\.00$/);
-    expect(cellOf(row, 'PnL %')).toHaveTextContent(/^\+52\.08\s?%$/);
+    expect(cellOf(row, 'Positionswert')).toHaveTextContent(/^505\.00\sUSDT$/);
+    expect(cellOf(row, 'Margin')).toHaveTextContent(/^60\.50\sUSDT$/);
+    expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^\+25\.00\s*\(\+52\.08\s?%\)$/);
     expect(cellOf(row, 'Real. PnL')).toHaveTextContent(/^[-−]0\.24$/);
-    expect(cellOf(row, 'Eröffnet')).toHaveTextContent(formatDateTime(suiLongPosition.openTime));
+    expect(cellOf(row, 'Einstieg')).toHaveTextContent(/^0\.96$/);
+    expect(cellOf(row, 'TP / SL')).toHaveTextContent(/^TP\s1\.2\d*\s*SL\s0\.9\d*$/);
   });
 
   it('formatiert die Werte einer SHORT-Position mit Tausendertrennung und Minus', () => {
     const table = renderTable([goldShortPosition]);
-    const row = rowFor(table, 'NCCOGOLD2USD-USDT');
+    const row = rowFor(table, 'NCCOGOLD2USD');
 
-    expect(cellOf(row, 'Seite')).toHaveTextContent(/short/i);
-    expect(cellOf(row, 'Menge')).toHaveTextContent(/^0\.25$/);
+    expect(cellOf(row, 'Positionswert')).toHaveTextContent(/^1['’]043\.75\sUSDT$/);
+    expect(cellOf(row, 'Margin')).toHaveTextContent(/^65\.00\sUSDT$/);
     expect(cellOf(row, 'Einstieg')).toHaveTextContent(/^4['’]150$/);
-    expect(cellOf(row, 'Mark')).toHaveTextContent(/^4['’]175$/);
-    expect(cellOf(row, 'Hebel')).toHaveTextContent(/^15\s?[x×]$/);
-    expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^[-−]6\.25$/);
-    expect(cellOf(row, 'PnL %')).toHaveTextContent(/^[-−]9\.04\s?%$/);
+    expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^[-−]6\.25\s*\([-−]9\.04\s?%\)$/);
     expect(cellOf(row, 'Real. PnL')).toHaveTextContent(/^[-−]0\.52$/);
-    expect(cellOf(row, 'Eröffnet')).toHaveTextContent(formatDateTime(goldShortPosition.openTime));
+  });
+
+  it('zeigt TP und SL in zwei Zeilen', () => {
+    const row = rowFor(renderTable([goldShortPosition]), 'NCCOGOLD2USD');
+    const cell = cellOf(row, 'TP / SL');
+
+    expect(cell).toHaveTextContent(/TP\s4['’]100/);
+    expect(cell).toHaveTextContent(/SL\s4['’]200/);
+    expect(within(cell).getByText(/^TP/)).toBeInTheDocument();
+    expect(within(cell).getByText(/^SL/)).toBeInTheDocument();
+  });
+
+  it('zeigt – bei TP und SL null', () => {
+    const row = rowFor(renderTable([unknownOrdersPosition]), 'SUI');
+    const cell = cellOf(row, 'TP / SL');
+
+    expect(cell).toHaveTextContent(/TP\s[–-]/);
+    expect(cell).toHaveTextContent(/SL\s[–-]/);
   });
 
   it('tönt die PnL-Zellen nach dem Vorzeichen', () => {
     const table = renderTable([goldShortPosition, suiLongPosition, flatPosition]);
-    const winner = rowFor(table, 'SUI-USDT');
-    const loser = rowFor(table, 'NCCOGOLD2USD-USDT');
-    const flat = rowFor(table, 'BTC-USDT');
+    const winner = rowFor(table, 'SUI');
+    const loser = rowFor(table, 'NCCOGOLD2USD');
+    const flat = rowFor(table, 'BTC');
 
     expect(hasTone(cellOf(winner, 'Unreal. PnL'), 'positive')).toBe(true);
-    expect(hasTone(cellOf(winner, 'PnL %'), 'positive')).toBe(true);
     expect(hasTone(cellOf(loser, 'Unreal. PnL'), 'negative')).toBe(true);
-    expect(hasTone(cellOf(loser, 'PnL %'), 'negative')).toBe(true);
     expect(hasTone(cellOf(flat, 'Unreal. PnL'), 'neutral')).toBe(true);
     expect(hasTone(cellOf(flat, 'Unreal. PnL'), 'positive')).toBe(false);
     expect(hasTone(cellOf(flat, 'Unreal. PnL'), 'negative')).toBe(false);
@@ -142,22 +250,16 @@ describe('OpenPositionsTable', () => {
       ...suiLongPosition,
       positionId: '9100000000000000004',
       symbol: 'ETH-USDT',
-      positionAmount: '2',
       avgOpenPrice: '2500.5',
-      markPrice: '3117.75',
       unrealizedProfit: '1234.5',
       realisedProfit: '12.3456',
       pnlRatio: '0.12345',
     };
-    const table = renderTable([profitablePosition]);
-    const row = rowFor(table, 'ETH-USDT');
+    const row = rowFor(renderTable([profitablePosition]), 'ETH');
 
-    expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^\+1['’]234\.50$/);
+    expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^\+1['’]234\.50\s*\(\+12\.35\s?%\)$/);
     expect(cellOf(row, 'Real. PnL')).toHaveTextContent(/^\+12\.35$/);
-    expect(cellOf(row, 'PnL %')).toHaveTextContent(/^\+12\.35\s?%$/);
-    expect(cellOf(row, 'Menge')).toHaveTextContent(/^2$/);
     expect(cellOf(row, 'Einstieg')).toHaveTextContent(/^2['’]500\.5$/);
-    expect(cellOf(row, 'Mark')).toHaveTextContent(/^3['’]117\.75$/);
   });
 
   it('zeigt PnL-Werte, die gerundet 0 sind, ohne Vorzeichen', () => {
@@ -167,39 +269,46 @@ describe('OpenPositionsTable', () => {
       realisedProfit: '-0.004',
       pnlRatio: '-0.00004',
     };
-    const table = renderTable([nearlyFlatPosition]);
-    const row = rowFor(table, 'BTC-USDT');
+    const row = rowFor(renderTable([nearlyFlatPosition]), 'BTC');
 
-    expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^0\.00$/);
+    expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^0\.00\s*\(0\.00\s?%\)$/);
     expect(cellOf(row, 'Real. PnL')).toHaveTextContent(/^0\.00$/);
-    expect(cellOf(row, 'PnL %')).toHaveTextContent(/^0\.00\s?%$/);
     expect(hasTone(cellOf(row, 'Real. PnL'), 'neutral')).toBe(true);
   });
 
   it('zeigt bei PnL genau 0 kein Vorzeichen', () => {
-    const table = renderTable([flatPosition]);
-    const row = rowFor(table, 'BTC-USDT');
+    const row = rowFor(renderTable([flatPosition]), 'BTC');
 
-    expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^0\.00$/);
+    expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^0\.00\s*\(0\.00\s?%\)$/);
     expect(cellOf(row, 'Real. PnL')).toHaveTextContent(/^0\.00$/);
-    expect(cellOf(row, 'PnL %')).toHaveTextContent(/^0\.00\s?%$/);
   });
 
   it('tönt den realisierten PnL nach dem gerundeten Vorzeichen', () => {
     const realisedWinner: OpenPosition = { ...suiLongPosition, realisedProfit: '3.5' };
     const table = renderTable([realisedWinner, goldShortPosition]);
 
-    expect(hasTone(cellOf(rowFor(table, 'SUI-USDT'), 'Real. PnL'), 'positive')).toBe(true);
-    expect(hasTone(cellOf(rowFor(table, 'NCCOGOLD2USD-USDT'), 'Real. PnL'), 'negative')).toBe(true);
+    expect(hasTone(cellOf(rowFor(table, 'SUI'), 'Real. PnL'), 'positive')).toBe(true);
+    expect(hasTone(cellOf(rowFor(table, 'NCCOGOLD2USD'), 'Real. PnL'), 'negative')).toBe(true);
   });
 });
 
 describe('OpenPositionsTable: Chart-Auswahl', () => {
+  it('benennt den Chart-Button mit dem Anzeigenamen statt dem Rohsymbol', () => {
+    renderTable([goldShortPosition, suiLongPosition], iconMap(goldIcon, suiIcon));
+
+    const goldButton = screen.getByRole('button', { name: /chart.*Gold/i });
+    expect(goldButton.getAttribute('aria-label')).not.toContain('NCCO');
+    expect(goldButton.getAttribute('aria-label')).not.toContain('USDT');
+    expect(
+      screen.getByRole('button', { name: /chart.*SUI/i }).getAttribute('aria-label'),
+    ).not.toContain('USDT');
+  });
+
   it('hat pro Zeile einen Chart-Button mit Symbol im Namen, ohne die Spalten zu ändern', () => {
     const table = renderTable([suiLongPosition, goldShortPosition]);
 
-    expect(screen.getByRole('button', { name: /chart.*SUI-USDT/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /chart.*NCCOGOLD2USD-USDT/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /chart.*SUI/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /chart.*NCCOGOLD2USD/i })).toBeInTheDocument();
     expect(within(table).getAllByRole('columnheader')).toHaveLength(COLUMN_LABELS.length);
   });
 
@@ -213,7 +322,7 @@ describe('OpenPositionsTable: Chart-Auswahl', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: /chart.*NCCOGOLD2USD-USDT/i }));
+    await user.click(screen.getByRole('button', { name: /chart.*NCCOGOLD2USD/i }));
 
     expect(onSelectPosition).toHaveBeenCalledWith(goldShortPosition.positionId);
   });
@@ -227,64 +336,66 @@ describe('OpenPositionsTable: Chart-Auswahl', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: /chart.*SUI-USDT/i })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /chart.*SUI/i })).toHaveAttribute(
       'aria-expanded',
       'true',
     );
-    expect(screen.getByRole('button', { name: /chart.*NCCOGOLD2USD-USDT/i })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /chart.*NCCOGOLD2USD/i })).toHaveAttribute(
       'aria-expanded',
       'false',
     );
   });
+});
 
-  describe('SL, TP und Break-even', () => {
-    it('zeigt SL und TP als Preis', () => {
-      const row = rowFor(renderTable([goldShortPosition]), 'NCCOGOLD2USD-USDT');
+describe('OpenPositionsTable: SL, TP und Break-even', () => {
+  it('zeigt in der SL-Zeile das Badge BE (role img, Break-even), wenn breakEven true ist', () => {
+    const cell = cellOf(rowFor(renderTable([breakEvenPosition]), 'SUI'), 'TP / SL');
 
-      expect(cellOf(row, 'SL')).toHaveTextContent(/^4['’]200$/);
-      expect(cellOf(row, 'TP')).toHaveTextContent(/^4['’]100$/);
-    });
+    const badge = within(cell).getByRole('img', { name: 'Break-even' });
+    expect(badge).toHaveAttribute('aria-label', 'Break-even');
+    expect(badge).toHaveTextContent('BE');
+    expect(cell).toHaveTextContent(/SL\s0\.97/);
+  });
 
-    it('zeigt – bei SL und TP null', () => {
-      const row = rowFor(renderTable([unknownOrdersPosition]), 'SUI-USDT');
+  it('zeigt kein BE-Badge bei breakEven false', () => {
+    const cell = cellOf(rowFor(renderTable([goldShortPosition]), 'NCCOGOLD2USD'), 'TP / SL');
 
-      expect(cellOf(row, 'SL')).toHaveTextContent(/^[–-]$/);
-      expect(cellOf(row, 'TP')).toHaveTextContent(/^[–-]$/);
-    });
+    expect(within(cell).queryByRole('img', { name: 'Break-even' })).not.toBeInTheDocument();
+    expect(within(cell).queryByText('BE')).not.toBeInTheDocument();
+  });
 
-    it('zeigt das Badge BE, wenn breakEven true ist', () => {
-      const row = rowFor(renderTable([breakEvenPosition]), 'SUI-USDT');
+  it('zeigt den Hinweis "kein SL", wenn Orders bekannt sind und kein SL existiert', () => {
+    const cell = cellOf(rowFor(renderTable([noStopLossPosition]), 'SUI'), 'TP / SL');
 
-      const badge = within(row).getByLabelText(/break-even/i);
-      expect(badge).toHaveTextContent('BE');
-    });
+    expect(within(cell).getByText('kein SL')).toBeInTheDocument();
+    expect(within(cell).queryByRole('img', { name: 'Break-even' })).not.toBeInTheDocument();
+  });
 
-    it('zeigt kein BE-Badge bei breakEven false', () => {
-      const row = rowFor(renderTable([goldShortPosition]), 'NCCOGOLD2USD-USDT');
+  it('zeigt bei vorhandenem SL keinen Hinweis "kein SL"', () => {
+    const cell = cellOf(rowFor(renderTable([goldShortPosition]), 'NCCOGOLD2USD'), 'TP / SL');
 
-      expect(within(row).queryByLabelText(/break-even/i)).not.toBeInTheDocument();
-      expect(within(row).queryByText('BE')).not.toBeInTheDocument();
-    });
+    expect(within(cell).queryByText('kein SL')).not.toBeInTheDocument();
+  });
 
-    it('zeigt den Hinweis "kein SL", wenn Orders bekannt sind und kein SL existiert', () => {
-      const row = rowFor(renderTable([noStopLossPosition]), 'SUI-USDT');
+  it('zeigt bei breakEven null (Orders unbekannt) weder Badge noch "kein SL"', () => {
+    const cell = cellOf(rowFor(renderTable([unknownOrdersPosition]), 'SUI'), 'TP / SL');
 
-      expect(within(row).getByText('kein SL')).toBeInTheDocument();
-      expect(within(row).queryByLabelText(/break-even/i)).not.toBeInTheDocument();
-    });
+    expect(within(cell).queryByRole('img', { name: 'Break-even' })).not.toBeInTheDocument();
+    expect(within(cell).queryByText('BE')).not.toBeInTheDocument();
+    expect(within(cell).queryByText('kein SL')).not.toBeInTheDocument();
+  });
 
-    it('zeigt bei vorhandenem SL keinen Hinweis "kein SL"', () => {
-      const row = rowFor(renderTable([goldShortPosition]), 'NCCOGOLD2USD-USDT');
+  it('tönt fehlenden SL nicht negativ, vorhandenen SL schon', () => {
+    const table = renderTable([unknownOrdersPosition, goldShortPosition]);
+    const missingLine = within(cellOf(bodyRows(table)[0] as HTMLElement, 'TP / SL')).getByText(
+      /^SL/,
+    ).parentElement as HTMLElement;
+    const presentLine = within(cellOf(bodyRows(table)[1] as HTMLElement, 'TP / SL')).getByText(
+      /^SL/,
+    ).parentElement as HTMLElement;
 
-      expect(within(row).queryByText('kein SL')).not.toBeInTheDocument();
-    });
-
-    it('zeigt bei breakEven null (Orders unbekannt) weder Badge noch "kein SL"', () => {
-      const row = rowFor(renderTable([unknownOrdersPosition]), 'SUI-USDT');
-
-      expect(within(row).queryByLabelText(/break-even/i)).not.toBeInTheDocument();
-      expect(within(row).queryByText('BE')).not.toBeInTheDocument();
-      expect(within(row).queryByText('kein SL')).not.toBeInTheDocument();
-    });
+    // Ausnahme: Klassenwechsel, da getComputedStyle die CSS-Module-Tönung nicht sichtbar macht.
+    expect(missingLine.className).not.toMatch(/slLine|negative/);
+    expect(presentLine.className).toMatch(/slLine|negative/);
   });
 });

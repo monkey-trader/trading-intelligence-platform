@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Trading Intelligence Platform API
-  version: 0.4.0
+  version: 0.5.0
   description: |-
     HTTP/JSON-API des Backends. Diese Spezifikation ist der Vertrag zwischen Backend
     und Clients: erst hier anpassen, dann implementieren. Jedes Backend (TypeScript, später Go)
@@ -142,11 +142,60 @@ paths:
           $ref: '#/components/responses/Problem'
         '504':
           $ref: '#/components/responses/Problem'
+  /assets/icons:
+    get:
+      operationId: getAssetIcons
+      summary: Coin-Icons für BingX-Symbole
+      description: >-
+        Löst die Basis-Assets der angefragten Symbole über CoinGecko (`coins/markets`, ein Abruf für
+        alle Symbole) in Icon-URLs auf. Bei mehreren Coins mit demselben Symbol gewinnt der mit dem
+        besten Marktkapitalisierungs-Rang. Treffer werden 24 h zwischengespeichert, fehlende 10 min.
+        Metalle (XAU, XAG) und nicht auflösbare Symbole liefern `iconUrl: null`. Ist CoinGecko nicht
+        erreichbar oder drosselt es, antwortet die API trotzdem mit 200 und `iconUrl: null` (kein
+        Icon ist kein Fehler). Es werden nur HTTPS-URLs von `coin-images.coingecko.com` ausgeliefert.
+      tags:
+        - Assets
+      parameters:
+        - name: symbols
+          in: query
+          required: true
+          description: >-
+            Kommaseparierte BingX-Symbole, z.B. `BTC-USDT,SUI-USDT` (1 bis 50, Duplikate werden
+            entfernt, nur Großbuchstaben, Ziffern und "-"). Sonst 400.
+          schema:
+            type: string
+            pattern: '^[A-Z0-9]{1,20}(-[A-Z0-9]+)*(,[A-Z0-9]{1,20}(-[A-Z0-9]+)*)*$'
+          example: BTC-USDT,SUI-USDT
+      responses:
+        '200':
+          description: Icons je Symbol.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetIcons'
+              example:
+                icons:
+                  - symbol: SUI-USDT
+                    baseAsset: SUI
+                    displayName: SUI
+                    iconUrl: https://coin-images.coingecko.com/coins/images/26375/large/sui-ocean-square.png
+                  - symbol: NCCOGOLD2USD-USDT
+                    baseAsset: XAU
+                    displayName: Gold
+                    iconUrl: null
+        '400':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
 tags:
   - name: System
     description: Betriebliche Endpunkte
   - name: Positionen
     description: Positionen des BingX-Futures-Kontos
+  - name: Assets
+    description: Zusatzdaten zu Assets (Icons)
 components:
   responses:
     Problem:
@@ -445,3 +494,51 @@ components:
             - ENTRY
         price:
           $ref: '#/components/schemas/Decimal'
+    AssetIcons:
+      type: object
+      additionalProperties: false
+      required:
+        - icons
+      properties:
+        icons:
+          type: array
+          description: Ein Eintrag je angefragtem Symbol, in der Reihenfolge der Anfrage, ohne Duplikate.
+          items:
+            $ref: '#/components/schemas/AssetIcon'
+    AssetIcon:
+      type: object
+      additionalProperties: false
+      required:
+        - symbol
+        - baseAsset
+        - displayName
+        - iconUrl
+      properties:
+        symbol:
+          type: string
+          description: Das angefragte BingX-Symbol, unverändert.
+          example: SUI-USDT
+        baseAsset:
+          type: string
+          description: >-
+            Basis-Asset in Großbuchstaben (Teil vor dem ersten "-"). Rohstoff-Kontrakte nach dem
+            Muster `NCCO<Name>2USD` werden auf den Rohstoff-Code normalisiert: `NCCOGOLD2USD` wird
+            `XAU`, `NCCOXAG2USD` bleibt `XAG`, `NCCONICKEL2USD` wird `NICKEL`.
+          example: SUI
+        displayName:
+          type: string
+          description: >-
+            Anzeigename ohne Quote (kein "-USDT"). Coins: der Ticker in Großbuchstaben (`ONDO`).
+            Rohstoffe: deutscher Name (`XAU` Gold, `XAG` Silber, sonst der Rohstoff-Name mit großem
+            Anfangsbuchstaben, z.B. `Nickel`).
+          example: SUI
+        iconUrl:
+          type:
+            - string
+            - 'null'
+          format: uri
+          description: >-
+            HTTPS-URL des Icons (nur Host `coin-images.coingecko.com`), `null` wenn kein Icon bekannt
+            ist, die Quelle nicht erreichbar war oder das Asset ein Rohstoff ist (Muster `NCCO<Name>2USD`,
+            XAU, XAG). Für Gold und Silber zeigt der Client lokale Icons.
+          example: https://coin-images.coingecko.com/coins/images/26375/large/sui-ocean-square.png

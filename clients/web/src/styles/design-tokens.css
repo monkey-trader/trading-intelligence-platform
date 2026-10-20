@@ -43,6 +43,7 @@
   --font-family-base:
     system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-size-small: 0.8125rem;
+  --font-size-x-small: 0.6875rem; /* Chips, Kopfzeile Positionstabelle */
   --font-size-base: 0.9375rem;
   --font-size-large: 1.25rem;
   --font-size-x-large: 1.75rem;
@@ -65,6 +66,14 @@
   --table-cell-padding-block: var(--space-3);
   --table-cell-padding-inline: var(--space-2);
   --font-family-numeric: var(--font-family-base);
+
+  /* Positionstabelle (BingX-Stil) */
+  --table-row-padding-block: var(--space-4);
+  --size-coin-icon: 20px;
+  --size-side-bar: 3px; /* Balken am linken Zeilenrand (Long/Short) */
+  --radius-chip: 4px;
+  --color-chip-surface: #ebeaf4; /* neutraler Chip; Text text-muted/text: hell 5.76:1 */
+  --color-chip-text: #3f3b5c; /* auf chip-surface 8.3:1 */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -84,6 +93,8 @@
     --color-positive-surface: #123027;
 
     --color-on-accent: #120f24;
+    --color-chip-surface: #2a2450; /* Text chip-text dunkel 9.5:1 */
+    --color-chip-text: #cfcce8;
 
     /* Chart-Farben (dunkel), abgeleitet von positive/negative */
     --color-chart-up: #4cc790;
