@@ -5,6 +5,7 @@ export const DEFAULT_COLUMN_ORDER = [
   'positionValue',
   'margin',
   'unrealizedProfit',
+  'rMultiple',
   'realisedProfit',
   'entry',
   'tpSl',

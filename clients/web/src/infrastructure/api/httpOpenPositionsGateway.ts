@@ -150,6 +150,8 @@ function parseOpenPositionDto(candidate: unknown): OpenPositionDto | undefined {
     openTime,
     updateTime,
   } = candidate;
+  const { initialStopLoss, riskDistance, currentRMultiple, breakEvenTriggerReached, reached2RAt } =
+    candidate;
   const matchesContract =
     typeof positionId === 'string' &&
     positionId !== '' &&
@@ -193,6 +195,12 @@ function parseOpenPositionDto(candidate: unknown): OpenPositionDto | undefined {
     breakEven,
     openTime,
     updateTime,
+    initialStopLoss: isDecimal(initialStopLoss) ? initialStopLoss : null,
+    riskDistance: isDecimal(riskDistance) ? riskDistance : null,
+    currentRMultiple: isDecimal(currentRMultiple) ? currentRMultiple : null,
+    breakEvenTriggerReached:
+      typeof breakEvenTriggerReached === 'boolean' ? breakEvenTriggerReached : null,
+    reached2RAt: isFiniteNumber(reached2RAt) ? reached2RAt : null,
   };
 }
 
@@ -225,6 +233,11 @@ function toOpenPosition(positionDto: OpenPositionDto): OpenPosition {
     breakEven: positionDto.breakEven,
     openTime: positionDto.openTime,
     updateTime: positionDto.updateTime,
+    initialStopLoss: positionDto.initialStopLoss ?? null,
+    riskDistance: positionDto.riskDistance ?? null,
+    currentRMultiple: positionDto.currentRMultiple ?? null,
+    breakEvenTriggerReached: positionDto.breakEvenTriggerReached ?? null,
+    reached2RAt: positionDto.reached2RAt ?? null,
   };
 }
 

@@ -90,6 +90,37 @@ describe('createHttpPositionChartGateway', () => {
       expect(result).toEqual({ kind: 'ok', chart: xagChartWithoutProtection });
     });
 
+    it('liest levels als Liste mit rMultiple als String', async () => {
+      const body = {
+        ...xagLongChart,
+        levels: [
+          { kind: 'ONE_R', rMultiple: 1, price: '56.75', percent: '0.0179' },
+          { kind: 'TWO_R', rMultiple: '2', price: '57.75', percent: '0.0359' },
+        ],
+      };
+      const gateway = createHttpPositionChartGateway(fakeFetchReturning(jsonResponse(body)));
+
+      const result = await gateway.fetchChart(CHART_POSITION_ID, '15m', 300, newSignal());
+
+      if (result.kind !== 'ok') throw new Error(`erwartet ok, erhalten ${result.kind}`);
+      expect(result.chart.levels).toEqual([
+        { kind: 'ONE_R', rMultiple: '1', price: '56.75', percent: '0.0179' },
+        { kind: 'TWO_R', rMultiple: '2', price: '57.75', percent: '0.0359' },
+      ]);
+    });
+
+    it.each([
+      ['fehlend', { ...xagLongChart, levels: undefined }],
+      ['leer', { ...xagLongChart, levels: [] }],
+    ])('liefert levels undefined, wenn sie %s sind', async (_name, body) => {
+      const gateway = createHttpPositionChartGateway(fakeFetchReturning(jsonResponse(body)));
+
+      const result = await gateway.fetchChart(CHART_POSITION_ID, '15m', 300, newSignal());
+
+      if (result.kind !== 'ok') throw new Error(`erwartet ok, erhalten ${result.kind}`);
+      expect(result.chart.levels).toBeUndefined();
+    });
+
     it.each([
       ['Kerzen fehlen', { ...xagLongChart, candles: undefined }],
       ['Entry ohne Preis', { ...xagLongChart, entry: { time: 1 } }],

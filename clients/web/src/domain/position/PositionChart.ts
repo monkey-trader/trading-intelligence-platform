@@ -33,6 +33,15 @@ export type ChartMarker = Readonly<{
   price: string;
 }>;
 
+/** CRV-Level aus dem ursprünglichen Risiko; TWO_R ist der Break-even-Trigger. */
+export type RLevel = Readonly<{
+  kind: 'ONE_R' | 'TWO_R' | 'THREE_R';
+  rMultiple: string;
+  price: string;
+  /** Abstand zum Entry relativ zum Entry. */
+  percent: string;
+}>;
+
 export type PositionChart = Readonly<{
   positionId: string;
   symbol: string;
@@ -43,5 +52,7 @@ export type PositionChart = Readonly<{
   stopLoss: readonly ProtectiveOrder[];
   takeProfit: readonly ProtectiveOrder[];
   markers: readonly ChartMarker[];
+  /** Fehlt oder leer, wenn das Risiko unbekannt ist. */
+  levels?: readonly RLevel[] | undefined;
   fetchedAt: number;
 }>;

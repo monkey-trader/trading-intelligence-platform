@@ -358,6 +358,10 @@
   background: var(--color-positive-surface);
   color: var(--color-positive);
 }
+.chipAction {
+  background: var(--color-warning-surface);
+  color: var(--color-warning);
+}
 .chipShort {
   background: var(--color-negative-surface);
   color: var(--color-negative);

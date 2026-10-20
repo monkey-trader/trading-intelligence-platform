@@ -21,7 +21,17 @@ type OpenPositionEntry struct {
 	StopLoss   *string // engster SL, nil ohne
 	TakeProfit *string // nächster TP, nil ohne
 	BreakEven  *bool   // nil = Orders unbekannt
+
+	// Risiko-Felder (alle nil, wenn das Risiko unbekannt ist).
+	InitialStopLoss         *string
+	RiskDistance            *string
+	CurrentRMultiple        *string
+	BreakEvenTriggerReached *bool  // nil auch, wenn die Kerzen nicht lesbar waren
+	Reached2RAt             *int64 // Kerzenbeginn, nil wenn nicht erreicht oder unbekannt
 }
+
+// riskCandleLimit ist die Zahl der 5-Minuten-Kerzen, in denen nach 2R gesucht wird.
+const riskCandleLimit = 1000
 
 // OpenPositionsOverview ist das Ergebnis: sortierte Positionen (nie nil), exakte PnL-Summe, Abfragezeit.
 type OpenPositionsOverview struct {
@@ -32,8 +42,17 @@ type OpenPositionsOverview struct {
 
 // GetOpenPositionsUseCase liefert die offenen Positionen, neueste zuerst.
 type GetOpenPositionsUseCase struct {
-	source interfaces.OpenPositionSource
-	orders chartinterfaces.ProtectiveOrderSource // optional
+	source  interfaces.OpenPositionSource
+	orders  chartinterfaces.ProtectiveOrderSource // optional
+	risks   interfaces.PositionRiskRepository     // optional
+	candles chartinterfaces.CandleRepository      // optional
+	now     func() int64
+}
+
+// WithRisk ergänzt R-Multiple und 2R-Status; now liefert die Zeit in Epoch-ms für das erste Sehen.
+func (useCase *GetOpenPositionsUseCase) WithRisk(risks interfaces.PositionRiskRepository, candles chartinterfaces.CandleRepository, now func() int64) *GetOpenPositionsUseCase {
+	useCase.risks, useCase.candles, useCase.now = risks, candles, now
+	return useCase
 }
 
 // NewGetOpenPositionsUseCase baut den Use Case mit der injizierten Source.
@@ -58,6 +77,9 @@ func (useCase *GetOpenPositionsUseCase) Execute(ctx context.Context) (OpenPositi
 		entry := OpenPositionEntry{OpenPosition: openPosition}
 		if groupedOrders != nil {
 			applyProtection(ctx, &entry, groupedOrders[openPosition.PositionID])
+		}
+		if useCase.risks != nil {
+			useCase.applyRisk(ctx, &entry, groupedOrders[openPosition.PositionID])
 		}
 		entries = append(entries, entry)
 	}
@@ -133,4 +155,57 @@ func applyProtection(ctx context.Context, entry *OpenPositionEntry, orders []cha
 		slog.WarnContext(ctx, "SL/TP/Break-even nicht berechenbar",
 			slog.String("positionId", entry.PositionID), slog.String("error", err.Error()))
 	}
+}
+
+// applyRisk setzt die Risiko-Felder; Fehler lassen sie leer (Warn-Log), die Liste bleibt lieferbar.
+func (useCase *GetOpenPositionsUseCase) applyRisk(ctx context.Context, entry *OpenPositionEntry, orders []chart.ProtectiveOrder) {
+	var stopTriggers []string
+	for _, order := range orders {
+		if order.Kind == chart.StopLoss {
+			stopTriggers = append(stopTriggers, order.TriggerPrice)
+		}
+	}
+	risk, known := ResolveRisk(ctx, useCase.risks, useCase.now, entry.OpenPosition, stopTriggers)
+	if !known {
+		return
+	}
+	riskDistance, err := domainposition.RiskDistance(entry.Side, risk.EntryPrice, risk.InitialStopLoss)
+	if err != nil {
+		slog.WarnContext(ctx, "Risiko nicht berechenbar", slog.String("positionId", entry.PositionID), slog.String("error", err.Error()))
+		return
+	}
+	currentR, err := domainposition.CurrentRMultiple(entry.Side, risk.EntryPrice, riskDistance, entry.MarkPrice)
+	if err != nil {
+		slog.WarnContext(ctx, "R-Multiple nicht berechenbar", slog.String("positionId", entry.PositionID), slog.String("error", err.Error()))
+		return
+	}
+	entry.InitialStopLoss, entry.RiskDistance, entry.CurrentRMultiple = &risk.InitialStopLoss, &riskDistance, &currentR
+	entry.BreakEvenTriggerReached, entry.Reached2RAt = useCase.twoRStatus(ctx, entry, risk)
+}
+
+// twoRStatus prüft in den 5-Minuten-Kerzen seit Eröffnung, ob 2R berührt wurde; (nil, nil), wenn unbekannt.
+func (useCase *GetOpenPositionsUseCase) twoRStatus(ctx context.Context, entry *OpenPositionEntry, risk domainposition.PositionRisk) (*bool, *int64) {
+	if useCase.candles == nil {
+		return nil, nil
+	}
+	levels, err := domainposition.RLevels(entry.Side, risk.EntryPrice, risk.InitialStopLoss)
+	if err != nil {
+		return nil, nil
+	}
+	candles, err := useCase.candles.ListCandles(ctx, entry.Symbol, chart.Interval5m, riskCandleLimit)
+	if err != nil {
+		slog.WarnContext(ctx, "Kerzen nicht lesbar, 2R bleibt unbekannt", slog.String("symbol", entry.Symbol), slog.String("error", err.Error()))
+		return nil, nil
+	}
+	ranges := make([]domainposition.CandleRange, 0, len(candles))
+	for _, candle := range candles {
+		ranges = append(ranges, domainposition.CandleRange{OpenTime: candle.OpenTime, High: candle.High, Low: candle.Low})
+	}
+	reachedAt, err := domainposition.ReachedAt(entry.Side, levels[1].Price, entry.OpenTime, ranges)
+	if err != nil {
+		slog.WarnContext(ctx, "2R nicht berechenbar", slog.String("positionId", entry.PositionID), slog.String("error", err.Error()))
+		return nil, nil
+	}
+	reached := reachedAt != nil
+	return &reached, reachedAt
 }

@@ -18,6 +18,7 @@ const COLUMN_LABELS = [
   'Positionswert',
   'Margin',
   'Unreal. PnL',
+  'R',
   'Real. PnL',
   'Einstieg',
   'TP / SL',
@@ -82,7 +83,7 @@ function hasTone(cell: HTMLElement, tone: 'positive' | 'negative' | 'neutral'): 
 }
 
 describe('OpenPositionsTable', () => {
-  it('ist eine semantische Tabelle mit den 7 Spalten in fester Reihenfolge', () => {
+  it('ist eine semantische Tabelle mit den 8 Spalten in fester Reihenfolge', () => {
     const table = renderTable([suiLongPosition]);
 
     const headers = within(table)

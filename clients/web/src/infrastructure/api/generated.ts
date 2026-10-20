@@ -141,6 +141,28 @@ export interface components {
             takeProfit: components["schemas"]["Decimal"] | null;
             /** @description true, wenn ein SL existiert und der SL nicht im Verlust liegt (LONG SL >= Entry, SHORT SL <= Entry). false bei SL im Verlust oder ohne SL. null, wenn die offenen Orders nicht geladen werden konnten (die Liste wird trotzdem geliefert). */
             breakEven: boolean | null;
+            /** @description Ursprünglicher SL (beim ersten Sehen der Position gespeichert, wird nie überschrieben). null, wenn die Position beim ersten Sehen schon auf Break-even stand oder kein SL existierte. */
+            initialStopLoss?: components["schemas"]["Decimal"] | null;
+            /** @description Risiko-Distanz |Entry - initialStopLoss| (1R in Preiseinheiten). null, wenn unbekannt. */
+            riskDistance?: components["schemas"]["Decimal"] | null;
+            /** @description Aktueller Gewinn in R ((Mark Price - Entry) / riskDistance, SHORT gespiegelt), negativ im Verlust. null, wenn das Risiko unbekannt ist. */
+            currentRMultiple?: components["schemas"]["Decimal"] | null;
+            /** @description true, sobald der Kurs seit Eröffnung 2R erreicht hat (Hoch/Tief der Kerzen; bleibt true). Nicht zu verwechseln mit `breakEven` (SL aktuell nicht im Verlust). null, wenn unbekannt. */
+            breakEvenTriggerReached?: boolean | null;
+            /** @description Kerzenbeginn (Epoch-Millisekunden), in dem 2R erstmals erreicht wurde. null, wenn nicht erreicht oder unbekannt. */
+            reached2RAt?: number | null;
+        };
+        RLevel: {
+            /**
+             * @description TWO_R ist der Break-even-Trigger, THREE_R das CRV-Ziel.
+             * @enum {string}
+             */
+            kind: "ONE_R" | "TWO_R" | "THREE_R";
+            /** @description 1, 2 oder 3. */
+            rMultiple: number;
+            price: components["schemas"]["Decimal"];
+            /** @description Abstand des Levels zum Entry relativ zum Entry (0.03 = 3 %). */
+            percent: components["schemas"]["Decimal"];
         };
         PositionChart: {
             positionId: string;
@@ -159,6 +181,8 @@ export interface components {
             takeProfit: components["schemas"]["ProtectiveOrder"][];
             /** @description Ereignisse auf der Zeitachse. In Stufe 1 nur der Einstieg. */
             markers: components["schemas"]["ChartMarker"][];
+            /** @description CRV-Level 1R/2R/3R aus dem ursprünglichen Risiko (Entry bis initialStopLoss). Leer, wenn das Risiko unbekannt ist. */
+            levels?: components["schemas"]["RLevel"][];
             /** @description Zeitpunkt der Abfrage der Orders bei BingX in Epoch-Millisekunden. */
             fetchedAt: number;
         };

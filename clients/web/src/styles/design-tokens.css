@@ -26,6 +26,7 @@
   --color-chart-entry: #5b3fc4;
   --color-chart-stop-loss: #bf2d3a;
   --color-chart-take-profit: #0a7040;
+  --color-chart-r-target: #0a6c8a;
 
   /* Abstände */
   --space-1: 4px;
@@ -104,6 +105,7 @@
     --color-chart-entry: #a592f5;
     --color-chart-stop-loss: #f2727f;
     --color-chart-take-profit: #4cc790;
+    --color-chart-r-target: #5cc4e6;
   }
 }
 

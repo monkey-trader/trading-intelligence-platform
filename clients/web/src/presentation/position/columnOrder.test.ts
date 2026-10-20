@@ -11,17 +11,18 @@ import {
 const DEFAULT = [...DEFAULT_COLUMN_ORDER];
 
 describe('DEFAULT_COLUMN_ORDER', () => {
-  it('hat die BingX-Stil-Reihenfolge mit 7 eindeutigen Spalten', () => {
+  it('hat die BingX-Stil-Reihenfolge mit 8 eindeutigen Spalten', () => {
     expect([...DEFAULT_COLUMN_ORDER]).toEqual([
       'symbol',
       'positionValue',
       'margin',
       'unrealizedProfit',
+      'rMultiple',
       'realisedProfit',
       'entry',
       'tpSl',
     ]);
-    expect(new Set(DEFAULT_COLUMN_ORDER).size).toBe(7);
+    expect(new Set(DEFAULT_COLUMN_ORDER).size).toBe(8);
   });
   it('Storage-Key ist v2', () => {
     expect(COLUMN_ORDER_STORAGE_KEY).toBe('tip_open_positions_column_order_v2');
@@ -32,7 +33,7 @@ describe('moveColumn', () => {
   it('schiebt eine Spalte nach vorn auf die Position der Zielspalte', () => {
     const result = moveColumn(DEFAULT, 'entry', 'margin');
     expect(result.slice(0, 4)).toEqual(['symbol', 'positionValue', 'entry', 'margin']);
-    expect(result).toHaveLength(7);
+    expect(result).toHaveLength(8);
   });
   it('schiebt eine Spalte nach hinten auf die Position der Zielspalte', () => {
     const result = moveColumn(DEFAULT, 'positionValue', 'unrealizedProfit');
@@ -75,7 +76,7 @@ describe('sanitizeColumnOrder', () => {
     const result = sanitizeColumnOrder(['symbol', 'entry', 'entry', 'margin']);
     expect(result.filter((key) => key === 'entry')).toHaveLength(1);
     expect(result.slice(0, 3)).toEqual(['symbol', 'entry', 'margin']);
-    expect(result).toHaveLength(7);
+    expect(result).toHaveLength(8);
   });
   it('hängt fehlende Keys in Standardposition-Reihenfolge an', () => {
     const result = sanitizeColumnOrder(['symbol', 'tpSl', 'entry']);
@@ -84,10 +85,17 @@ describe('sanitizeColumnOrder', () => {
       DEFAULT.filter((key) => !['symbol', 'tpSl', 'entry'].includes(key)),
     );
   });
+  it('hängt eine fehlende rMultiple hinten an (alte gespeicherte Reihenfolge)', () => {
+    const stored = DEFAULT.filter((key) => key !== 'rMultiple');
+    const result = sanitizeColumnOrder(stored);
+    expect(result).toHaveLength(8);
+    expect(result[result.length - 1]).toBe('rMultiple');
+    expect(result.slice(0, 7)).toEqual(stored);
+  });
   it('erzwingt symbol als erste Spalte', () => {
     const result = sanitizeColumnOrder(['entry', 'symbol', 'margin']);
     expect(result[0]).toBe('symbol');
-    expect(result).toHaveLength(7);
+    expect(result).toHaveLength(8);
   });
   it('ignoriert entfernte alte Keys (side, mark, openTime, breakEven) und ergänzt fehlende', () => {
     const result = sanitizeColumnOrder(['symbol', 'side', 'mark', 'openTime', 'breakEven', 'tpSl']);

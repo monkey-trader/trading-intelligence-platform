@@ -82,7 +82,7 @@ func run(logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	getOpenPositions := newGetOpenPositions(openPositionSource, orderSource)
+	getOpenPositions := newGetOpenPositions(openPositionSource, orderSource, database)
 	getPositionChart, err := newGetPositionChart(logger, os.Getenv, openPositionSource, orderSource, database)
 	if err != nil {
 		return err
@@ -291,7 +291,7 @@ func newGetPositionChart(
 		orderSource,
 		infrachart.NewBingXCandleSource(client),
 		sqlite.NewCandleRepository(database),
-		logger)
+		logger).WithRisk(sqlite.NewPositionRiskRepository(database), time.Now().UnixMilli)
 	return useCase.Execute, nil
 }
 
@@ -343,12 +343,19 @@ func newWebUI() http.Handler {
 	return webui.NewHandler(files)
 }
 
-// newGetOpenPositions nutzt SL/TP/Break-even nur, wenn eine Orders-Source existiert (Keys gesetzt).
-func newGetOpenPositions(source interfaces.OpenPositionSource, orderSource chartinterfaces.ProtectiveOrderSource) *appposition.GetOpenPositionsUseCase {
+// newGetOpenPositions nutzt SL/TP/Break-even nur, wenn eine Orders-Source existiert (Keys gesetzt),
+// und die R-Werte nur mit Datenbank.
+func newGetOpenPositions(source interfaces.OpenPositionSource, orderSource chartinterfaces.ProtectiveOrderSource, database *sql.DB) *appposition.GetOpenPositionsUseCase {
+	var useCase *appposition.GetOpenPositionsUseCase
 	if orderSource == nil {
-		return appposition.NewGetOpenPositionsUseCase(source)
+		useCase = appposition.NewGetOpenPositionsUseCase(source)
+	} else {
+		useCase = appposition.NewGetOpenPositionsUseCaseWithProtection(source, orderSource)
 	}
-	return appposition.NewGetOpenPositionsUseCaseWithProtection(source, orderSource)
+	if database == nil {
+		return useCase
+	}
+	return useCase.WithRisk(sqlite.NewPositionRiskRepository(database), sqlite.NewCandleRepository(database), time.Now().UnixMilli)
 }
 
 // newProtectiveOrderSource baut BingX-Orders-Source mit 5-s-Cache, der von Chart und Positionsliste geteilt wird.

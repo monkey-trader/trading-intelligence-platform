@@ -113,7 +113,49 @@ describe('createHttpOpenPositionsGateway', () => {
 
       const result = await gateway.fetchOpenPositions(newSignal());
 
-      expect(result).toEqual({ kind: 'ok', snapshot: snapshotBody });
+      const nullRisk = {
+        initialStopLoss: null,
+        riskDistance: null,
+        currentRMultiple: null,
+        breakEvenTriggerReached: null,
+        reached2RAt: null,
+      };
+      expect(result).toEqual({
+        kind: 'ok',
+        snapshot: {
+          ...snapshotBody,
+          positions: snapshotBody.positions.map((position) => ({ ...position, ...nullRisk })),
+        },
+      });
+    });
+
+    it('liest die Risikofelder, wenn vorhanden', async () => {
+      const [first] = snapshotBody.positions;
+      const body = {
+        ...snapshotBody,
+        positions: [
+          {
+            ...first,
+            initialStopLoss: '4200',
+            riskDistance: '50',
+            currentRMultiple: '1.4',
+            breakEvenTriggerReached: true,
+            reached2RAt: 1791705000000,
+          },
+        ],
+      };
+      const gateway = createHttpOpenPositionsGateway(fakeFetchReturning(jsonResponse(body)));
+
+      const result = await gateway.fetchOpenPositions(newSignal());
+
+      if (result.kind !== 'ok') throw new Error(`erwartet ok, erhalten ${result.kind}`);
+      expect(result.snapshot.positions[0]).toMatchObject({
+        initialStopLoss: '4200',
+        riskDistance: '50',
+        currentRMultiple: '1.4',
+        breakEvenTriggerReached: true,
+        reached2RAt: 1791705000000,
+      });
     });
 
     it('übernimmt stopLoss, takeProfit und breakEven (auch null) unverändert', async () => {

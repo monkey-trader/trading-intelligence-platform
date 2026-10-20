@@ -17,6 +17,7 @@ const COLUMN_LABELS = {
   positionValue: 'Positionswert',
   margin: 'Margin',
   unrealizedProfit: 'Unreal. PnL',
+  rMultiple: 'R',
   realisedProfit: 'Real. PnL',
   entry: 'Einstieg',
   tpSl: 'TP / SL',
@@ -45,6 +46,16 @@ const PNL_FORMAT = {
   maximumFractionDigits: 2,
   signDisplay: 'exceptZero',
 } as const;
+
+/** R-Vielfaches mit einer Nachkommastelle und Vorzeichen, Dezimalpunkt wie die übrigen Spalten ("+1.4R"). */
+function formatRMultiple(value: string): string {
+  const formatted = formatDecimal(value, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+    signDisplay: 'exceptZero',
+  });
+  return `${formatted}R`;
+}
 
 /** Offene Positionen als Tabelle; auf schmalen Bildschirmen als Karten. */
 export function OpenPositionsTable({
@@ -222,6 +233,9 @@ function OpenPositionRow({
             </span>
             <span className={styles.chip}>{position.isolated ? 'Isolated' : 'Cross'}</span>
             <span className={styles.chip}>{`${position.leverage}X`}</span>
+            {position.breakEvenTriggerReached === true && position.breakEven !== true && (
+              <span className={`${styles.chip} ${styles.chipAction}`}>2R · BE ziehen</span>
+            )}
           </div>
         </div>
       </th>
@@ -248,6 +262,17 @@ function OpenPositionRow({
             ({formatRatioAsPercent(position.pnlRatio, { signDisplay: 'exceptZero' })})
           </span>
         </div>
+      </td>
+    ),
+    rMultiple: (
+      <td data-label={COLUMN_LABELS.rMultiple} className={styles.cell}>
+        {position.currentRMultiple === null ? (
+          <span aria-label="Risiko unbekannt">{MISSING_VALUE}</span>
+        ) : (
+          <span className={styles[pnlTone(position.currentRMultiple, 1)]}>
+            {formatRMultiple(position.currentRMultiple)}
+          </span>
+        )}
       </td>
     ),
     realisedProfit: (

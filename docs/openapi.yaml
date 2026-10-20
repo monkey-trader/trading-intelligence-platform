@@ -360,6 +360,61 @@ components:
           oneOf:
             - type: boolean
             - type: 'null'
+        initialStopLoss:
+          description: >-
+            Ursprünglicher SL (beim ersten Sehen der Position gespeichert, wird nie überschrieben).
+            null, wenn die Position beim ersten Sehen schon auf Break-even stand oder kein SL existierte.
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        riskDistance:
+          description: Risiko-Distanz |Entry - initialStopLoss| (1R in Preiseinheiten). null, wenn unbekannt.
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        currentRMultiple:
+          description: >-
+            Aktueller Gewinn in R ((Mark Price - Entry) / riskDistance, SHORT gespiegelt), negativ im Verlust.
+            null, wenn das Risiko unbekannt ist.
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        breakEvenTriggerReached:
+          description: >-
+            true, sobald der Kurs seit Eröffnung 2R erreicht hat (Hoch/Tief der Kerzen; bleibt true).
+            Nicht zu verwechseln mit `breakEven` (SL aktuell nicht im Verlust). null, wenn unbekannt.
+          oneOf:
+            - type: boolean
+            - type: 'null'
+        reached2RAt:
+          description: Kerzenbeginn (Epoch-Millisekunden), in dem 2R erstmals erreicht wurde. null, wenn nicht erreicht oder unbekannt.
+          oneOf:
+            - type: integer
+            - type: 'null'
+    RLevel:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - rMultiple
+        - price
+        - percent
+      properties:
+        kind:
+          type: string
+          enum:
+            - ONE_R
+            - TWO_R
+            - THREE_R
+          description: TWO_R ist der Break-even-Trigger, THREE_R das CRV-Ziel.
+        rMultiple:
+          type: integer
+          description: 1, 2 oder 3.
+        price:
+          $ref: '#/components/schemas/Decimal'
+        percent:
+          $ref: '#/components/schemas/Decimal'
+          description: Abstand des Levels zum Entry relativ zum Entry (0.03 = 3 %).
     PositionChart:
       type: object
       additionalProperties: false
@@ -415,6 +470,13 @@ components:
           description: Ereignisse auf der Zeitachse. In Stufe 1 nur der Einstieg.
           items:
             $ref: '#/components/schemas/ChartMarker'
+        levels:
+          type: array
+          description: >-
+            CRV-Level 1R/2R/3R aus dem ursprünglichen Risiko (Entry bis initialStopLoss). Leer, wenn das
+            Risiko unbekannt ist.
+          items:
+            $ref: '#/components/schemas/RLevel'
         fetchedAt:
           type: integer
           description: Zeitpunkt der Abfrage der Orders bei BingX in Epoch-Millisekunden.

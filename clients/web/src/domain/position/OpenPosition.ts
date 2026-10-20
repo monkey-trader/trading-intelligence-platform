@@ -26,6 +26,16 @@ export type OpenPosition = Readonly<{
   takeProfit: string | null;
   /** true = SL auf/über Einstand; null = Orders unbekannt. */
   breakEven: boolean | null;
+  /** Ursprünglicher SL; null = unbekannt. */
+  initialStopLoss: string | null;
+  /** Risiko-Distanz (1R in Preiseinheiten); null = unbekannt. */
+  riskDistance: string | null;
+  /** Aktueller Gewinn in R; null = Risiko unbekannt. */
+  currentRMultiple: string | null;
+  /** true, sobald der Kurs seit Eröffnung 2R erreicht hat; null = unbekannt. */
+  breakEvenTriggerReached: boolean | null;
+  /** Kerzenbeginn (Epoch-Millisekunden) des ersten 2R; null = nicht erreicht/unbekannt. */
+  reached2RAt: number | null;
   /** Epoch-Millisekunden. */
   openTime: number;
   /** Epoch-Millisekunden. */
