@@ -386,7 +386,7 @@ describe('docs/openapi.yaml', () => {
     ).toBe(true);
   });
 
-  it('prüft liquidationDistanceRatio als Decimal oder null', () => {
+  it('prüft stopLoss als Decimal oder null', () => {
     const validator = OpenApiValidator.create(loadOpenApi());
     const position = {
       positionId: '9100000000000000001',
@@ -403,8 +403,6 @@ describe('docs/openapi.yaml', () => {
       unrealizedProfit: '25.0000',
       realisedProfit: '-0.2400',
       pnlRatio: '0.5208',
-      liquidationPrice: '0',
-      liquidationDistanceRatio: null,
       openTime: 1791500000000,
       updateTime: 1791600000000,
       stopLoss: null,
@@ -413,9 +411,8 @@ describe('docs/openapi.yaml', () => {
     };
 
     expect(validator.validateSchema('OpenPosition', position).valid).toBe(true);
-    expect(
-      validator.validateSchema('OpenPosition', { ...position, liquidationDistanceRatio: 0.06 })
-        .valid,
-    ).toBe(false);
+    expect(validator.validateSchema('OpenPosition', { ...position, stopLoss: 0.06 }).valid).toBe(
+      false,
+    );
   });
 });

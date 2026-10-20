@@ -111,10 +111,6 @@ export interface components {
             realisedProfit: components["schemas"]["Decimal"];
             /** @description Unrealisierter PnL relativ zur Margin (0.25 = 25 %). */
             pnlRatio: components["schemas"]["Decimal"];
-            /** @description "0" bedeutet keine Liquidation. */
-            liquidationPrice: components["schemas"]["Decimal"];
-            /** @description Abstand des Mark-Preises zum Liquidationspreis relativ zum Mark-Preis, 8 Nachkommastellen (0.06 = 6 %). LONG (mark − liq) / mark, SHORT (liq − mark) / mark. null ohne Liquidationspreis ("0") oder bei Mark-Preis 0. */
-            liquidationDistanceRatio: components["schemas"]["Decimal"] | null;
             /** @description Eröffnung in Epoch-Millisekunden. */
             openTime: number;
             /** @description Letzte Änderung in Epoch-Millisekunden. */

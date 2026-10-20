@@ -19,8 +19,6 @@ export const suiLongPosition: OpenPosition = {
   unrealizedProfit: '25.0000',
   realisedProfit: '-0.2400',
   pnlRatio: '0.5208',
-  liquidationPrice: '0.865',
-  liquidationDistanceRatio: '0.14356436',
   stopLoss: '0.90',
   takeProfit: '1.20',
   breakEven: false,
@@ -43,8 +41,6 @@ export const goldShortPosition: OpenPosition = {
   unrealizedProfit: '-6.2500',
   realisedProfit: '-0.5187',
   pnlRatio: '-0.0904',
-  liquidationPrice: '4410.5',
-  liquidationDistanceRatio: '0.05640719',
   stopLoss: '4200',
   takeProfit: '4100',
   breakEven: false,
@@ -52,8 +48,8 @@ export const goldShortPosition: OpenPosition = {
   updateTime: 1791710000000,
 };
 
-/** Position ohne Liquidationspreis ("0") und mit PnL genau 0. */
-export const positionWithoutLiquidation: OpenPosition = {
+/** Position mit PnL genau 0. */
+export const flatPosition: OpenPosition = {
   positionId: '9100000000000000003',
   symbol: 'BTC-USDT',
   side: 'LONG',
@@ -68,8 +64,6 @@ export const positionWithoutLiquidation: OpenPosition = {
   unrealizedProfit: '0.0000',
   realisedProfit: '0',
   pnlRatio: '0',
-  liquidationPrice: '0',
-  liquidationDistanceRatio: null,
   stopLoss: null,
   takeProfit: null,
   breakEven: null,

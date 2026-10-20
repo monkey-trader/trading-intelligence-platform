@@ -144,8 +144,6 @@ function parseOpenPositionDto(candidate: unknown): OpenPositionDto | undefined {
     unrealizedProfit,
     realisedProfit,
     pnlRatio,
-    liquidationPrice,
-    liquidationDistanceRatio,
     stopLoss,
     takeProfit,
     breakEven,
@@ -168,8 +166,6 @@ function parseOpenPositionDto(candidate: unknown): OpenPositionDto | undefined {
     isDecimal(unrealizedProfit) &&
     isDecimal(realisedProfit) &&
     isDecimal(pnlRatio) &&
-    isDecimal(liquidationPrice) &&
-    (liquidationDistanceRatio === null || isDecimal(liquidationDistanceRatio)) &&
     (stopLoss === null || isDecimal(stopLoss)) &&
     (takeProfit === null || isDecimal(takeProfit)) &&
     (breakEven === null || typeof breakEven === 'boolean') &&
@@ -192,8 +188,6 @@ function parseOpenPositionDto(candidate: unknown): OpenPositionDto | undefined {
     unrealizedProfit,
     realisedProfit,
     pnlRatio,
-    liquidationPrice,
-    liquidationDistanceRatio,
     stopLoss,
     takeProfit,
     breakEven,
@@ -226,8 +220,6 @@ function toOpenPosition(positionDto: OpenPositionDto): OpenPosition {
     unrealizedProfit: positionDto.unrealizedProfit,
     realisedProfit: positionDto.realisedProfit,
     pnlRatio: positionDto.pnlRatio,
-    liquidationPrice: positionDto.liquidationPrice,
-    liquidationDistanceRatio: positionDto.liquidationDistanceRatio,
     stopLoss: positionDto.stopLoss,
     takeProfit: positionDto.takeProfit,
     breakEven: positionDto.breakEven,

@@ -9,7 +9,10 @@ import {
 } from '@/presentation/position/hooks/usePositionChartViewModel';
 
 const ok = (chart: typeof xagLongChart): PositionChartResult => ({ kind: 'ok', chart });
-const problem: PositionChartResult = { kind: 'problem', problemType: 'backend-unreachable' } as PositionChartResult;
+const problem: PositionChartResult = {
+  kind: 'problem',
+  problemType: 'backend-unreachable',
+} as PositionChartResult;
 
 function setup(...results: Array<PositionChartResult | Error>) {
   const fetchChart = vi.fn<PositionChartGateway['fetchChart']>();

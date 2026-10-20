@@ -15,18 +15,17 @@ import (
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/position/interfaces"
 )
 
-// OpenPositionWithDistance ist eine offene Position plus Abstand zur Liquidation (nil ohne).
-type OpenPositionWithDistance struct {
+// OpenPositionEntry ist eine offene Position plus SL, TP und Break-even (nil, wenn unbekannt).
+type OpenPositionEntry struct {
 	domainposition.OpenPosition
-	LiquidationDistanceRatio *string
-	StopLoss                 *string // engster SL, nil ohne
-	TakeProfit               *string // nächster TP, nil ohne
-	BreakEven                *bool   // nil = Orders unbekannt
+	StopLoss   *string // engster SL, nil ohne
+	TakeProfit *string // nächster TP, nil ohne
+	BreakEven  *bool   // nil = Orders unbekannt
 }
 
 // OpenPositionsOverview ist das Ergebnis: sortierte Positionen (nie nil), exakte PnL-Summe, Abfragezeit.
 type OpenPositionsOverview struct {
-	Positions             []OpenPositionWithDistance
+	Positions             []OpenPositionEntry
 	TotalUnrealizedProfit string
 	FetchedAt             int64
 }
@@ -42,7 +41,7 @@ func NewGetOpenPositionsUseCase(source interfaces.OpenPositionSource) *GetOpenPo
 	return &GetOpenPositionsUseCase{source: source}
 }
 
-// Execute fragt die Source ab, sortiert, ergänzt den Liquidationsabstand und summiert den PnL.
+// Execute fragt die Source ab, sortiert, ergänzt SL/TP/Break-even und summiert den PnL.
 func (useCase *GetOpenPositionsUseCase) Execute(ctx context.Context) (OpenPositionsOverview, error) {
 	snapshot, err := useCase.source.FetchOpenPositions(ctx)
 	if err != nil {
@@ -54,18 +53,13 @@ func (useCase *GetOpenPositionsUseCase) Execute(ctx context.Context) (OpenPositi
 	slices.SortFunc(sortedPositions, compareNewestFirst)
 
 	groupedOrders := useCase.ordersByPosition(ctx)
-	positionsWithDistance := make([]OpenPositionWithDistance, 0, len(sortedPositions))
+	entries := make([]OpenPositionEntry, 0, len(sortedPositions))
 	for _, openPosition := range sortedPositions {
-		ratio, err := domainposition.LiquidationDistanceRatio(
-			openPosition.Side, openPosition.MarkPrice, openPosition.LiquidationPrice)
-		if err != nil {
-			return OpenPositionsOverview{}, fmt.Errorf("berechne Liquidationsabstand für Position %s: %w", openPosition.PositionID, err)
-		}
-		entry := OpenPositionWithDistance{OpenPosition: openPosition, LiquidationDistanceRatio: ratio}
+		entry := OpenPositionEntry{OpenPosition: openPosition}
 		if groupedOrders != nil {
 			applyProtection(ctx, &entry, groupedOrders[openPosition.PositionID])
 		}
-		positionsWithDistance = append(positionsWithDistance, entry)
+		entries = append(entries, entry)
 	}
 
 	totalUnrealizedProfit, err := domainposition.SummarizeOpenPositions(sortedPositions)
@@ -74,7 +68,7 @@ func (useCase *GetOpenPositionsUseCase) Execute(ctx context.Context) (OpenPositi
 	}
 
 	return OpenPositionsOverview{
-		Positions:             positionsWithDistance,
+		Positions:             entries,
 		TotalUnrealizedProfit: totalUnrealizedProfit,
 		FetchedAt:             snapshot.FetchedAt,
 	}, nil
@@ -113,7 +107,7 @@ func (useCase *GetOpenPositionsUseCase) ordersByPosition(ctx context.Context) ma
 }
 
 // applyProtection setzt SL, TP und Break-even; Fehler bei der Berechnung lassen die Felder leer.
-func applyProtection(ctx context.Context, entry *OpenPositionWithDistance, orders []chart.ProtectiveOrder) {
+func applyProtection(ctx context.Context, entry *OpenPositionEntry, orders []chart.ProtectiveOrder) {
 	var stopTriggers, profitTriggers []string
 	for _, order := range orders {
 		switch order.Kind {

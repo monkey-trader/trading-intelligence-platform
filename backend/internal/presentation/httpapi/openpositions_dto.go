@@ -18,14 +18,11 @@ type openPositionDto struct {
 	UnrealizedProfit string  `json:"unrealizedProfit"`
 	RealisedProfit   string  `json:"realisedProfit"`
 	PnlRatio         string  `json:"pnlRatio"`
-	LiquidationPrice string  `json:"liquidationPrice"`
-	// LiquidationDistanceRatio ist null ohne Liquidationspreis.
-	LiquidationDistanceRatio *string `json:"liquidationDistanceRatio"`
-	StopLoss                 *string `json:"stopLoss"`
-	TakeProfit               *string `json:"takeProfit"`
-	BreakEven                *bool   `json:"breakEven"`
-	OpenTime                 int64   `json:"openTime"`
-	UpdateTime               int64   `json:"updateTime"`
+	StopLoss         *string `json:"stopLoss"`
+	TakeProfit       *string `json:"takeProfit"`
+	BreakEven        *bool   `json:"breakEven"`
+	OpenTime         int64   `json:"openTime"`
+	UpdateTime       int64   `json:"updateTime"`
 }
 
 // openPositionsSnapshotDto ist das Schema OpenPositionsSnapshot; positions ist nie null.
@@ -40,27 +37,25 @@ func toOpenPositionsSnapshotDto(overview appposition.OpenPositionsOverview) open
 	positions := make([]openPositionDto, 0, len(overview.Positions))
 	for _, entry := range overview.Positions {
 		positions = append(positions, openPositionDto{
-			PositionID:               entry.PositionID,
-			Symbol:                   entry.Symbol,
-			Side:                     string(entry.Side),
-			Isolated:                 entry.Isolated,
-			PositionAmount:           entry.PositionAmount,
-			AvgOpenPrice:             entry.AvgOpenPrice,
-			MarkPrice:                entry.MarkPrice,
-			Leverage:                 entry.Leverage,
-			InitialMargin:            entry.InitialMargin,
-			Margin:                   entry.Margin,
-			PositionValue:            entry.PositionValue,
-			UnrealizedProfit:         entry.UnrealizedProfit,
-			RealisedProfit:           entry.RealisedProfit,
-			PnlRatio:                 entry.PnlRatio,
-			LiquidationPrice:         entry.LiquidationPrice,
-			LiquidationDistanceRatio: entry.LiquidationDistanceRatio,
-			StopLoss:                 entry.StopLoss,
-			TakeProfit:               entry.TakeProfit,
-			BreakEven:                entry.BreakEven,
-			OpenTime:                 entry.OpenTime,
-			UpdateTime:               entry.UpdateTime,
+			PositionID:       entry.PositionID,
+			Symbol:           entry.Symbol,
+			Side:             string(entry.Side),
+			Isolated:         entry.Isolated,
+			PositionAmount:   entry.PositionAmount,
+			AvgOpenPrice:     entry.AvgOpenPrice,
+			MarkPrice:        entry.MarkPrice,
+			Leverage:         entry.Leverage,
+			InitialMargin:    entry.InitialMargin,
+			Margin:           entry.Margin,
+			PositionValue:    entry.PositionValue,
+			UnrealizedProfit: entry.UnrealizedProfit,
+			RealisedProfit:   entry.RealisedProfit,
+			PnlRatio:         entry.PnlRatio,
+			StopLoss:         entry.StopLoss,
+			TakeProfit:       entry.TakeProfit,
+			BreakEven:        entry.BreakEven,
+			OpenTime:         entry.OpenTime,
+			UpdateTime:       entry.UpdateTime,
 		})
 	}
 	return openPositionsSnapshotDto{
