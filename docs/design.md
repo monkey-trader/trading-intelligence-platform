@@ -91,7 +91,7 @@ Labels: Symbol, Positionswert, Margin, Unreal. PnL, Real. PnL, Einstieg, TP / SL
 Optik: keine Zebra-Streifen, nur 1px `border` zwischen Zeilen, Kopfzeile `font-size-x-small`,
 `text-muted`, auf `surface` (nicht raised), Zeilen luftig (`--table-row-padding-block` = `space-4`).
 Neue Tokens: `--font-size-x-small`, `--table-row-padding-block`, `--size-coin-icon` (20px),
-`--size-side-bar` (3px), `--radius-chip`, `--color-chip-surface`, `--color-chip-text` (hell und dunkel, >= 4.5:1).
+`--size-side-bar` (3px), `--radius-chip`, `--color-chip-surface`, `--color-chip-text` (hell und dunkel, >= 4.5:1), `--color-r-target-surface` (Ziel-Pille der BE / Ziel-Spalte, hell und dunkel).
 
 Zellaufbau (Klassen):
 - **Symbol** (`th.cell.symbolCell` + `.barLong`/`.barShort`, Balken links per inset box-shadow):
@@ -102,7 +102,7 @@ Zellaufbau (Klassen):
 - **Unreal. PnL**: `.twoLine` > Betrag (USDT, mit Vorzeichen, Ton `positive`/`negative`) + `.lineSub` "(+x,xx %)" gleicher Ton.
 - **TP / SL**: `.twoLine` > TP-Zeile, darunter `.slLine` (SL, rot); "–" wenn nicht gesetzt. Zeilen mit
   Präfix "TP"/"SL" als Text (`.lineMuted`), damit Farbe nicht einziges Merkmal ist.
-- **BE / Ziel**: `.twoLine` > "BE <2R-Preis>" und "Ziel <3R-Preis>" (Preisformat wie Einstieg); ohne `levels` "–" mit `aria-label="Risiko unbekannt"`.
+- **BE / Ziel**: `.levelStack` > zwei Tonpillen `.levelPill` (rechtsbündig, `font-size-small`, fett, `radius-chip`): "BE <2R-Preis>" in `.levelBe` (`warning-surface` + `warning`, wie die 2R-Linie im Chart) und "Ziel <3R-Preis>" in `.levelTarget` (`--color-r-target-surface` + `--color-chart-r-target`, wie die 3R-Linie). Preisformat wie Einstieg, tabular-nums. Ohne `levels` "–" mit `aria-label="Risiko unbekannt"`. Pille statt Präfix-Span, weil der Test "BE 1.08" als Text in einem Element erwartet. Kontrast (berechnet): BE hell 5.98:1, dunkel 8.12:1; Ziel hell 5.13:1, dunkel 7.48:1.
 - Mobile (<768 px): Karte wie bisher, jede Zelle mit `data-label`; `.twoLine` rechtsbündig neben dem Label.
   Abnahme (Design-Review, gerendert 1440/390 px hell und dunkel): Label (`::before`) hat `margin-inline-end: auto`,
   Wert und Einheit stehen als Gruppe rechtsbündig (`.cell` ohne `gap`, Abstand über `padding-inline-end`).

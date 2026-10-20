@@ -294,9 +294,13 @@ function OpenPositionRow({
     beTarget: (
       <td data-label={COLUMN_LABELS.beTarget} className={styles.cell}>
         {breakEvenLevel && targetLevel ? (
-          <div className={styles.twoLine}>
-            <span>{`BE ${formatDecimal(breakEvenLevel.price)}`}</span>
-            <span>{`Ziel ${formatDecimal(targetLevel.price)}`}</span>
+          <div className={styles.levelStack}>
+            <span className={`${styles.levelPill} ${styles.levelBe}`}>
+              {`BE ${formatDecimal(breakEvenLevel.price)}`}
+            </span>
+            <span className={`${styles.levelPill} ${styles.levelTarget}`}>
+              {`Ziel ${formatDecimal(targetLevel.price)}`}
+            </span>
           </div>
         ) : (
           <span aria-label="Risiko unbekannt">{MISSING_VALUE}</span>

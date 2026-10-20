@@ -75,6 +75,7 @@
   --radius-chip: 4px;
   --color-chip-surface: #ebeaf4; /* neutraler Chip; Text text-muted/text: hell 5.76:1 */
   --color-chip-text: #3f3b5c; /* auf chip-surface 8.3:1 */
+  --color-r-target-surface: #e0f1f6; /* Ziel-Pille (3R); Text chart-r-target auf dieser Fläche 5.13:1 */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -96,6 +97,7 @@
     --color-on-accent: #120f24;
     --color-chip-surface: #2a2450; /* Text chip-text dunkel 9.5:1 */
     --color-chip-text: #cfcce8;
+    --color-r-target-surface: #0f2a35; /* Text chart-r-target dunkel auf dieser Fläche 7.48:1 */
 
     /* Chart-Farben (dunkel), abgeleitet von positive/negative */
     --color-chart-up: #4cc790;
