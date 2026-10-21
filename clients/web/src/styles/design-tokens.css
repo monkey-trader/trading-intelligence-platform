@@ -77,6 +77,7 @@
   --color-chip-text: #3f3b5c; /* auf chip-surface 8.3:1 */
   --color-r-target-surface: #e0f1f6; /* Ziel-Pille (3R); Text chart-r-target auf dieser Fläche 5.13:1 */
   --color-control-border: #7f7aa3; /* Rahmen Buttons/Eingabe (WCAG 1.4.11 ≥ 3:1 auf surface und surface-raised) */
+  --size-control-compact: 26px; /* schlanke Buttons/Felder bei Mauszeiger (pointer: fine) */
   --size-touch-target: 44px; /* Mindestgröße Touch-Ziele (Buttons, Eingabefelder) */
   --size-sl-input-width: 8rem; /* Eingabefeld "Ursprünglicher SL" */
 }

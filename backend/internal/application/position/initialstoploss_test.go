@@ -16,7 +16,7 @@ import (
 //   (*RiskResolver).ForgetPosition(positionID string)
 //   (*GetOpenPositionsUseCase).WithInitialStopLossOverrides(overrides) *GetOpenPositionsUseCase (nach WithRisk)
 //   OpenPositionEntry.InitialStopLossSource *string ("MANUAL" | "AUTO" | nil)
-//   NewSetInitialStopLossUseCase(source interfaces.OpenPositionSource, overrides, resolver *RiskResolver, now func() int64)
+//   NewSetInitialStopLossUseCase(entries interfaces.PositionEntryLookup, overrides, resolver *RiskResolver, now func() int64)
 //     .Execute(ctx, positionID, rawStopLoss string) (SetInitialStopLossResult{Override position.InitialStopLossOverride; RiskDistance string}, error)
 //   NewClearInitialStopLossUseCase(overrides, resolver *RiskResolver).Execute(ctx, positionID string) error
 //   Fehler: *chart.PositionNotFoundError, *position.StopLossAtEntryError, *position.StopLossWrongSideError,
@@ -59,6 +59,25 @@ func (repo *fakeOverrides) Delete(_ context.Context, positionID string) error {
 }
 
 var _ interfaces.PositionInitialStopLossRepository = (*fakeOverrides)(nil)
+
+type fakeEntries struct {
+	entries map[string]position.PositionEntry
+	err     error
+}
+
+func (lookup *fakeEntries) FindEntry(_ context.Context, positionID string) (position.PositionEntry, bool, error) {
+	if lookup.err != nil {
+		return position.PositionEntry{}, false, lookup.err
+	}
+	entry, found := lookup.entries[positionID]
+	return entry, found, nil
+}
+
+var _ interfaces.PositionEntryLookup = (*fakeEntries)(nil)
+
+func knownEntries() *fakeEntries {
+	return &fakeEntries{entries: map[string]position.PositionEntry{riskPositionID: {Side: position.Long, AvgOpenPrice: "0.9600"}}}
+}
 
 const overrideNow = int64(1_791_700_000_000)
 
@@ -194,7 +213,7 @@ func TestGetOpenPositions_QuelleAutoUndNil(t *testing.T) {
 
 func TestSet_Erfolg(t *testing.T) {
 	overrides := &fakeOverrides{}
-	useCase := appposition.NewSetInitialStopLossUseCase(sourceWith(openPosition(nil)), overrides,
+	useCase := appposition.NewSetInitialStopLossUseCase(knownEntries(), overrides,
 		appposition.NewRiskResolver(&fakeRiskRepo{}, overrideNowFn), overrideNowFn)
 
 	result, err := useCase.Execute(context.Background(), riskPositionID, "0.9000")
@@ -214,27 +233,27 @@ func TestSet_Fehler(t *testing.T) {
 	boom := errors.New("quelle kaputt")
 	tests := []struct {
 		name   string
-		source interfaces.OpenPositionSource
+		source interfaces.PositionEntryLookup
 		id     string
 		raw    string
 		check  func(error) bool
 	}{
-		{"Position nicht offen", sourceWith(openPosition(nil)), "9999", "0.9", func(err error) bool {
+		{"Position unbekannt", knownEntries(), "9999", "0.9", func(err error) bool {
 			var target *chart.PositionNotFoundError
 			return errors.As(err, &target)
 		}},
-		{"SL gleich Entry", sourceWith(openPosition(nil)), riskPositionID, "0.96", func(err error) bool {
+		{"SL gleich Entry", knownEntries(), riskPositionID, "0.96", func(err error) bool {
 			var target *position.StopLossAtEntryError
 			return errors.As(err, &target)
 		}},
-		{"falsche Seite", sourceWith(openPosition(nil)), riskPositionID, "1.0", func(err error) bool {
+		{"falsche Seite", knownEntries(), riskPositionID, "1.0", func(err error) bool {
 			var target *position.StopLossWrongSideError
 			return errors.As(err, &target)
 		}},
-		{"keine Zahl", sourceWith(openPosition(nil)), riskPositionID, "x", func(err error) bool {
+		{"keine Zahl", knownEntries(), riskPositionID, "x", func(err error) bool {
 			return err != nil && !errors.Is(err, boom) // *decimal.InvalidDecimalError, siehe Domain-Test
 		}},
-		{"Quellfehler", &fakeSource{err: boom}, riskPositionID, "0.9", func(err error) bool { return errors.Is(err, boom) }},
+		{"Quellfehler", &fakeEntries{err: boom}, riskPositionID, "0.9", func(err error) bool { return errors.Is(err, boom) }},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
