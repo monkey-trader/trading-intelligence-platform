@@ -25,6 +25,12 @@ type Settings struct {
 	GetAssetIcons func(ctx context.Context, list asset.SymbolList) ([]asset.CoinIcon, error)
 	// WebUI bedient alle Pfade, die die API nicht kennt (optional; nil = 404 not-found).
 	WebUI http.Handler
+	// SetInitialStopLoss und ClearInitialStopLoss bedienen PUT/DELETE /positions/{positionId}/initial-stop-loss.
+	// Beide sind nötig, sonst (und bei AllowRemote) ist die Route nicht registriert.
+	SetInitialStopLoss   func(ctx context.Context, positionID, rawStopLoss string) (appposition.SetInitialStopLossResult, error)
+	ClearInitialStopLoss func(ctx context.Context, positionID string) error
+	// AllowRemote: true = schreibende Routen werden nie registriert.
+	AllowRemote bool
 }
 
 // NewHandler baut die Kette recover → hostGuard → malformedTarget → router → 404.
@@ -51,19 +57,27 @@ func newHandlerWithRoutes(settings Settings, logger *slog.Logger, extraRoutes ma
 	if settings.GetPositionChart != nil {
 		chartRoute = newPositionChartHandler(settings.GetPositionChart, logger)
 	}
+	var stopRoute http.HandlerFunc
+	if settings.SetInitialStopLoss != nil && settings.ClearInitialStopLoss != nil && !settings.AllowRemote {
+		stopRoute = newInitialStopLossHandler(settings.SetInitialStopLoss, settings.ClearInitialStopLoss, settings.AllowedHosts, logger)
+	}
 	allowedHosts := append([]string(nil), settings.AllowedHosts...)
 
-	return withRecover(logger, withHostGuard(allowedHosts, withMalformedTarget(newRouter(routes, chartRoute, settings.WebUI))))
+	return withRecover(logger, withHostGuard(allowedHosts, withMalformedTarget(newRouter(routes, chartRoute, stopRoute, settings.WebUI))))
 }
 
 // newRouter sucht die Route exakt über "METHOD /pfad". Alles andere ergibt 404 not-found;
 // der Request-Body wird dabei nie gelesen.
 // chartRoute (optional) bedient GET /positions/{positionId}/chart per Pfad-Matching.
-func newRouter(routes map[string]http.HandlerFunc, chartRoute http.HandlerFunc, webUI http.Handler) http.Handler {
+func newRouter(routes map[string]http.HandlerFunc, chartRoute, stopRoute http.HandlerFunc, webUI http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		route, found := routes[r.Method+" "+r.URL.Path]
 		if _, isChartPath := chartPathSegment(r.URL.Path); !found && chartRoute != nil && r.Method == http.MethodGet && isChartPath {
 			route, found = chartRoute, true
+		}
+		if _, isStopPath := stopLossPathSegment(r.URL.Path); !found && stopRoute != nil && isStopPath &&
+			(r.Method == http.MethodPut || r.Method == http.MethodDelete) {
+			route, found = stopRoute, true
 		}
 		if !found {
 			if webUI != nil && wantsWebUI(r) {

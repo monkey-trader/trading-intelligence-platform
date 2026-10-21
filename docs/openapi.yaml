@@ -15,8 +15,13 @@ info:
       403 `forbidden-host`, auch für unbekannte oder ungültige Pfade. Erlaubt sind mindestens
       `127.0.0.1:<port>`, `localhost:<port>` und `[::1]:<port>` sowie ausdrücklich konfigurierte
       Hosts; der Vergleich ignoriert Groß-/Kleinschreibung.
-    - Unbekannte Pfade und nicht beschriebene Methoden (auch `HEAD`, `OPTIONS`, `DELETE`) ergeben
-      404 `not-found`, unabhängig von einem mitgeschickten Body.
+    - Unbekannte Pfade und nicht beschriebene Methoden (auch `HEAD`, `OPTIONS`; `PUT` und `DELETE`
+      nur auf `/positions/{positionId}/initial-stop-loss` beschrieben) ergeben 404 `not-found`,
+      unabhängig von einem mitgeschickten Body.
+    - Schreibende Routen (`PUT`/`DELETE`) gibt es nur auf Loopback; mit `ALLOW_REMOTE=true` werden sie
+      nicht registriert (404). Sie verlangen `Content-Type: application/json` (sonst 415
+      `unsupported-media-type`), prüfen einen mitgeschickten `Origin` gegen die erlaubten Hosts
+      (sonst 403 `forbidden-origin`) und begrenzen den Body auf 1 KiB.
     - Formal fehlerhafte Anfragen (z.B. ungültige Prozent-Kodierung im Pfad) ergeben
       400 `bad-request`.
     - Alle Fehler kommen als `application/problem+json` (Schema `Problem`) ohne interne Details;
@@ -142,6 +147,89 @@ paths:
           $ref: '#/components/responses/Problem'
         '504':
           $ref: '#/components/responses/Problem'
+  /positions/{positionId}/initial-stop-loss:
+    put:
+      operationId: setInitialStopLoss
+      summary: Ursprünglichen Stop-Loss einer offenen Position manuell setzen
+      description: >-
+        BingX überschreibt einen nachgezogenen SL in derselben Order; der Ursprungswert steht danach in
+        keiner Order-Historie. Mit diesem Endpunkt trägt der Nutzer ihn von Hand ein. Der Wert wird
+        zusammen mit dem aktuellen Entry der Position gespeichert (damit die R-Level bei Nachkäufen nicht
+        wandern) und hat Vorrang vor dem automatisch ermittelten Risiko. Danach liefern
+        `GET /positions/open` und der Chart `levels`, `riskDistance`, `currentRMultiple` und
+        `breakEvenTriggerReached` mit `initialStopLossSource: MANUAL`. Ein erneutes `PUT` ersetzt den
+        Wert. Der SL muss auf der Verlustseite des Entry liegen (LONG darunter, SHORT darüber).
+        Nur für aktuell offene Positionen. Schreibt nur in die eigene Datenbank, nie zu BingX.
+      tags:
+        - Positionen
+      parameters:
+        - name: positionId
+          in: path
+          required: true
+          description: BingX-Positions-ID (19-stellig, immer String).
+          schema:
+            type: string
+            pattern: '^\d{1,20}$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetInitialStopLossRequest'
+      responses:
+        '200':
+          description: Der gespeicherte manuelle Ursprungs-SL.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitialStopLoss'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '413':
+          $ref: '#/components/responses/Problem'
+        '415':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+        '502':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
+        '504':
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: clearInitialStopLoss
+      summary: Manuellen Ursprungs-SL entfernen
+      description: >-
+        Entfernt den manuell gesetzten Wert; die Position fällt auf das automatisch ermittelte Risiko
+        zurück (`initialStopLossSource: AUTO`, bzw. unbekannt, wenn es keins gibt). Die Antwort ist
+        immer 204 (idempotent), auch ohne vorhandenen manuellen Wert und für unbekannte oder
+        geschlossene Positionen.
+      tags:
+        - Positionen
+      parameters:
+        - name: positionId
+          in: path
+          required: true
+          description: BingX-Positions-ID (19-stellig, immer String).
+          schema:
+            type: string
+            pattern: '^\d{1,20}$'
+      responses:
+        '204':
+          description: Der manuelle Wert ist entfernt (oder war nicht vorhanden).
+        '400':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
   /assets/icons:
     get:
       operationId: getAssetIcons
@@ -200,7 +288,8 @@ components:
   responses:
     Problem:
       description: >-
-        Fehlerantwort ohne interne Details: 400 bad-request, 403 forbidden-host, 404 not-found,
+        Fehlerantwort ohne interne Details: 400 bad-request, 403 forbidden-host/forbidden-origin,
+        404 not-found, 413 payload-too-large, 415 unsupported-media-type, 422 invalid-stop-loss,
         502 upstream-error/invalid-response, 503 not-configured/rate-limited, 504 unreachable,
         500 internal.
       headers:
@@ -241,7 +330,11 @@ components:
           enum:
             - bad-request
             - forbidden-host
+            - forbidden-origin
             - not-found
+            - payload-too-large
+            - unsupported-media-type
+            - invalid-stop-loss
             - not-configured
             - rate-limited
             - unreachable
@@ -254,6 +347,45 @@ components:
           type: integer
         detail:
           type: string
+    SetInitialStopLossRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - initialStopLoss
+      properties:
+        initialStopLoss:
+          $ref: '#/components/schemas/Decimal'
+          description: >-
+            Ursprünglicher SL-Trigger. Muss auf der Verlustseite des aktuellen Entry liegen
+            (LONG kleiner, SHORT größer); sonst 422 `invalid-stop-loss`.
+    InitialStopLoss:
+      type: object
+      additionalProperties: false
+      required:
+        - positionId
+        - initialStopLoss
+        - entryPrice
+        - riskDistance
+        - source
+        - setAt
+      properties:
+        positionId:
+          type: string
+        initialStopLoss:
+          $ref: '#/components/schemas/Decimal'
+        entryPrice:
+          $ref: '#/components/schemas/Decimal'
+          description: Entry der Position zum Zeitpunkt der Eingabe (Basis der R-Level).
+        riskDistance:
+          $ref: '#/components/schemas/Decimal'
+          description: Risiko-Distanz |entryPrice - initialStopLoss| (1R).
+        source:
+          type: string
+          enum:
+            - MANUAL
+        setAt:
+          type: integer
+          description: Zeitpunkt der Eingabe in Epoch-Millisekunden.
     OpenPositionsSnapshot:
       type: object
       additionalProperties: false
@@ -366,6 +498,16 @@ components:
             null, wenn die Position beim ersten Sehen schon auf Break-even stand oder kein SL existierte.
           oneOf:
             - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        initialStopLossSource:
+          description: >-
+            Herkunft von `initialStopLoss`: MANUAL (per PUT eingetragen) oder AUTO (beim ersten Sehen
+            oder aus der Order-Historie ermittelt). null, wenn das Risiko unbekannt ist.
+          oneOf:
+            - type: string
+              enum:
+                - AUTO
+                - MANUAL
             - type: 'null'
         riskDistance:
           description: Risiko-Distanz |Entry - initialStopLoss| (1R in Preiseinheiten). null, wenn unbekannt.

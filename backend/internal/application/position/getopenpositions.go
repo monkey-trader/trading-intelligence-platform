@@ -29,6 +29,7 @@ type OpenPositionEntry struct {
 	BreakEvenTriggerReached *bool                   // nil auch, wenn die Kerzen nicht lesbar waren
 	Reached2RAt             *int64                  // Kerzenbeginn, nil wenn nicht erreicht oder unbekannt
 	Levels                  []domainposition.RLevel // 1R/2R/3R, nil bei unbekanntem Risiko
+	InitialStopLossSource   *string                 // "MANUAL" | "AUTO", nil bei unbekanntem Risiko
 }
 
 // riskCandleLimit ist die Zahl der 5-Minuten-Kerzen, in denen nach 2R gesucht wird.
@@ -69,6 +70,14 @@ func (useCase *GetOpenPositionsUseCase) WithRiskResolver(resolver *RiskResolver,
 func (useCase *GetOpenPositionsUseCase) WithStopHistory(history interfaces.StopOrderHistorySource) *GetOpenPositionsUseCase {
 	if useCase.resolver != nil {
 		useCase.resolver.WithHistory(history)
+	}
+	return useCase
+}
+
+// WithInitialStopLossOverrides berücksichtigt manuelle Ursprungs-SLs; nach WithRisk aufrufen.
+func (useCase *GetOpenPositionsUseCase) WithInitialStopLossOverrides(overrides interfaces.PositionInitialStopLossRepository) *GetOpenPositionsUseCase {
+	if useCase.resolver != nil {
+		useCase.resolver.WithOverrides(overrides)
 	}
 	return useCase
 }
@@ -190,7 +199,7 @@ func (useCase *GetOpenPositionsUseCase) applyRisk(ctx context.Context, entry *Op
 			stopTriggers = append(stopTriggers, order.TriggerPrice)
 		}
 	}
-	risk, known := useCase.resolver.Resolve(ctx, entry.OpenPosition, stopTriggers)
+	risk, source, known := useCase.resolver.ResolveWithSource(ctx, entry.OpenPosition, stopTriggers)
 	if !known {
 		return
 	}
@@ -205,6 +214,8 @@ func (useCase *GetOpenPositionsUseCase) applyRisk(ctx context.Context, entry *Op
 		return
 	}
 	entry.InitialStopLoss, entry.RiskDistance, entry.CurrentRMultiple = &risk.InitialStopLoss, &riskDistance, &currentR
+	sourceText := string(source)
+	entry.InitialStopLossSource = &sourceText
 	if levels, levelsErr := domainposition.RLevels(entry.Side, risk.EntryPrice, risk.InitialStopLoss); levelsErr == nil {
 		entry.Levels = levels
 	}

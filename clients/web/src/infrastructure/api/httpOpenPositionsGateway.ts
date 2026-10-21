@@ -197,6 +197,11 @@ function parseOpenPositionDto(candidate: unknown): OpenPositionDto | undefined {
     openTime,
     updateTime,
     initialStopLoss: isDecimal(initialStopLoss) ? initialStopLoss : null,
+    initialStopLossSource:
+      candidate['initialStopLossSource'] === 'AUTO' ||
+      candidate['initialStopLossSource'] === 'MANUAL'
+        ? candidate['initialStopLossSource']
+        : null,
     riskDistance: isDecimal(riskDistance) ? riskDistance : null,
     currentRMultiple: isDecimal(currentRMultiple) ? currentRMultiple : null,
     breakEvenTriggerReached:
@@ -259,6 +264,7 @@ function toOpenPosition(positionDto: OpenPositionDto): OpenPosition {
     openTime: positionDto.openTime,
     updateTime: positionDto.updateTime,
     initialStopLoss: positionDto.initialStopLoss ?? null,
+    initialStopLossSource: positionDto.initialStopLossSource ?? null,
     riskDistance: positionDto.riskDistance ?? null,
     currentRMultiple: positionDto.currentRMultiple ?? null,
     breakEvenTriggerReached: positionDto.breakEvenTriggerReached ?? null,

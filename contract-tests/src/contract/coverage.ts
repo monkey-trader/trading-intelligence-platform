@@ -8,4 +8,6 @@ export const OPERATION_TEST_NAMES = {
   getOpenPositions: 'GET /positions/open (getOpenPositions)',
   getPositionChart: 'GET /positions/{positionId}/chart (getPositionChart)',
   getAssetIcons: 'GET /assets/icons (getAssetIcons)',
+  setInitialStopLoss: 'PUT /positions/{positionId}/initial-stop-loss (setInitialStopLoss)',
+  clearInitialStopLoss: 'DELETE /positions/{positionId}/initial-stop-loss (clearInitialStopLoss)',
 } as const satisfies Readonly<Record<string, string>>;

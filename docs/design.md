@@ -154,6 +154,20 @@ Zellaufbau (Klassen):
   vermutlich vor allem Gebühren und Funding, daher oft leicht negativ. 2 Nachkommastellen.
 - Header: Summe des unrealisierten PnL in `font-size-x-large`, mit `+`/`-` und Tönung.
 
+### Ursprungs-SL von Hand (Zelle "BE / Ziel")
+- Bei unbekanntem Risiko (keine `levels`) erscheint der Button "SL eintragen" (accessible name
+  "Ursprünglichen SL eintragen für <Symbol>"). Klick öffnet inline ein Textfeld (`inputmode="decimal"`,
+  Label "Ursprünglicher SL") mit Speichern/Abbrechen; Fokus springt ins Feld, Escape bricht ab.
+- Fehler stehen als `role="alert"` unter dem Feld (Validierung vor dem Senden, Serverfehler gemappt).
+- Bei `initialStopLossSource: MANUAL` zeigt die Zelle das Badge "manuell" und den Button "Zurücksetzen".
+- Touch-Ziele mindestens 44 px (`--size-touch-target`), Farben und Abstände nur über Tokens, auch in der mobilen Karte.
+- Button und Eingabefeld: Fläche `surface-raised` (Button) bzw. `surface` (Feld), Rahmen `--color-control-border`
+  (≥ 3:1 auf surface und surface-raised, hell 3.38:1 auf raised, dunkel 3.68:1), Text `text` (hell 14.2:1, dunkel 13.1:1).
+  Ohne diesen Rahmen verschwindet der Button weiß auf weiß bzw. dunkel auf dunkel.
+- Fokus: `:focus-visible` mit `--border-width-emphasis` und `--color-accent` (Ring, 2px Abstand) an Button und Feld; das Feld erhält den Fokus beim Öffnen, Escape bricht ab.
+- Feld-Breite `--size-sl-input-width`, Zahlen `tabular-nums`, rechtsbündig wie die Preise.
+- Fehlertext `role="alert"`: `negative` auf `surface` hell 5.75:1, dunkel 6.21:1; steht unter dem Feld, nicht als Overlay.
+
 ## Chart (Stufe 1)
 Chart-Tokens angelegt in `design-tokens.css` (hell und dunkel):
 - `--color-chart-up`, `--color-chart-down` (Kerzen, abgeleitet von positive/negative)

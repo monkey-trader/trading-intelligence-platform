@@ -10,6 +10,8 @@ import { pnlTone } from '@/presentation/position/format/pnlTone';
 import { Fragment, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react';
 import type { ColumnKey } from '@/presentation/position/columnOrder';
 import { useColumnOrder } from '@/presentation/position/hooks/useColumnOrder';
+import type { InitialStopLossGateway } from '@/domain/position/InitialStopLossGateway';
+import { InitialStopLossControl } from '@/presentation/position/components/InitialStopLossControl';
 import styles from '@/presentation/position/components/OpenPositionsTable.module.css';
 
 const COLUMN_LABELS = {
@@ -35,6 +37,10 @@ type OpenPositionsTableProps = Readonly<{
   onSelectPosition?: ((positionId: string) => void) | undefined;
   /** Icons und Anzeigenamen je Symbol; fehlt ein Eintrag, gilt der Ticker als Name. */
   iconsBySymbol?: ReadonlyMap<string, AssetIcon> | undefined;
+  /** Ohne Gateway gibt es kein manuelles Eintragen des Ursprungs-SL. */
+  initialStopLossGateway?: InitialStopLossGateway | undefined;
+  /** Wird nach erfolgreichem Speichern/Zurücksetzen aufgerufen (Liste neu laden). */
+  onInitialStopLossChanged?: (() => void) | undefined;
 }>;
 
 /** Beträge in USDT: 2 Nachkommastellen. */
@@ -53,6 +59,8 @@ export function OpenPositionsTable({
   selectedPositionId,
   onSelectPosition,
   iconsBySymbol,
+  initialStopLossGateway,
+  onInitialStopLossChanged,
 }: OpenPositionsTableProps) {
   const { order, move, reset, isDefault } = useColumnOrder();
   const [draggedKey, setDraggedKey] = useState<ColumnKey | null>(null);
@@ -164,6 +172,8 @@ export function OpenPositionsTable({
                 isSelected={position.positionId === selectedPositionId}
                 onSelectPosition={onSelectPosition}
                 assetIcon={iconsBySymbol?.get(position.symbol)}
+                initialStopLossGateway={initialStopLossGateway}
+                onInitialStopLossChanged={onInitialStopLossChanged}
               />
             ))}
           </tbody>
@@ -179,7 +189,11 @@ function OpenPositionRow({
   isSelected,
   onSelectPosition,
   assetIcon,
+  initialStopLossGateway,
+  onInitialStopLossChanged,
 }: Readonly<{
+  initialStopLossGateway?: InitialStopLossGateway | undefined;
+  onInitialStopLossChanged?: (() => void) | undefined;
   assetIcon?: AssetIcon | undefined;
   position: OpenPosition;
   order: readonly ColumnKey[];
@@ -293,18 +307,27 @@ function OpenPositionRow({
     ),
     beTarget: (
       <td data-label={COLUMN_LABELS.beTarget} className={styles.cell}>
-        {breakEvenLevel && targetLevel ? (
-          <div className={styles.levelStack}>
-            <span className={`${styles.levelPill} ${styles.levelBe}`}>
-              {`BE ${formatDecimal(breakEvenLevel.price)}`}
-            </span>
-            <span className={`${styles.levelPill} ${styles.levelTarget}`}>
-              {`Ziel ${formatDecimal(targetLevel.price)}`}
-            </span>
-          </div>
-        ) : (
-          <span aria-label="Risiko unbekannt">{MISSING_VALUE}</span>
-        )}
+        <div className={styles.beTargetStack}>
+          {breakEvenLevel && targetLevel ? (
+            <div className={styles.levelStack}>
+              <span className={`${styles.levelPill} ${styles.levelBe}`}>
+                {`BE ${formatDecimal(breakEvenLevel.price)}`}
+              </span>
+              <span className={`${styles.levelPill} ${styles.levelTarget}`}>
+                {`Ziel ${formatDecimal(targetLevel.price)}`}
+              </span>
+            </div>
+          ) : (
+            <span aria-label="Risiko unbekannt">{MISSING_VALUE}</span>
+          )}
+          {initialStopLossGateway && (
+            <InitialStopLossControl
+              position={position}
+              gateway={initialStopLossGateway}
+              onChanged={onInitialStopLossChanged}
+            />
+          )}
+        </div>
       </td>
     ),
   };

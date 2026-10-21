@@ -6,6 +6,9 @@ export type OpenPositionLevel = Readonly<{
   percent: string;
 }>;
 
+/** Herkunft des ursprünglichen SL. */
+export type InitialStopLossSource = 'AUTO' | 'MANUAL';
+
 /** Seite einer Position im Hedge-Modus. */
 export type PositionSide = 'LONG' | 'SHORT';
 
@@ -36,6 +39,8 @@ export type OpenPosition = Readonly<{
   breakEven: boolean | null;
   /** Ursprünglicher SL; null = unbekannt. */
   initialStopLoss: string | null;
+  /** Herkunft des Risikos: AUTO (aus Orders), MANUAL (von Hand); null = unbekannt. */
+  initialStopLossSource: InitialStopLossSource | null;
   /** Risiko-Distanz (1R in Preiseinheiten); null = unbekannt. */
   riskDistance: string | null;
   /** Aktueller Gewinn in R; null = Risiko unbekannt. */

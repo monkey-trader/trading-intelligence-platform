@@ -20,6 +20,11 @@ const (
 	ProblemUpstreamError   ProblemType = "upstream-error"
 	ProblemInvalidResponse ProblemType = "invalid-response"
 	ProblemInternal        ProblemType = "internal"
+
+	ProblemInvalidStopLoss      ProblemType = "invalid-stop-loss"
+	ProblemUnsupportedMediaType ProblemType = "unsupported-media-type"
+	ProblemForbiddenOrigin      ProblemType = "forbidden-origin"
+	ProblemPayloadTooLarge      ProblemType = "payload-too-large"
 )
 
 const problemContentTypeHeader = "application/problem+json; charset=utf-8"
@@ -40,6 +45,11 @@ var problemDefinitions = map[ProblemType]problemDefinition{
 	ProblemUpstreamError:   {http.StatusBadGateway, "BingX hat mit einem Fehler geantwortet."},
 	ProblemInvalidResponse: {http.StatusBadGateway, "BingX hat eine ungültige Antwort geliefert."},
 	ProblemInternal:        {http.StatusInternalServerError, "Interner Fehler."},
+
+	ProblemInvalidStopLoss:      {http.StatusUnprocessableEntity, "Der Stop-Loss liegt nicht auf der Verlustseite des Entry oder ist keine Zahl."},
+	ProblemUnsupportedMediaType: {http.StatusUnsupportedMediaType, "Erwartet wird Content-Type application/json."},
+	ProblemForbiddenOrigin:      {http.StatusForbidden, "Der Origin-Header ist nicht erlaubt."},
+	ProblemPayloadTooLarge:      {http.StatusRequestEntityTooLarge, "Der Request-Body ist zu groß."},
 }
 
 // problemBody ist das Problem-Objekt laut docs/openapi.yaml, ohne interne Details.

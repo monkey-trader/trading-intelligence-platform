@@ -122,6 +122,8 @@ Konsequenz für dieses Projekt:
 
 ## Sicherheit
 - BingX-API-Key **nur mit Lese-Rechten**; der Code macht nur signierte GET-Requests.
+  „Nur GET“ gilt für BingX. Die eigene API hat einen Schreib-Endpoint (`PUT`/`DELETE /positions/{positionId}/initial-stop-loss`,
+  nur Loopback, ohne Auth; mit `ALLOW_REMOTE=true` nicht registriert) und schreibt nur in die eigene Datenbank.
 - Secrets (`BX_KEY`, `BX_SECRET`) nur in `.env`, niemals im Code oder Repo. `.env` steht in `.gitignore`.
 - Die eigene API gibt niemals Secrets aus.
 - Phase 1 ohne Authentifizierung: Der Server bindet nur auf Loopback (`127.0.0.1`), ein anderer

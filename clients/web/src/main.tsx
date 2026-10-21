@@ -3,6 +3,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createHttpAssetIconsGateway } from '@/infrastructure/api/httpAssetIconsGateway';
 import { AppHeader } from '@/presentation/shared/components/AppHeader';
+import { createHttpInitialStopLossGateway } from '@/infrastructure/api/httpInitialStopLossGateway';
 import { createHttpOpenPositionsGateway } from '@/infrastructure/api/httpOpenPositionsGateway';
 import { createHttpPositionChartGateway } from '@/infrastructure/api/httpPositionChartGateway';
 import { createLightweightChartRenderer } from '@/infrastructure/chart/lightweightChartRenderer';
@@ -28,6 +29,7 @@ createRoot(rootElement).render(
     <OpenPositionsPage
       assetIconsGateway={assetIconsGateway}
       gateway={openPositionsGateway}
+      initialStopLossGateway={createHttpInitialStopLossGateway()}
       chartGateway={positionChartGateway}
       createChartRenderer={createLightweightChartRenderer}
     />

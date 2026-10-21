@@ -463,3 +463,17 @@ func TestToOpenPositionsSnapshotDto_Levels(t *testing.T) {
 		}
 	})
 }
+
+// Erwartet: OpenPositionEntry.InitialStopLossSource *string -> DTO-Feld "initialStopLossSource" (omitempty bei nil).
+func TestToOpenPositionsSnapshotDto_InitialStopLossSource(t *testing.T) {
+	manual := "MANUAL"
+	withSource := appposition.OpenPositionEntry{InitialStopLossSource: &manual}
+	body, err := json.Marshal(toOpenPositionsSnapshotDto(appposition.OpenPositionsOverview{Positions: []appposition.OpenPositionEntry{withSource}}))
+	if err != nil || !strings.Contains(string(body), `"initialStopLossSource":"MANUAL"`) {
+		t.Errorf("Body = %s err=%v", body, err)
+	}
+	body, _ = json.Marshal(toOpenPositionsSnapshotDto(appposition.OpenPositionsOverview{Positions: []appposition.OpenPositionEntry{{}}}))
+	if strings.Contains(string(body), "initialStopLossSource") {
+		t.Errorf("Feld muss bei nil fehlen: %s", body)
+	}
+}

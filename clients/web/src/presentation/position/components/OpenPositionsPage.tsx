@@ -8,6 +8,7 @@ import type { OpenPositionsGateway } from '@/domain/position/OpenPositionsGatewa
 import { OpenPositionsHeader } from '@/presentation/position/components/OpenPositionsHeader';
 import { OpenPositionsTable } from '@/presentation/position/components/OpenPositionsTable';
 import { useOpenPositionsViewModel } from '@/presentation/position/hooks/useOpenPositionsViewModel';
+import type { InitialStopLossGateway } from '@/domain/position/InitialStopLossGateway';
 import styles from '@/presentation/position/components/OpenPositionsPage.module.css';
 
 type OpenPositionsPageProps = Readonly<{
@@ -17,6 +18,8 @@ type OpenPositionsPageProps = Readonly<{
   createChartRenderer?: ChartRendererFactory;
   /** Ohne Gateway zeigt die Tabelle Ticker statt Icons. */
   assetIconsGateway?: AssetIconsGateway;
+  /** Ohne Gateway gibt es kein manuelles Eintragen des Ursprungs-SL. */
+  initialStopLossGateway?: InitialStopLossGateway;
 }>;
 
 /** Seite "Offene Positionen": lädt über das injizierte Gateway und pollt. */
@@ -25,6 +28,7 @@ export function OpenPositionsPage({
   chartGateway,
   createChartRenderer,
   assetIconsGateway,
+  initialStopLossGateway,
 }: OpenPositionsPageProps) {
   const { status, snapshot, errorMessage, isStale, refresh } = useOpenPositionsViewModel(gateway);
   const symbols = useMemo(
@@ -75,6 +79,8 @@ export function OpenPositionsPage({
             <OpenPositionsTable
               positions={snapshot.positions}
               iconsBySymbol={iconsBySymbol}
+              initialStopLossGateway={initialStopLossGateway}
+              onInitialStopLossChanged={refresh}
               selectedPositionId={chartPositionId}
               onSelectPosition={chartGateway && createChartRenderer ? toggleChart : undefined}
             />
