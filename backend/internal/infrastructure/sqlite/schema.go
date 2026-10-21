@@ -43,6 +43,7 @@ var schemaStatements = []string{
 		imported_at INTEGER NOT NULL
 	)`,
 	`CREATE INDEX IF NOT EXISTS income_symbol_time ON income (symbol, time)`,
+	`CREATE INDEX IF NOT EXISTS income_type_time ON income (income_type, time)`,
 	`CREATE TABLE IF NOT EXISTS candles (
 		symbol TEXT NOT NULL,
 		interval TEXT NOT NULL,

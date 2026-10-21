@@ -68,3 +68,6 @@ func classifyUnavailable(err error) (reason domainposition.UnavailableReason, kn
 	}
 	return "", false
 }
+
+// ToUnavailable übersetzt bekannte BingX-Fehler in *OpenPositionsUnavailableError (für andere Sources).
+func ToUnavailable(err error) error { return toUnavailable(err) }

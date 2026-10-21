@@ -20,7 +20,8 @@ panelbasiert) – eigener Look, keine Kopie fremder Marken oder Logos.
    als der Platz (bei offenen Positionen bis ca. 1'280 px Fensterbreite), scrollt sie im Panel,
    nie die ganze Seite. Die Symbol-Spalte bleibt dabei links stehen (`position: sticky`).
    Der Container ist per Tastatur fokussierbar (`tabIndex={0}`, `role="region"`, `aria-label`).
-4. **Hell und dunkel.** Das Theme folgt dem System (`prefers-color-scheme`).
+4. **Hell und dunkel, Palette Gruvbox.** Das Theme folgt standardmäßig dem System (`prefers-color-scheme`); im Kopf lässt sich
+   System/Hell/Dunkel wählen (`useTheme`, `data-theme` am `<html>`, gespeichert unter `tip_theme_v1`).
    Dunkel ist die primäre Zielansicht; hell muss trotzdem sauber funktionieren.
 
 ## Farben (Tokens)

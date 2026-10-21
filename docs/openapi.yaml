@@ -82,6 +82,37 @@ paths:
           $ref: '#/components/responses/Problem'
         '504':
           $ref: '#/components/responses/Problem'
+  /account/summary:
+    get:
+      operationId: getAccountSummary
+      summary: Kontostand und Monats-Performance
+      description: >-
+        Kontostand (`balance`), Equity und verfügbare Margin kommen live von BingX (bis zu 5 s
+        zwischengespeichert). Der Monats-PnL ist die Summe aus `REALIZED_PNL`, `TRADING_FEE` und
+        `FUNDING_FEE` der lokalen Income-Tabelle im laufenden Kalendermonat (Europe/Zurich) und
+        daher nur so aktuell wie der letzte Import; die Historie ab Monatsanfang wird beim Start einmalig
+        nachgeladen. `monthlyPnlPercent` = Monats-PnL ÷ `equity` × 100, auf 2 Nachkommastellen
+        (half-up); `null`, wenn `equity` 0 ist. `equity` entspricht dem Kontostand der BingX-Anzeige
+        (USD-M Perp). Bezogen auf die aktuelle Equity, nicht aufs Startkapital des Monats; Ein-/Auszahlungen verzerren den Wert.
+      tags:
+        - Konto
+      responses:
+        '200':
+          description: Kontostand mit Monats-PnL.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountSummary'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+        '502':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
+        '504':
+          $ref: '#/components/responses/Problem'
   /positions/{positionId}/chart:
     get:
       operationId: getPositionChart
@@ -388,6 +419,58 @@ components:
         setAt:
           type: integer
           description: Zeitpunkt der Eingabe in Epoch-Millisekunden.
+    AccountSummary:
+      type: object
+      required: [balance, equity, availableMargin, month, monthlyRealizedPnl, monthlyPnlPercent, periods, unrealizedPnl, unrealizedPnlPercent]
+      properties:
+        balance:
+          $ref: '#/components/schemas/Decimal'
+        equity:
+          $ref: '#/components/schemas/Decimal'
+        availableMargin:
+          $ref: '#/components/schemas/Decimal'
+        month:
+          type: string
+          pattern: '^\d{4}-(0[1-9]|1[0-2])$'
+          description: Kalendermonat (Europe/Zurich), auf den sich der Monats-PnL bezieht.
+          example: '2026-10'
+        monthlyRealizedPnl:
+          $ref: '#/components/schemas/Decimal'
+        monthlyPnlPercent:
+          description: Monats-PnL in Prozent der Equity; `null` bei Equity 0.
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        periods:
+          type: array
+          description: >-
+            Netto-PnL (REALIZED_PNL + TRADING_FEE + FUNDING_FEE) für Heute, 7T und 30T in dieser Reihenfolge.
+            `today` beginnt um 00:00 Europe/Zurich, `7d`/`30d` sind gleitende Fenster bis jetzt.
+          items:
+            $ref: '#/components/schemas/PeriodPnl'
+        unrealizedPnl:
+          $ref: '#/components/schemas/Decimal'
+        unrealizedPnlPercent:
+          description: Unrealisierter PnL des Kontos in Prozent der `equity`; `null` bei Equity <= 0 oder unbekanntem Wert.
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+    PeriodPnl:
+      type: object
+      required: [period, realizedPnl, pnlPercent]
+      properties:
+        period:
+          type: string
+          enum: [today, 7d, 30d]
+        realizedPnl:
+          $ref: '#/components/schemas/Decimal'
+        pnlPercent:
+          description: >-
+            PnL in Prozent der Equity am Periodenanfang (Equity jetzt minus PnL, Ein-/Auszahlungen
+            werden nicht berücksichtigt); `null`, wenn diese Basis 0 oder negativ ist.
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
     OpenPositionsSnapshot:
       type: object
       additionalProperties: false

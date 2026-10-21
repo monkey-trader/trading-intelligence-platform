@@ -1,32 +1,32 @@
-/* Design-Tokens der Web-UI. Komponenten verwenden nur diese Variablen, keine festen Werte. */
+/* Design-Tokens der Web-UI (Gruvbox). Theme: system (Default), oder per data-theme="light|dark" am <html>. Komponenten verwenden nur diese Variablen, keine festen Werte. */
 :root {
   color-scheme: light dark;
 
   /* Farben, hell */
-  --color-background: #f3f2f8;
-  --color-surface: #ffffff;
-  --color-surface-raised: #ebeaf4;
-  --color-border: #d6d3e6;
-  --color-text: #1c1a2e;
-  --color-text-muted: #5a5775;
-  --color-accent: #5b3fc4;
-  --color-positive: #0a7040; /* Kontrast ≥ 4.5:1 auf Weiß (WCAG AA) */
-  --color-negative: #bf2d3a;
-  --color-warning: #8a4f00;
-  --color-warning-surface: #fff3de;
-  --color-negative-surface: #fbe8ea;
-  --color-positive-surface: #e2f2e9;
-  --color-on-accent: #ffffff; /* Text auf accent-Flächen (Buttons) */
+  --color-background: #fbf1c7;
+  --color-surface: #f2e5bc;
+  --color-surface-raised: #ebdbb2;
+  --color-border: #d5c4a1;
+  --color-text: #3c3836;
+  --color-text-muted: #665c54;
+  --color-accent: #875300;
+  --color-positive: #5f5a0b; /* Kontrast ≥ 4.5:1 auf background/surface (WCAG AA) */
+  --color-negative: #9d0006;
+  --color-warning: #8f3f0a;
+  --color-warning-surface: #f5dcb0;
+  --color-negative-surface: #f3d0c0;
+  --color-positive-surface: #e4e2a8;
+  --color-on-accent: #fbf1c7; /* Text auf accent-Flächen (Buttons) */
 
   /* Chart-Farben (hell), abgeleitet von positive/negative */
-  --color-chart-up: #0a7040;
-  --color-chart-down: #bf2d3a;
-  --color-chart-grid: #d6d3e6;
-  --color-chart-crosshair: #5b3fc4;
-  --color-chart-entry: #5b3fc4;
-  --color-chart-stop-loss: #bf2d3a;
-  --color-chart-take-profit: #0a7040;
-  --color-chart-r-target: #0a6c8a;
+  --color-chart-up: #5f5a0b;
+  --color-chart-down: #9d0006;
+  --color-chart-grid: #d5c4a1;
+  --color-chart-crosshair: #875300;
+  --color-chart-entry: #875300;
+  --color-chart-stop-loss: #9d0006;
+  --color-chart-take-profit: #5f5a0b;
+  --color-chart-r-target: #0f5f5a;
 
   /* Abstände */
   --space-1: 4px;
@@ -73,47 +73,78 @@
   --size-coin-icon: 20px;
   --size-side-bar: 3px; /* Balken am linken Zeilenrand (Long/Short) */
   --radius-chip: 4px;
-  --color-chip-surface: #ebeaf4; /* neutraler Chip; Text text-muted/text: hell 5.76:1 */
-  --color-chip-text: #3f3b5c; /* auf chip-surface 8.3:1 */
-  --color-r-target-surface: #e0f1f6; /* Ziel-Pille (3R); Text chart-r-target auf dieser Fläche 5.13:1 */
-  --color-control-border: #7f7aa3; /* Rahmen Buttons/Eingabe (WCAG 1.4.11 ≥ 3:1 auf surface und surface-raised) */
+  --color-chip-surface: #ebdbb2; /* neutraler Chip */
+  --color-chip-text: #3c3836;
+  --color-r-target-surface: #d8e3c4; /* Ziel-Pille (3R) */
+  --color-control-border: #7c6f64; /* Rahmen Buttons/Eingabe (WCAG 1.4.11 ≥ 3:1 auf surface und surface-raised) */
   --size-control-compact: 26px; /* schlanke Buttons/Felder bei Mauszeiger (pointer: fine) */
   --size-touch-target: 44px; /* Mindestgröße Touch-Ziele (Buttons, Eingabefelder) */
   --size-sl-input-width: 8rem; /* Eingabefeld "Ursprünglicher SL" */
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --color-background: #120f24;
-    --color-surface: #1a1633;
-    --color-surface-raised: #231e43;
-    --color-border: #342e5c;
-    --color-text: #ebe9f7;
-    --color-text-muted: #a29fc4;
-    --color-accent: #a592f5;
-    --color-positive: #4cc790;
-    --color-negative: #f2727f;
-    --color-warning: #e8b45f;
-    --color-warning-surface: #2c2414;
-    --color-negative-surface: #35172a;
-    --color-positive-surface: #123027;
-
-    --color-on-accent: #120f24;
-    --color-chip-surface: #2a2450; /* Text chip-text dunkel 9.5:1 */
-    --color-chip-text: #cfcce8;
-    --color-r-target-surface: #0f2a35; /* Text chart-r-target dunkel auf dieser Fläche 7.48:1 */
-    --color-control-border: #7a75a6; /* ≥ 3:1 auf surface und surface-raised (dunkel) */
-
-    /* Chart-Farben (dunkel), abgeleitet von positive/negative */
-    --color-chart-up: #4cc790;
-    --color-chart-down: #f2727f;
-    --color-chart-grid: #342e5c;
-    --color-chart-crosshair: #a592f5;
-    --color-chart-entry: #a592f5;
-    --color-chart-stop-loss: #f2727f;
-    --color-chart-take-profit: #4cc790;
-    --color-chart-r-target: #5cc4e6;
+  :root:not([data-theme='light']) {
+    --color-background: #282828;
+    --color-surface: #3c3836;
+    --color-surface-raised: #504945;
+    --color-border: #665c54;
+    --color-text: #ebdbb2;
+    --color-text-muted: #c9b99a;
+    --color-accent: #fabd2f;
+    --color-positive: #b8bb26;
+    --color-negative: #ff8473;
+    --color-warning: #fe8019;
+    --color-warning-surface: #4a3520;
+    --color-negative-surface: #4a2a26;
+    --color-positive-surface: #3b4023;
+    --color-on-accent: #282828;
+    --color-chart-up: #b8bb26;
+    --color-chart-down: #fb4934;
+    --color-chart-grid: #504945;
+    --color-chart-crosshair: #fabd2f;
+    --color-chart-entry: #fabd2f;
+    --color-chart-stop-loss: #fb4934;
+    --color-chart-take-profit: #b8bb26;
+    --color-chart-r-target: #83c5be;
+    --color-chip-surface: #504945;
+    --color-chip-text: #ebdbb2;
+    --color-r-target-surface: #32403c;
+    --color-control-border: #928374;
   }
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-background: #282828;
+  --color-surface: #3c3836;
+  --color-surface-raised: #504945;
+  --color-border: #665c54;
+  --color-text: #ebdbb2;
+  --color-text-muted: #c9b99a;
+  --color-accent: #fabd2f;
+  --color-positive: #b8bb26;
+  --color-negative: #ff8473;
+  --color-warning: #fe8019;
+  --color-warning-surface: #4a3520;
+  --color-negative-surface: #4a2a26;
+  --color-positive-surface: #3b4023;
+  --color-on-accent: #282828;
+  --color-chart-up: #b8bb26;
+  --color-chart-down: #fb4934;
+  --color-chart-grid: #504945;
+  --color-chart-crosshair: #fabd2f;
+  --color-chart-entry: #fabd2f;
+  --color-chart-stop-loss: #fb4934;
+  --color-chart-take-profit: #b8bb26;
+  --color-chart-r-target: #83c5be;
+  --color-chip-surface: #504945;
+  --color-chip-text: #ebdbb2;
+  --color-r-target-surface: #32403c;
+  --color-control-border: #928374;
 }
 
 @media (min-width: 768px) {

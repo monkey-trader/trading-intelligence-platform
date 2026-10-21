@@ -2,7 +2,8 @@
 
 Status: Phase 0 bis 5 und 7 (Server) erledigt, Release automatisch über semantic-release; offen: Phase 6 (Wails)
 
-## Aktueller Stand (2026-10-20)
+## Aktueller Stand (2026-10-21)
+- **Konto im Kopf:** `GET /account/summary` (Kontostand = Equity wie in der BingX-Anzeige, live, 5 s Cache; Monats-PnL aus `income`, Europe/Zurich, Historie ab Monatsanfang wird beim Start einmalig nachgeladen (`income_history_from`); Prozent bezogen auf aktuelle Equity). Zusätzlich `periods` (Heute/7T/30T, Netto-PnL aus `income`, Prozent auf Start-Equity = Equity − PnL; Nachladen ab min(Monatsanfang, jetzt−30 Tage)) sowie `unrealizedPnl` und `unrealizedPnlPercent` (aus BingX `unrealizedProfit`, Prozent der Equity). Web-UI im Gruvbox-Design mit Umschalter System/Hell/Dunkel.
 - **Erledigt:** Phase 0 bis 2d (Vertrag, Gerüst, offene Positionen, Positions-Import, SQLite/State, Income-Import).
 - **2e:** Scheduler (5 Minuten) und einmaliger Vollimport sind in `main.go` verdrahtet, nur mit gültigen Keys.
 - **3:** Vertragstest läuft grün gegen das Go-Backend, der UI-Proxy ist umschaltbar.

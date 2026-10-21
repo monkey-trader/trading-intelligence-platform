@@ -82,12 +82,20 @@ export function PositionChartPanel({
     renderer.setMarkers(toChartMarkers(chart));
   }, [chart, positionId, interval]);
 
-  // Design folgt dem System (prefers-color-scheme): Farben im Renderer neu anwenden.
+  // Design folgt System oder Auswahl (data-theme am <html>): Farben im Renderer neu anwenden.
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const onThemeChange = () => rendererRef.current?.applyTheme();
     mediaQuery.addEventListener('change', onThemeChange);
-    return () => mediaQuery.removeEventListener('change', onThemeChange);
+    const attributeObserver = new MutationObserver(onThemeChange);
+    attributeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    return () => {
+      mediaQuery.removeEventListener('change', onThemeChange);
+      attributeObserver.disconnect();
+    };
   }, []);
 
   return (

@@ -58,7 +58,7 @@ Kontoweite Einträge von BingX (Gebühren, Funding, realisierter PnL), Quelle de
 | `raw` | TEXT | Rohantwort |
 | `imported_at` | INTEGER | Importzeitpunkt (Epoch-ms) |
 
-Index `income_symbol_time` auf `(symbol, time)`. Schreiben per Upsert über `transaction_id`
+Indizes `income_symbol_time` auf `(symbol, time)` und `income_type_time` auf `(income_type, time)` (Monatssummen für `GET /account/summary`). Schreiben per Upsert über `transaction_id`
 (`ON CONFLICT … DO UPDATE`), ein Batch pro 7-Tage-Fenster in einer Transaktion. Fortschritt: `income_scan_until`.
 
 ## Tabelle `candles`

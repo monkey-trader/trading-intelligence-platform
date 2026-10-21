@@ -12,9 +12,11 @@ import (
 // IncomeScanUntilKey ist der State-Schlüssel des Income-Fortschritts.
 const IncomeScanUntilKey = "income_scan_until"
 
+// IncomeHistoryFromKey merkt, ab wann die Income-Historie nachgeladen wurde (unabhängig vom Fortschritt).
+const IncomeHistoryFromKey = "income_history_from"
+
 const (
 	incomeWindowMillis = int64(7 * 24 * time.Hour / time.Millisecond)
-	realizedPnlType    = "REALIZED_PNL"
 )
 
 // ImportIncomeResult ist das Ergebnis eines Income-Laufs.
@@ -94,7 +96,7 @@ func (uc *ImportIncomeUseCase) importWindow(ctx context.Context, from, to int64,
 		}
 		seen[entry.TranID] = struct{}{}
 		unique = append(unique, entry)
-		if entry.IncomeType == realizedPnlType {
+		if entry.IncomeType == position.IncomeTypeRealizedPnl {
 			pnlSymbols[entry.Symbol] = struct{}{}
 		}
 	}
@@ -102,4 +104,30 @@ func (uc *ImportIncomeUseCase) importWindow(ctx context.Context, from, to int64,
 		return 0, err
 	}
 	return len(unique), nil
+}
+
+// EnsureHistorySince lädt einmalig das Income ab since (Epoch-ms) bis jetzt nach, damit Summen über
+// frühere Zeiträume (z.B. der Monats-PnL) vollständig sind. Der Lauf ist wiederholbar (Upsert über tranId),
+// berührt den Fortschritt des laufenden Imports nicht und merkt sich nur nach Erfolg.
+func (uc *ImportIncomeUseCase) EnsureHistorySince(ctx context.Context, since int64) error {
+	loaded, found, err := uc.state.Get(ctx, IncomeHistoryFromKey)
+	if err != nil {
+		return err
+	}
+	if found && loaded <= since {
+		return nil
+	}
+	end := uc.now().UnixMilli()
+	ignoredSymbols := map[string]struct{}{}
+	for windowStart := since; windowStart < end; {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		windowEnd := min(windowStart+incomeWindowMillis, end)
+		if _, err := uc.importWindow(ctx, windowStart, windowEnd, ignoredSymbols); err != nil {
+			return err
+		}
+		windowStart = windowEnd
+	}
+	return uc.state.Set(ctx, IncomeHistoryFromKey, since)
 }
