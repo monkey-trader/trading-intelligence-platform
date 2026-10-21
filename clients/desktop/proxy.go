@@ -42,8 +42,8 @@ func isLoopbackHTTP(target *url.URL) bool {
 const serverDownPage = `<!doctype html><meta charset="utf-8"><title>trading-intelligence nicht erreichbar</title>
 <body style="font-family:-apple-system,sans-serif;display:grid;place-items:center;height:100vh;margin:0;background:#282828;color:#ebdbb2">
 <main style="text-align:center"><h1>Server nicht erreichbar</h1>
-<p>Der Dienst läuft nicht. Im Terminal starten:</p>
-<pre>brew services start trading-intelligence</pre>
+<p>Der eingebaute Server läuft nicht. App neu starten; bleibt es so, steht der Grund in:</p>
+<pre>~/Library/Application Support/tip/server.log</pre>
 <p><small>%s</small></p></main>`
 
 // newServerProxy reicht alle Anfragen des Fensters an den trading-intelligence weiter.

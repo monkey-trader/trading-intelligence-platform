@@ -135,10 +135,47 @@ jobs:
       - name: Wails installieren
         run: go install github.com/wailsapp/wails/v2/cmd/wails@${WAILS_VERSION}
 
-      # Das UI liefert der trading-intelligence aus; die App bringt nur das Fenster mit (kein Frontend-Build).
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.mod
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: clients/web/package-lock.json
+
+      # Die App bringt den Server mit: Web-UI einbetten (wie im Formula-Job), Server als Universal-Binary bauen.
+      - name: Web-UI bauen und einbetten
+        env:
+          VITE_API_BASE: ''
+        run: |
+          (cd clients/web && npm ci && npm run build)
+          cp -R clients/web/dist/. backend/internal/presentation/webui/dist/
+          test -f backend/internal/presentation/webui/dist/index.html
+          ! grep -rq '/api/' backend/internal/presentation/webui/dist/assets
+
+      - name: Server bauen (Intel + Apple Silicon)
+        working-directory: backend
+        env:
+          CGO_ENABLED: '0'
+        run: |
+          GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o "$RUNNER_TEMP/server-arm64" ./cmd/trading-intelligence
+          GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o "$RUNNER_TEMP/server-amd64" ./cmd/trading-intelligence
+          lipo -create -output "$RUNNER_TEMP/trading-intelligence" "$RUNNER_TEMP/server-arm64" "$RUNNER_TEMP/server-amd64"
+
       - name: App bauen (Intel + Apple Silicon)
         working-directory: clients/desktop
         run: wails build -skipbindings -s -platform darwin/universal
+
+      # Das Binary kommt nach Contents/Resources; danach muss die ganze App neu (ad-hoc) signiert werden.
+      - name: Server in die App legen und signieren
+        working-directory: clients/desktop/build/bin
+        run: |
+          install -m 0755 "$RUNNER_TEMP/trading-intelligence" "Trading Intelligence.app/Contents/Resources/trading-intelligence"
+          codesign --force --deep --sign - "Trading Intelligence.app"
+          codesign --verify --deep --strict "Trading Intelligence.app"
 
       - name: ZIP erzeugen
         working-directory: clients/desktop/build/bin

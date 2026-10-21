@@ -22,12 +22,17 @@ Alles läuft lokal auf deinem Mac: Deine Daten bleiben bei dir, es gibt keine Cl
 Voraussetzung ist [Homebrew](https://brew.sh).
 
 ```bash
-brew install monkey-trader/tap/trading-intelligence  #  der Dienst: Import, Datenbank, Web-UI
-brew install --cask monkey-trader/tap/trading-intelligence-app  #  optional: die Mac-App (Fenster auf den Dienst)
+brew install --cask monkey-trader/tap/trading-intelligence-app
 ```
 
-Die Mac-App ist nur ein Fenster. Die Daten holt und speichert der Dienst `trading-intelligence`, deshalb brauchst du ihn immer.
-Wer keine App will, nutzt das UI im Browser.
+Das ist alles: Die App `Trading Intelligence` liegt danach im Programme-Ordner und bringt ihren Server (Import, Datenbank, UI) mit.
+Sie startet und beendet ihn selbst. **Der Import läuft nur, solange die App offen ist**; beim nächsten Start holt sie Verpasstes nach.
+
+Wer keine App will oder den Import dauerhaft im Hintergrund braucht, installiert stattdessen den Dienst und nutzt das UI im Browser:
+
+```bash
+brew install monkey-trader/tap/trading-intelligence
+```
 
 ### 1. BingX-API-Key anlegen (nur Lese-Rechte)
 
@@ -42,7 +47,7 @@ Sie handelt nie und kann kein Geld bewegen.
 
 > Die Menünamen bei BingX können sich leicht ändern. Wichtig ist nur: ein neuer Key, nur Lese-Recht.
 
-### 2. Key hinterlegen und starten
+### 2. Key hinterlegen
 
 Die Keys kommen in eine Datei in deinem Home-Ordner, die nur du lesen kannst (nie in ein Repo oder einen Chat):
 
@@ -50,19 +55,19 @@ Die Keys kommen in eine Datei in deinem Home-Ordner, die nur du lesen kannst (ni
 mkdir -p ~/.config/tip && chmod 700 ~/.config/tip
 printf 'BX_KEY=dein-api-key\nBX_SECRET=dein-secret-key\n' > ~/.config/tip/env
 chmod 600 ~/.config/tip/env
-brew services start trading-intelligence
 ```
 
-Ersetze `dein-api-key` und `dein-secret-key` durch deine Werte.
-`brew services` startet den Dienst im Hintergrund und nach jedem Neustart des Macs automatisch wieder.
+Ersetze `dein-api-key` und `dein-secret-key` durch deine Werte. Die App liest die Datei beim Start.
+Nur beim Dienst-Weg: danach `brew services start trading-intelligence` (startet auch nach jedem Neustart des Macs wieder).
 
 ### 3. Öffnen
 
-- **Mac-App:** „Trading Intelligence Platform“ aus dem Programme-Ordner oder per Spotlight starten.
+- **Mac-App:** „Trading Intelligence“ aus dem Programme-Ordner oder per Spotlight starten.
   Sie ist nur ad-hoc signiert; Homebrew hebt die Gatekeeper-Sperre auf. Warnt macOS trotzdem, öffnest du sie einmal per Rechtsklick → **Öffnen**.
-- **Browser:** **http://127.0.0.1:3000**
+- **Browser:** **http://127.0.0.1:3000** (solange die App oder der Dienst läuft)
 
-Beide zeigen dasselbe UI. Die App spricht intern mit dem lokalen Dienst, du musst die Adresse nicht eingeben.
+Beide zeigen dasselbe UI. Die App spricht intern mit dem lokalen Server, du musst die Adresse nicht eingeben.
+Läuft schon der Brew-Dienst, nutzt die App diesen und startet keinen zweiten.
 
 Der erste Import beginnt mit dem ersten Start. Geschlossene Positionen erscheinen, sobald BingX sie liefert.
 
@@ -70,19 +75,19 @@ Der erste Import beginnt mit dem ersten Start. Geschlossene Positionen erscheine
 
 | Was | Befehl |
 |---|---|
-| Aktualisieren | `brew upgrade trading-intelligence trading-intelligence-app && brew services restart trading-intelligence` |
-| Stoppen | `brew services stop trading-intelligence` |
+| Aktualisieren | `brew upgrade --cask trading-intelligence-app` (App vorher beenden) |
+| Stoppen | App beenden (beim Dienst: `brew services stop trading-intelligence`) |
 | Status prüfen | `curl http://127.0.0.1:3000/health` (Antwort: `{"status":"ok"}`) |
-| Log ansehen | `tail -f $(brew --prefix)/var/log/trading-intelligence.log` |
-| Deinstallieren | `brew services stop trading-intelligence && brew uninstall trading-intelligence && brew uninstall --cask trading-intelligence-app` |
+| Log ansehen | `tail -f ~/Library/Application\ Support/tip/server.log` (beim Dienst: `$(brew --prefix)/var/log/trading-intelligence.log`) |
+| Deinstallieren | `brew uninstall --cask trading-intelligence-app` (Dienst, falls installiert: `brew services stop trading-intelligence && brew uninstall trading-intelligence`) |
 
 Deine Daten (SQLite) liegen unter `~/Library/Application Support/tip/journal.db`.
 Das Löschen dieser Datei setzt das Journal zurück (auch deine Notizen und Stop-Loss-Eingaben).
 
 ### Hilfe bei Problemen
 
-- **App zeigt „Server nicht erreichbar“:** Der Dienst läuft nicht. `brew services start trading-intelligence` im Terminal.
-- **Seite lädt nicht:** `brew services list` zeigt, ob `trading-intelligence` läuft. Sonst `brew services restart trading-intelligence`.
+- **App zeigt „Server nicht erreichbar“:** Der eingebaute Server ist nicht gestartet. App neu starten; den Grund nennt `~/Library/Application Support/tip/server.log`.
+- **Seite im Browser lädt nicht:** Die App (oder der Dienst) muss laufen. Beim Dienst zeigt `brew services list`, ob `trading-intelligence` läuft.
 - **Keine Positionen / Fehler 503 „not-configured“:** Die Keys fehlen oder sind falsch. Prüfe `~/.config/tip/env` und starte neu.
 - **Fehler von BingX (502/504):** Meist vorübergehend oder ein Limit bei zu vielen Abfragen, kurz warten.
 - **Port 3000 ist belegt:** Ein anderes Programm nutzt ihn. Mit `lsof -nP -iTCP:3000 -sTCP:LISTEN` findest du es.
