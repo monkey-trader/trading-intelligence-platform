@@ -25,7 +25,7 @@ func main() {
 		OnBeforeClose:            app.beforeClose,
 		EnableDefaultContextMenu: false,
 		Mac: &mac.Options{
-			TitleBar:             mac.TitleBarHiddenInset(),
+			TitleBar:             mac.TitleBarHidden(),
 			WebviewIsTransparent: true,
 			WindowIsTranslucent:  true,
 			About: &mac.AboutInfo{
