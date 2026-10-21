@@ -8,7 +8,7 @@ import { OpenPositionsTable } from '@/presentation/position/components/OpenPosit
 
 // Erwartet: OpenPositionsTable-Props `initialStopLossGateway?: InitialStopLossGateway` und
 // `onInitialStopLossChanged?: () => void` (wird nach erfolgreichem Speichern/Zurücksetzen aufgerufen,
-// z.B. mit refresh() des View-Models). Zelle "BE / Ziel":
+// z.B. mit refresh() des View-Models). Zelle "TPs (je 33 %)":
 //  - unbekanntes Risiko (levels fehlt/leer): Button "Ursprünglichen SL eintragen für <Symbol>"
 //  - Klick öffnet Feld (Label "Ursprünglicher SL", type text, inputmode decimal) mit "Speichern"/"Abbrechen"
 //  - Source MANUAL: Text "manuell" und Button "Zurücksetzen"; Source AUTO: kein Button
@@ -42,8 +42,8 @@ function renderRow(position: OpenPosition, gateway = fakeGateway(), onChanged = 
       onInitialStopLossChanged={onChanged}
     />,
   );
-  const cell = document.querySelector<HTMLElement>('[data-label="BE / Ziel"]');
-  if (!cell) throw new Error('BE / Ziel-Zelle fehlt');
+  const cell = document.querySelector<HTMLElement>('[data-label="TPs (je 33 %)"]');
+  if (!cell) throw new Error('TPs (je 33 %)-Zelle fehlt');
   return { cell, gateway, onChanged };
 }
 

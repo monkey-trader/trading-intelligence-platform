@@ -31,9 +31,9 @@ describe('buildPriceLines R-Linien', () => {
     expect(lines.filter((l) => l.kind === 'target')).toHaveLength(1);
   });
 
-  it('kein TP gesetzt: Titel "3R Ziel"', () => {
+  it('kein TP gesetzt: Titel "3R TP3"', () => {
     const lines = buildPriceLines(withLevels(xagChartWithoutProtection, levels));
-    expect(lines.find((l) => l.kind === 'r3')?.title).toBe('3R Ziel');
+    expect(lines.find((l) => l.kind === 'r3')?.title).toBe('3R TP3');
   });
 
   it('3R genau 0,1 % des Entry vom TP entfernt: eine Linie "TP = 3R" in TP-Farbe (kind target)', () => {

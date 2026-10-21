@@ -7,7 +7,7 @@ import { OpenPositionsTable } from '@/presentation/position/components/OpenPosit
 import { formatDecimal } from '@/presentation/position/format/formatDecimal';
 
 // Erwartet: OpenPosition.levels?: readonly { kind: 'ONE_R'|'TWO_R'|'THREE_R'; rMultiple: number; price: string; percent: string }[]
-// Spalte 'beTarget' (Label "BE / Ziel") am Ende; Zelle: Zeile "BE <2R-Preis>" und Zeile "Ziel <3R-Preis>".
+// Spalte 'beTarget' (Label "TPs (je 33 %)") am Ende; Zelle: Zeile "BE <2R-Preis>" und Zeile "TP1 <3R-Preis>".
 
 const levels = [
   { kind: 'ONE_R', rMultiple: 1, price: '1.0200', percent: '6.25' },
@@ -22,29 +22,31 @@ function renderRow(position: OpenPosition) {
 }
 
 function beTargetCell(row: HTMLElement): HTMLElement {
-  const cell = row.querySelector<HTMLElement>('[data-label="BE / Ziel"]');
-  if (!cell) throw new Error('BE / Ziel-Zelle fehlt');
+  const cell = row.querySelector<HTMLElement>('[data-label="TPs (je 33 %)"]');
+  if (!cell) throw new Error('TPs (je 33 %)-Zelle fehlt');
   return cell;
 }
 
 beforeEach(() => window.localStorage.clear());
 
-describe('OpenPositionsTable Spalte BE / Ziel', () => {
+describe('OpenPositionsTable Spalte TPs (je 33 %)', () => {
   it('beTarget steht in der Standardreihenfolge am Ende', () => {
     expect(DEFAULT_COLUMN_ORDER[DEFAULT_COLUMN_ORDER.length - 1]).toBe('beTarget');
   });
 
-  it('Header trägt das Label "BE / Ziel"', () => {
+  it('Header trägt das Label "TPs (je 33 %)"', () => {
     const { table } = renderRow({ ...suiLongPosition, levels });
-    expect(table.querySelector('th[data-column-key="beTarget"]')).toHaveTextContent(/^BE \/ Ziel$/);
+    expect(table.querySelector('th[data-column-key="beTarget"]')).toHaveTextContent(
+      /^TPs \(je 33 %\)$/,
+    );
   });
 
-  it('zeigt 2R-Preis als BE und 3R-Preis als Ziel, formatiert wie der Einstieg', () => {
+  it('zeigt TP1 (1R), TP2 (2R, zugleich BE) und TP3 (3R), formatiert wie der Einstieg', () => {
     const { row } = renderRow({ ...suiLongPosition, levels });
     const cell = beTargetCell(row);
-    expect(within(cell).getByText(`BE ${formatDecimal('1.0800')}`)).toBeInTheDocument();
-    expect(within(cell).getByText(`Ziel ${formatDecimal('1.1400')}`)).toBeInTheDocument();
-    expect(cell.textContent).not.toContain(formatDecimal('1.0200'));
+    expect(within(cell).getByText(`TP1 ${formatDecimal('1.0200')}`)).toBeInTheDocument();
+    expect(within(cell).getByText(`TP2 ${formatDecimal('1.0800')} · BE`)).toBeInTheDocument();
+    expect(within(cell).getByText(`TP3 ${formatDecimal('1.1400')}`)).toBeInTheDocument();
   });
 
   it.each([
@@ -55,6 +57,6 @@ describe('OpenPositionsTable Spalte BE / Ziel', () => {
     const cell = beTargetCell(row);
     expect(cell).toHaveTextContent('–');
     expect(within(cell).getByLabelText('Risiko unbekannt')).toBeInTheDocument();
-    expect(cell.textContent).not.toMatch(/BE |Ziel /);
+    expect(cell.textContent).not.toMatch(/TP[123] /);
   });
 });

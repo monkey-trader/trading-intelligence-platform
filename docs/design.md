@@ -88,11 +88,11 @@ Standard-Reihenfolge (ColumnKeys): `symbol`, `positionValue`, `margin`, `unreali
 Entfallen: Seite, Menge, Mark, Hebel, Eröffnet, SL/TP einzeln, PnL % (jetzt in Unreal. PnL).
 
 ### Positionstabelle (BingX-Stil, flach)
-Labels: Symbol, Positionswert, Margin, Unreal. PnL, Real. PnL, Einstieg, TP / SL, BE / Ziel.
+Labels: Symbol, Positionswert, Margin, Unreal. PnL, Real. PnL, Einstieg, TP / SL, TPs (je 33 %).
 Optik: keine Zebra-Streifen, nur 1px `border` zwischen Zeilen, Kopfzeile `font-size-x-small`,
 `text-muted`, auf `surface` (nicht raised), Zeilen luftig (`--table-row-padding-block` = `space-4`).
 Neue Tokens: `--font-size-x-small`, `--table-row-padding-block`, `--size-coin-icon` (20px),
-`--size-side-bar` (3px), `--radius-chip`, `--color-chip-surface`, `--color-chip-text` (hell und dunkel, >= 4.5:1), `--color-r-target-surface` (Ziel-Pille der BE / Ziel-Spalte, hell und dunkel).
+`--size-side-bar` (3px), `--radius-chip`, `--color-chip-surface`, `--color-chip-text` (hell und dunkel, >= 4.5:1), `--color-r-target-surface` (TP3-Pille der TP-Spalte, hell und dunkel).
 
 Zellaufbau (Klassen):
 - **Symbol** (`th.cell.symbolCell` + `.barLong`/`.barShort`, Balken links per inset box-shadow):
@@ -103,7 +103,7 @@ Zellaufbau (Klassen):
 - **Unreal. PnL**: `.twoLine` > Betrag (USDT, mit Vorzeichen, Ton `positive`/`negative`) + `.lineSub` "(+x,xx %)" gleicher Ton.
 - **TP / SL**: `.twoLine` > TP-Zeile, darunter `.slLine` (SL, rot); "–" wenn nicht gesetzt. Zeilen mit
   Präfix "TP"/"SL" als Text (`.lineMuted`), damit Farbe nicht einziges Merkmal ist.
-- **BE / Ziel**: `.levelStack` > zwei Tonpillen `.levelPill` (rechtsbündig, `font-size-small`, fett, `radius-chip`): "BE <2R-Preis>" in `.levelBe` (`warning-surface` + `warning`, wie die 2R-Linie im Chart) und "Ziel <3R-Preis>" in `.levelTarget` (`--color-r-target-surface` + `--color-chart-r-target`, wie die 3R-Linie). Preisformat wie Einstieg, tabular-nums. Ohne `levels` "–" mit `aria-label="Risiko unbekannt"`. Pille statt Präfix-Span, weil der Test "BE 1.08" als Text in einem Element erwartet. Kontrast (berechnet): BE hell 5.98:1, dunkel 8.12:1; Ziel hell 5.13:1, dunkel 7.48:1.
+- **TPs (je 33 %)**: `.levelStack` > drei Tonpillen (TP1 = 1R neutral in `.levelFirst`, TP2 = 2R + BE, TP3 = 3R); früher zwei Tonpillen `.levelPill` (rechtsbündig, `font-size-small`, fett, `radius-chip`): "BE <2R-Preis>" in `.levelBe` (`warning-surface` + `warning`, wie die 2R-Linie im Chart) und "TP3 <3R-Preis>" in `.levelTarget` (`--color-r-target-surface` + `--color-chart-r-target`, wie die 3R-Linie). Preisformat wie Einstieg, tabular-nums. Ohne `levels` "–" mit `aria-label="Risiko unbekannt"`. Pille statt Präfix-Span, weil der Test "BE 1.08" als Text in einem Element erwartet. Kontrast (berechnet): BE hell 5.98:1, dunkel 8.12:1; Ziel hell 5.13:1, dunkel 7.48:1.
 - Mobile (<768 px): Karte wie bisher, jede Zelle mit `data-label`; `.twoLine` rechtsbündig neben dem Label.
   Abnahme (Design-Review, gerendert 1440/390 px hell und dunkel): Label (`::before`) hat `margin-inline-end: auto`,
   Wert und Einheit stehen als Gruppe rechtsbündig (`.cell` ohne `gap`, Abstand über `padding-inline-end`).
@@ -118,11 +118,11 @@ Zellaufbau (Klassen):
   selbst kontrastreich. Die 3R-Linie (Teal, Hue ~195°) und die TP-Linie (Grün, Hue ~152°) unterscheiden sich
   zusätzlich durch Linienstil (3R gepunktet, TP gestrichelt) und Titel.
 - Fehlender SL: "SL –" ohne Klasse `.slLine`, also gedämpft; rot (`.slLine`) nur bei gesetztem SL.
-- **R-Spalte entfernt** (2026-10-21): Die Spalte „BE / Ziel“ mit den Preisen und der Chip ersetzen sie; `currentRMultiple` bleibt in der API (Journal, Stufe 3).
+- **R-Spalte entfernt** (2026-10-21): Die Spalte „TPs (je 33 %)“ mit den Preisen und der Chip ersetzen sie; `currentRMultiple` bleibt in der API (Journal, Stufe 3).
 - **Aktionschip "2R · BE ziehen"** (`.chipAction`, `warning-surface` mit Text `warning`) in der Chip-Zeile der
   Symbolzelle, nur bei `breakEvenTriggerReached: true` und `breakEven` nicht `true`; bleibt auch mobil.
 - **R-Linien im Chart**: 1R `text-muted` gepunktet ("1R"), 2R `warning` gestrichelt ("2R · BE"), 3R neues Token
-  `--color-chart-r-target` gepunktet ("3R", ohne TP "3R Ziel"); liegt 3R innerhalb 0,1 % des Entry am TP, eine
+  `--color-chart-r-target` gepunktet ("3R", ohne TP "3R TP3"); liegt 3R innerhalb 0,1 % des Entry am TP, eine
   TP-Linie "TP = 3R". Neues Token `--color-chart-r-target` (hell/dunkel); 2R nutzt `--color-warning`.
   Keine Legendeneinträge für R-Linien, der Titel an der Linie genügt.
 - **BE-Badge und "kein SL"** in der SL-Zeile der TP/SL-Zelle: **Badge "BE"** (`.breakEvenBadge`, nur bei
@@ -155,7 +155,7 @@ Zellaufbau (Klassen):
   vermutlich vor allem Gebühren und Funding, daher oft leicht negativ. 2 Nachkommastellen.
 - Header: Summe des unrealisierten PnL in `font-size-x-large`, mit `+`/`-` und Tönung.
 
-### Ursprungs-SL von Hand (Zelle "BE / Ziel")
+### Ursprungs-SL von Hand (Zelle "TPs (je 33 %)")
 - Bei unbekanntem Risiko (keine `levels`) erscheint der Button "SL eintragen" (accessible name
   "Ursprünglichen SL eintragen für <Symbol>"). Klick öffnet inline ein Textfeld (`inputmode="decimal"`,
   Label "Ursprünglicher SL") mit Speichern/Abbrechen; Fokus springt ins Feld, Escape bricht ab.
@@ -220,3 +220,6 @@ Radien 6/8 px, Borders statt Schatten, Seitenbreite 1360 px. Tabellenkopf auf
 - Kontrast: alle Text-Paare rechnerisch >= 4.5:1, hell (min. 4.82) und dunkel (min. 5.6).
   Griff-Glyphe (nur Icon, Nicht-Text, Ziel 3:1): `text-muted` auf `surface-raised` hell 5.76:1, dunkel 6.20:1.
 - Die früheren Design-Lab-Varianten (Terminal, Clean, Exchange) wurden verworfen.
+
+### Erklärung der TP-Spalte (i)
+- Kleiner (i)-Knopf (`.infoButton`, Kreis, „i“ per `::before`) im Kopf der Spalte „TPs (je 33 %)“; auf Mobile (kein Kopf) in der Toolbar (`.infoButtonToolbar`). Er öffnet den modalen `InfoDialog` (natives `<dialog>`, Esc/Hintergrund/„Schließen“) mit der Erklärung `BreakEvenTargetInfo`: 1R = ursprüngliches Risiko, TP1/TP2/TP3 bei 1R/2R/3R mit je 33 %, TP2 = BE-Auslöser.
