@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"html"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -46,6 +48,21 @@ const serverDownPage = `<!doctype html><meta charset="utf-8"><title>trading-inte
 <pre>~/Library/Application Support/tip/server.log</pre>
 <p><small>%s</small></p></main>`
 
+const portBusyPage = `<!doctype html><meta charset="utf-8"><title>Port belegt</title>
+<body style="font-family:-apple-system,sans-serif;display:grid;place-items:center;height:100vh;margin:0;background:#282828;color:#ebdbb2">
+<main style="text-align:center"><h1>Port belegt</h1>
+<p>Unter %s läuft ein anderer Server ohne Oberfläche (z.B. ein Entwicklungs-Server).</p>
+<p>Beende ihn, dann die App neu starten:</p>
+<pre>lsof -nP -iTCP:%s -sTCP:LISTEN</pre></main>`
+
+// isForeignAPIResponse: Die Startseite (Accept: text/html) bekommt vom eigenen Server HTML.
+// Antwortet stattdessen eine reine API (problem+json), belegt ein fremder Server den Port.
+func isForeignAPIResponse(response *http.Response) bool {
+	return response.Request.URL.Path == "/" &&
+		strings.Contains(response.Request.Header.Get("Accept"), "text/html") &&
+		strings.HasPrefix(response.Header.Get("Content-Type"), "application/problem+json")
+}
+
 // newServerProxy reicht alle Anfragen des Fensters an den trading-intelligence weiter.
 // So bleibt die App ein reiner Client der HTTP-API (API-first).
 func newServerProxy(target *url.URL) http.Handler {
@@ -54,6 +71,19 @@ func newServerProxy(target *url.URL) http.Handler {
 			request.SetURL(target)
 			request.Out.Host = target.Host // der Host-Guard des Servers lässt nur Loopback-Hosts zu
 		},
+	}
+	proxy.ModifyResponse = func(response *http.Response) error {
+		if !isForeignAPIResponse(response) {
+			return nil
+		}
+		page := fmt.Sprintf(portBusyPage, html.EscapeString(target.Host), html.EscapeString(target.Port()))
+		_ = response.Body.Close()
+		response.Body = io.NopCloser(strings.NewReader(page))
+		response.StatusCode, response.Status = http.StatusBadGateway, "502 Bad Gateway"
+		response.ContentLength = int64(len(page))
+		response.Header.Set("Content-Type", "text/html; charset=utf-8")
+		response.Header.Set("Content-Length", strconv.Itoa(len(page)))
+		return nil
 	}
 	proxy.ErrorHandler = func(writer http.ResponseWriter, request *http.Request, _ error) {
 		if !strings.Contains(request.Header.Get("Accept"), "text/html") {

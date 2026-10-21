@@ -95,3 +95,42 @@ func TestServerURL_LehntFremdeSchemesUndHostsAb(t *testing.T) {
 		}
 	}
 }
+
+func TestNewServerProxy_ZeigtHinweisWennFremderServerKeinUiLiefert(t *testing.T) {
+	foreign := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		writer.Header().Set("Content-Type", "application/problem+json; charset=utf-8")
+		writer.WriteHeader(http.StatusNotFound)
+		_, _ = io.WriteString(writer, `{"type":"not-found"}`)
+	}))
+	defer foreign.Close()
+	target, _ := url.Parse(foreign.URL)
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	request.Header.Set("Accept", "text/html,application/xhtml+xml")
+	newServerProxy(target).ServeHTTP(recorder, request)
+
+	body := recorder.Body.String()
+	if recorder.Code != http.StatusBadGateway || !strings.Contains(body, "Port belegt") || strings.Contains(body, "not-found") {
+		t.Fatalf("erwartet 502 mit Hinweis, bekam %d %q", recorder.Code, body)
+	}
+}
+
+func TestNewServerProxy_LaesstApiAntwortenMitProblemJsonUnveraendert(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		writer.Header().Set("Content-Type", "application/problem+json; charset=utf-8")
+		writer.WriteHeader(http.StatusNotFound)
+		_, _ = io.WriteString(writer, `{"type":"not-found"}`)
+	}))
+	defer server.Close()
+	target, _ := url.Parse(server.URL)
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/positions/xyz", nil)
+	request.Header.Set("Accept", "application/json")
+	newServerProxy(target).ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusNotFound || !strings.Contains(recorder.Body.String(), "not-found") {
+		t.Fatalf("API-Antwort verändert: %d %q", recorder.Code, recorder.Body.String())
+	}
+}
