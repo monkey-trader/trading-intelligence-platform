@@ -92,7 +92,8 @@ func newRouter(routes map[string]http.HandlerFunc, chartRoute, stopRoute http.Ha
 }
 
 // apiPathPrefixes sind Pfade, die nie vom Web-UI bedient werden (immer 404 not-found).
-var apiPathPrefixes = []string{"/health", "/positions", "/assets", "/api"}
+// Nicht "/assets": Vite legt die gehashten Bundles unter /assets/ ab, nur /assets/icons gehört der API.
+var apiPathPrefixes = []string{"/health", "/positions", "/assets/icons", "/api"}
 
 // wantsWebUI: Das UI bedient nur GET/HEAD, nie API-Pfade, und nur "/", Dateien (mit Endung) und
 // Browser-Navigationen (Accept: text/html). Alles andere bleibt 404 not-found im API-Vertrag.

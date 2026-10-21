@@ -1,9 +1,14 @@
 package httpapi
 
 import (
+	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"testing"
+	"testing/fstest"
+
+	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/presentation/webui"
 )
 
 func TestWebUIIntegration_ApiPraefixeBleibenNotFound(t *testing.T) {
@@ -44,4 +49,33 @@ func TestWebUIIntegration_BrowserNavigationBekommtDasUI(t *testing.T) {
 	if recorder := serve(handler, request); recorder.Code != http.StatusOK {
 		t.Fatalf("Status %d, erwartet 200 (SPA-Fallback)", recorder.Code)
 	}
+}
+
+// Vite legt die gehashten Bundles unter /assets/ ab; nur /assets/icons gehört der API.
+func TestWebUIIntegration_ViteAssetsKommenVomUI(t *testing.T) {
+	settings := testSettings
+	settings.WebUI = webui.NewHandler(fstest.MapFS{
+		"index.html":           {Data: []byte("<html>UI</html>")},
+		"assets/index-abc.js":  {Data: []byte("console.log('bundle')")},
+		"assets/index-abc.css": {Data: []byte("body{}")},
+	})
+	handler := NewHandler(settings, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	for target, want := range map[string]string{
+		"/assets/index-abc.js":  "bundle",
+		"/assets/index-abc.css": "body",
+	} {
+		t.Run(target, func(t *testing.T) {
+			recorder := serve(handler, newTestRequest(http.MethodGet, target, allowedTestHost))
+			if recorder.Code != http.StatusOK || !strings.Contains(recorder.Body.String(), want) {
+				t.Fatalf("Status %d, Body %q", recorder.Code, recorder.Body.String())
+			}
+		})
+	}
+	t.Run("/assets/icons bleibt API", func(t *testing.T) {
+		recorder := serve(handler, newTestRequest(http.MethodGet, "/assets/icons", allowedTestHost))
+		if strings.Contains(recorder.Body.String(), "UI") || strings.Contains(recorder.Header().Get("Content-Type"), "text/html") {
+			t.Fatalf("API-Route lieferte Web-UI: %d %q", recorder.Code, recorder.Body.String())
+		}
+	})
 }
