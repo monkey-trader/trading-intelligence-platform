@@ -10,6 +10,12 @@ Persönliches Trading-Journal mit automatischem Import von BingX (USDT-M Futures
 
 Details und Regeln für die Entwicklung stehen in [`CLAUDE.md`](CLAUDE.md).
 
+![Offene Positionen im Web-UI (Fake-Daten)](docs/images/app.png)
+
+*Screenshot mit erfundenen Daten. Neu erzeugen: `node clients/web/scripts/mock-api.mjs`, dann
+`BACKEND_URL=http://127.0.0.1:3299 npx vite --port 5174` (beides in `clients/web`) und
+`node scripts/screenshot.mjs`.*
+
 ## Lokal starten
 
 ### 1. Einmalig: installieren und Keys hinterlegen
