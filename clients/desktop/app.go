@@ -15,6 +15,7 @@ type App struct {
 	ctx          context.Context
 	backendMutex sync.Mutex // schützt backend: startup läuft nebenläufig zu shutdown
 	backend      *backendProcess
+	closing      bool // gesetzt beim Beenden: danach startet ensureBackend nichts mehr
 }
 
 func (app *App) startup(ctx context.Context) {
@@ -47,7 +48,7 @@ func (app *App) reload() {
 // ensureBackend startet den mitgelieferten Server, falls unter der Adresse noch keiner läuft.
 // Eine eigene TIP_SERVER_URL (z.B. Vite) wird nie angefasst; dann ist der Nutzer für den Server zuständig.
 func (app *App) ensureBackend(ctx context.Context, target *url.URL) {
-	if os.Getenv("TIP_SERVER_URL") != "" || serverRunning(target) {
+	if os.Getenv("TIP_SERVER_URL") != "" || target.Port() == "" || serverRunning(target) {
 		return
 	}
 	executable, err := os.Executable()
@@ -64,6 +65,11 @@ func (app *App) ensureBackend(ctx context.Context, target *url.URL) {
 		return // das Fenster zeigt die Hinweisseite
 	}
 	app.backendMutex.Lock()
+	if app.closing { // App wurde beendet, während der Server startete: keinen Waisen zurücklassen
+		app.backendMutex.Unlock()
+		process.stop()
+		return
+	}
 	app.backend = process
 	app.backendMutex.Unlock()
 	if waitUntilRunning(ctx, target) {
@@ -75,6 +81,7 @@ func (app *App) ensureBackend(ctx context.Context, target *url.URL) {
 func (app *App) shutdown(_ context.Context) {
 	app.backendMutex.Lock()
 	defer app.backendMutex.Unlock()
+	app.closing = true
 	app.backend.stop()
 }
 

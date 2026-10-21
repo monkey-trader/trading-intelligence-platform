@@ -68,6 +68,7 @@ func startBackend(binary string, environment []string, logPath string) (*backend
 	command.Env = append([]string{"HOME=" + os.Getenv("HOME")}, environment...)
 	if logPath != "" {
 		if logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600); err == nil {
+			_ = logFile.Chmod(0o600) // OpenFile setzt die Rechte nur beim Anlegen
 			command.Stdout, command.Stderr = logFile, logFile
 			defer func() { _ = logFile.Close() }() // der Kindprozess hält eine eigene Kopie des Handles
 		}
