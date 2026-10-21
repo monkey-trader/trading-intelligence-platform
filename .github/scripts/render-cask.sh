@@ -17,7 +17,7 @@ cask "trading-intelligence-app" do
   homepage "https://github.com/monkey-trader/trading-intelligence-platform"
 
   depends_on formula: "monkey-trader/tap/trading-intelligence"
-  depends_on macos: ">= :big_sur"
+  depends_on macos: :big_sur
 
   app "Trading Intelligence.app"
 
