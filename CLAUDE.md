@@ -35,6 +35,8 @@ docs/database/schema.md SQLite-Schema und State-Keys
 contracts/         Vertragstest gegen eine laufende API (`CONTRACT_BASE_URL=… npm test`),
                         backend-unabhängig (läuft in der CI gegen das Go-Backend)
 fixtures/bingx/         anonymisierte BingX-Antworten, sprachneutral (Go-Tests: Pfad relativ zum Repo-Root)
+clients/desktop/ Wails-App (macOS, Go-Modul): Fenster auf die lokale HTTP-API; bauen mit
+                `wails build -skipbindings -s`, Tests `go test ./...` in diesem Ordner
 clients/web/    Web-Client (Vite + React), spricht nur über die HTTP-API
                 API-Typen per `npm run generate:api` aus docs/openapi.yaml (openapi-typescript 7.13.0
                 verlangt TS ^5, läuft mit TS 6 über `overrides` in package.json, getestet)

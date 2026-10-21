@@ -30,3 +30,42 @@ h2,
 p {
   margin: 0;
 }
+
+/* Wails-Desktop-App (macOS), nur mit data-desktop="wails" am <html> (siehe markWailsApp). Im Browser greift nichts davon. */
+:root[data-desktop='wails'] {
+  overscroll-behavior: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-control-border) transparent;
+}
+
+:root[data-desktop='wails'] * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Werte in Tabellen (Preise, Positions-ID) bleiben kopierbar. */
+:root[data-desktop='wails'] :is(td, input, textarea) {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+:root[data-desktop='wails'] body {
+  cursor: default;
+}
+
+:root[data-desktop='wails'] a[href] {
+  cursor: pointer;
+}
+
+:root[data-desktop='wails'] :is(button, select, summary) {
+  cursor: default;
+}
+
+:root[data-desktop='wails'] :is(input, textarea) {
+  cursor: text;
+}
+
+/* Interaktive Elemente in einer Drag-Zone ziehen das Fenster nicht. */
+:root[data-desktop='wails'] :is(a, button, input, select, textarea, label) {
+  --wails-draggable: no-drag;
+}
