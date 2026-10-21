@@ -461,23 +461,37 @@
 .slButton {
   min-height: var(--size-touch-target);
   min-width: var(--size-touch-target);
-  padding: 0 var(--space-3);
-  border: 1px solid var(--color-control-border);
+  padding: 0 var(--space-1);
+  border: 1px solid transparent;
   border-radius: var(--radius-small);
-  background: var(--color-surface-raised);
-  color: var(--color-text);
+  background: transparent;
+  color: var(--color-text-muted);
   font-size: var(--font-size-small);
   cursor: pointer;
+}
+.slButton:hover:not(:disabled) {
+  color: var(--color-text);
+}
+/* Mit Maus wie der Chart-Button: Textbutton ohne feste Höhe; Touch-Geräte behalten das 44-px-Ziel. */
+@media (pointer: fine) {
+  .slButton {
+    min-height: 0;
+    min-width: 0;
+  }
+  .slInput {
+    min-height: var(--size-control-compact);
+    font-size: var(--font-size-small);
+  }
 }
 .slButton:focus-visible,
 .slInput:focus-visible {
   outline: var(--border-width-emphasis) solid var(--color-accent);
   outline-offset: var(--border-width-emphasis);
 }
-.slButtonPrimary {
+.slButtonPrimary,
+.slButtonPrimary:hover:not(:disabled) {
   background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: var(--color-on-accent);
+  color: var(--color-surface);
 }
 .slError {
   margin: 0;
@@ -491,10 +505,12 @@
   color: var(--color-chip-text);
   font-size: var(--font-size-x-small);
 }
+/* Badge und Zurücksetzen untereinander, damit die BE/Ziel-Spalte nicht breiter wird. */
 .manualRow {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
 }
 
 /* Platzhalter bzw. Level-Pillen und das Eintragen-Formular untereinander, rechtsbündig wie die Preise. */
