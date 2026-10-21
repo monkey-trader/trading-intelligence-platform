@@ -34,7 +34,7 @@ Du bist der Designer dieses Projekts. Quelle der Wahrheit ist `docs/design.md`. 
 Code allein reicht nicht. Mach Screenshots und schau sie dir an (Read auf die PNG-Datei).
 - Playwright im Web-Client nutzen (falls nicht vorhanden: `npm i -D @playwright/test` in `clients/web`
   und `npx playwright install chromium`, vorher den Nutzer fragen).
-- Backend (`cd backend && go run ./cmd/tip-server`) und `npm run dev` starten, dann Screenshots von jeder geänderten Ansicht:
+- Backend (`cd backend && go run ./cmd/trading-intelligence`) und `npm run dev` starten, dann Screenshots von jeder geänderten Ansicht:
   - Breite 1440 px und 390 px
   - hell und dunkel (`colorScheme: 'light' | 'dark'`)
   - Zustände: mit Daten, leer, Fehler, veraltet

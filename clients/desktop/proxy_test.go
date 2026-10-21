@@ -37,7 +37,7 @@ func TestNewServerProxy_zeigtHinweisWennServerNichtLaeuft(t *testing.T) {
 	if recorder.Code != http.StatusBadGateway {
 		t.Fatalf("Status = %d, erwartet 502", recorder.Code)
 	}
-	if !strings.Contains(recorder.Body.String(), "brew services start tip-server") {
+	if !strings.Contains(recorder.Body.String(), "brew services start trading-intelligence") {
 		t.Fatalf("Hinweis fehlt: %q", recorder.Body.String())
 	}
 }

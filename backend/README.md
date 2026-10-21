@@ -1,4 +1,4 @@
-# backend – Go-Backend (`tip-server`)
+# backend – Go-Backend (`trading-intelligence`)
 
 Das Backend der Trading Intelligence Platform (Go, nur Standardbibliothek): BingX-Import, SQLite,
 Fachlogik und HTTP-API gemäß [`docs/openapi.yaml`](../docs/openapi.yaml). Das frühere TypeScript-Backend
@@ -33,13 +33,13 @@ Externe Go-Abhängigkeiten gibt es nicht, nur die Standardbibliothek. Deshalb is
 
 Ohne Build-Schritt, Go kompiliert das Programm im Hintergrund:
 ```bash
-go run ./cmd/tip-server
+go run ./cmd/trading-intelligence
 ```
 Die API läuft danach auf http://127.0.0.1:3000.
 
 Belegt schon ein anderer Prozess Port 3000, wählst du einen anderen Port:
 ```bash
-PORT=3001 go run ./cmd/tip-server
+PORT=3001 go run ./cmd/trading-intelligence
 ```
 
 Beenden mit **Ctrl+C**. Der Server schließt laufende Anfragen noch ab (höchstens 10 s).
@@ -48,21 +48,21 @@ Ein zweites Ctrl+C beendet ihn sofort.
 ## Bauen und Binary starten
 
 ```bash
-go build -o tip-server ./cmd/tip-server    # erzeugt ./tip-server (steht in .gitignore)
-./tip-server                               # Start auf 127.0.0.1:3000
-PORT=3001 ./tip-server                     # anderer Port
+go build -o trading-intelligence ./cmd/trading-intelligence    # erzeugt ./trading-intelligence (steht in .gitignore)
+./trading-intelligence                               # Start auf 127.0.0.1:3000
+PORT=3001 ./trading-intelligence                     # anderer Port
 ```
 
 Ein optimiertes, kleineres Binary für Apple Silicon und für Intel:
 ```bash
-GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o tip-server-arm64 ./cmd/tip-server
-GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o tip-server-amd64 ./cmd/tip-server
+GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o trading-intelligence-arm64 ./cmd/trading-intelligence
+GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o trading-intelligence-amd64 ./cmd/trading-intelligence
 ```
 
 Ein selbst gebautes, unsigniertes Binary läuft im Terminal ohne Rückfrage. Nur ein heruntergeladenes Binary
 blockiert macOS Gatekeeper. Das lässt sich einmalig freigeben:
 ```bash
-xattr -d com.apple.quarantine ./tip-server
+xattr -d com.apple.quarantine ./trading-intelligence
 ```
 
 ## Konfiguration (Umgebungsvariablen)
@@ -75,12 +75,12 @@ xattr -d com.apple.quarantine ./tip-server
 | `ALLOWED_HOSTS` | – | Bei `ALLOW_REMOTE=true` Pflicht: kommagetrennte Host-Header mit Port, z.B. `meinrechner.local:3000` |
 | `BX_KEY`, `BX_SECRET` | – | BingX-Zugang, Lese-Key von BingX. Fehlen sie, kommt beim Start nur ein Hinweis und die Positions- und Chart-Routen liefern 503 `not-configured`. |
 
-`tip-server` liest **keine `.env`-Datei**. Variablen setzt du direkt vor den Befehl
-(`PORT=3001 ./tip-server`) oder exportierst sie in der Shell (`BX_KEY`, `BX_SECRET`).
+`trading-intelligence` liest **keine `.env`-Datei**. Variablen setzt du direkt vor den Befehl
+(`PORT=3001 ./trading-intelligence`) oder exportierst sie in der Shell (`BX_KEY`, `BX_SECRET`).
 
 Das Log geht als JSON auf stderr. Zum Mitlesen mit `jq`:
 ```bash
-go run ./cmd/tip-server 2>&1 | jq
+go run ./cmd/trading-intelligence 2>&1 | jq
 ```
 
 ## Ausprobieren
@@ -113,7 +113,7 @@ Der Vertragstest in `../contracts/` prüft die laufende API gegen `docs/openapi.
 Starte zuerst den Server in Terminal 1, dann in Terminal 2:
 ```bash
 # Terminal 1
-PORT=3001 go run ./cmd/tip-server
+PORT=3001 go run ./cmd/trading-intelligence
 
 # Terminal 2 (einmalig vorher: cd ../contracts && npm ci)
 cd ../contracts && CONTRACT_BASE_URL=http://127.0.0.1:3001 npm test
@@ -129,7 +129,7 @@ kill <PID>
 ## Aufbau
 
 ```
-cmd/tip-server/main.go          Composition Root: Konfiguration, Server, Graceful Shutdown
+cmd/trading-intelligence/main.go          Composition Root: Konfiguration, Server, Graceful Shutdown
 internal/domain/                Domain-Kern (ab Phase 2)
 internal/application/           Use Cases (ab Phase 2)
 internal/infrastructure/config/ Umgebungsvariablen lesen und prüfen

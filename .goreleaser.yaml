@@ -1,13 +1,13 @@
-# Release des Go-Backends (tip-server) als Homebrew-Formula.
+# Release des Go-Backends (trading-intelligence) als Homebrew-Formula.
 # Ausgelöst von .github/workflows/release.yml, nachdem semantic-release Tag + Release angelegt hat.
 version: 2
-project_name: tip-server
+project_name: trading-intelligence
 
 builds:
-  - id: tip-server
+  - id: trading-intelligence
     dir: backend
-    main: ./cmd/tip-server
-    binary: tip-server
+    main: ./cmd/trading-intelligence
+    binary: trading-intelligence
     env:
       - CGO_ENABLED=0 # SQLite via modernc: reines Go, Cross-Compile ohne macOS-Runner
     goos: [darwin]
@@ -17,7 +17,7 @@ builds:
 
 archives:
   - formats: [tar.gz]
-    name_template: "tip-server_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: "trading-intelligence_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 checksum:
   name_template: checksums.txt
@@ -30,7 +30,7 @@ changelog:
   disable: true
 
 brews:
-  - name: tip-server
+  - name: trading-intelligence
     repository:
       owner: monkey-trader
       name: homebrew-tap
@@ -44,23 +44,23 @@ brews:
     # Der Dienst liest die BingX-Keys aus ~/.config/tip/env (BX_KEY=..., BX_SECRET=...),
     # damit keine Secrets in der plist stehen.
     extra_install: |
-      (bin/"tip-server-service").write <<~SH
+      (bin/"trading-intelligence-service").write <<~SH
         #!/bin/sh
         ENV_FILE="${HOME}/.config/tip/env"
         if [ -f "$ENV_FILE" ]; then set -a; . "$ENV_FILE"; set +a; fi
-        exec "#{opt_bin}/tip-server"
+        exec "#{opt_bin}/trading-intelligence"
       SH
-      chmod 0755, bin/"tip-server-service"
+      chmod 0755, bin/"trading-intelligence-service"
     service: |
-      run [opt_bin/"tip-server-service"]
+      run [opt_bin/"trading-intelligence-service"]
       keep_alive true
-      log_path var/"log/tip-server.log"
-      error_log_path var/"log/tip-server.log"
+      log_path var/"log/trading-intelligence.log"
+      error_log_path var/"log/trading-intelligence.log"
     caveats: |
       Keys (nur Lese-Rechte) hinterlegen, dann starten:
         mkdir -p ~/.config/tip && chmod 700 ~/.config/tip
         printf 'BX_KEY=...\nBX_SECRET=...\n' > ~/.config/tip/env && chmod 600 ~/.config/tip/env
-        brew services start tip-server
+        brew services start trading-intelligence
       API: http://127.0.0.1:3000/health
     test: |
-      assert_predicate bin/"tip-server", :exist?
+      assert_predicate bin/"trading-intelligence", :exist?
