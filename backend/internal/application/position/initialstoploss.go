@@ -17,42 +17,39 @@ type SetInitialStopLossResult struct {
 
 // SetInitialStopLossUseCase setzt den ursprünglichen SL einer offenen Position manuell.
 type SetInitialStopLossUseCase struct {
-	source    interfaces.OpenPositionSource
+	entries   interfaces.PositionEntryLookup
 	overrides interfaces.PositionInitialStopLossRepository
 	resolver  *RiskResolver
 	now       func() int64
 }
 
 // NewSetInitialStopLossUseCase baut den Use Case.
-func NewSetInitialStopLossUseCase(source interfaces.OpenPositionSource, overrides interfaces.PositionInitialStopLossRepository, resolver *RiskResolver, now func() int64) *SetInitialStopLossUseCase {
-	return &SetInitialStopLossUseCase{source: source, overrides: overrides, resolver: resolver, now: now}
+func NewSetInitialStopLossUseCase(entries interfaces.PositionEntryLookup, overrides interfaces.PositionInitialStopLossRepository, resolver *RiskResolver, now func() int64) *SetInitialStopLossUseCase {
+	return &SetInitialStopLossUseCase{entries: entries, overrides: overrides, resolver: resolver, now: now}
 }
 
-// Execute validiert und speichert den Override; die Position muss offen sein.
+// Execute validiert und speichert den Override; Seite und Einstieg stammen aus der lokalen Datenbank.
 func (useCase *SetInitialStopLossUseCase) Execute(ctx context.Context, positionID, rawStopLoss string) (SetInitialStopLossResult, error) {
-	snapshot, err := useCase.source.FetchOpenPositions(ctx)
+	entry, found, err := useCase.entries.FindEntry(ctx, positionID)
 	if err != nil {
 		return SetInitialStopLossResult{}, err
 	}
-	for _, openPosition := range snapshot.Positions {
-		if openPosition.PositionID != positionID {
-			continue
-		}
-		override, err := domainposition.NewInitialStopLossOverride(positionID, openPosition.Side, openPosition.AvgOpenPrice, rawStopLoss, useCase.now())
-		if err != nil {
-			return SetInitialStopLossResult{}, err
-		}
-		riskDistance, err := domainposition.RiskDistance(openPosition.Side, override.EntryPrice, override.InitialStopLoss)
-		if err != nil {
-			return SetInitialStopLossResult{}, err
-		}
-		if err := useCase.overrides.Set(ctx, override); err != nil {
-			return SetInitialStopLossResult{}, err
-		}
-		useCase.resolver.ForgetPosition(positionID)
-		return SetInitialStopLossResult{Override: override, RiskDistance: riskDistance}, nil
+	if !found {
+		return SetInitialStopLossResult{}, &chart.PositionNotFoundError{PositionID: positionID}
 	}
-	return SetInitialStopLossResult{}, &chart.PositionNotFoundError{PositionID: positionID}
+	override, err := domainposition.NewInitialStopLossOverride(positionID, entry.Side, entry.AvgOpenPrice, rawStopLoss, useCase.now())
+	if err != nil {
+		return SetInitialStopLossResult{}, err
+	}
+	riskDistance, err := domainposition.RiskDistance(entry.Side, override.EntryPrice, override.InitialStopLoss)
+	if err != nil {
+		return SetInitialStopLossResult{}, err
+	}
+	if err := useCase.overrides.Set(ctx, override); err != nil {
+		return SetInitialStopLossResult{}, err
+	}
+	useCase.resolver.ForgetPosition(positionID)
+	return SetInitialStopLossResult{Override: override, RiskDistance: riskDistance}, nil
 }
 
 // ClearInitialStopLossUseCase entfernt den manuellen SL; danach gilt wieder die automatische Ermittlung.

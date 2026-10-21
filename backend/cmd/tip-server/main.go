@@ -97,7 +97,7 @@ func run(logger *slog.Logger) error {
 	if riskResolver != nil {
 		overrides := sqlite.NewPositionInitialStopLossRepository(database)
 		riskResolver.WithOverrides(overrides)
-		setStopLoss := appposition.NewSetInitialStopLossUseCase(openPositionSource, overrides, riskResolver, time.Now().UnixMilli)
+		setStopLoss := appposition.NewSetInitialStopLossUseCase(sqlite.NewPositionEntryLookup(database), overrides, riskResolver, time.Now().UnixMilli)
 		clearStopLoss := appposition.NewClearInitialStopLossUseCase(overrides, riskResolver)
 		settings.SetInitialStopLoss, settings.ClearInitialStopLoss = setStopLoss.Execute, clearStopLoss.Execute
 	} else {

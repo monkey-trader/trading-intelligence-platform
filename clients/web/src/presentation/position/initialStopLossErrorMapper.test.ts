@@ -11,7 +11,7 @@ describe('mapInitialStopLossProblem', () => {
   });
 
   it.each([
-    ['not-found', /nicht (mehr )?offen/i],
+    ['not-found', /unbekannt.*Backend neu starten/i],
     ['bad-request', /ungültig/i],
     ['backend-unreachable', /nicht erreichbar/i],
     ['forbidden-origin', /abgelehnt/i],
