@@ -1,0 +1,18 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "balance": {
+      "userId": "1000000000000000001",
+      "asset": "USDT",
+      "balance": "1234.5678",
+      "equity": "1259.5678",
+      "unrealizedProfit": "25.0000",
+      "realisedProfit": "-3.2100",
+      "availableMargin": "1150.0678",
+      "usedMargin": "109.5000",
+      "freezedMargin": "0.0000",
+      "shortUid": "10000001"
+    }
+  }
+}

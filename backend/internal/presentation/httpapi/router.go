@@ -8,6 +8,7 @@ import (
 	"path"
 	"strings"
 
+	appaccount "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/account"
 	appchart "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/chart"
 	appposition "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/position"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/asset"
@@ -23,6 +24,8 @@ type Settings struct {
 	GetPositionChart func(ctx context.Context, query appchart.Query) (appchart.PositionChart, error)
 	// GetAssetIcons liefert Coin-Icons (optional; nil = Route nicht registriert).
 	GetAssetIcons func(ctx context.Context, list asset.SymbolList) ([]asset.CoinIcon, error)
+	// GetAccountSummary liefert die Kontoübersicht (optional; nil = Route nicht registriert).
+	GetAccountSummary func(ctx context.Context) (appaccount.AccountSummary, error)
 	// WebUI bedient alle Pfade, die die API nicht kennt (optional; nil = 404 not-found).
 	WebUI http.Handler
 	// SetInitialStopLoss und ClearInitialStopLoss bedienen PUT/DELETE /positions/{positionId}/initial-stop-loss.
@@ -51,6 +54,9 @@ func newHandlerWithRoutes(settings Settings, logger *slog.Logger, extraRoutes ma
 	}
 	if settings.GetAssetIcons != nil {
 		routes["GET /assets/icons"] = newAssetIconsHandler(settings.GetAssetIcons, logger)
+	}
+	if settings.GetAccountSummary != nil {
+		routes["GET /account/summary"] = newAccountSummaryHandler(settings.GetAccountSummary, logger)
 	}
 	maps.Copy(routes, extraRoutes)
 	var chartRoute http.HandlerFunc
@@ -93,7 +99,7 @@ func newRouter(routes map[string]http.HandlerFunc, chartRoute, stopRoute http.Ha
 
 // apiPathPrefixes sind Pfade, die nie vom Web-UI bedient werden (immer 404 not-found).
 // Nicht "/assets": Vite legt die gehashten Bundles unter /assets/ ab, nur /assets/icons gehört der API.
-var apiPathPrefixes = []string{"/health", "/positions", "/assets/icons", "/api"}
+var apiPathPrefixes = []string{"/health", "/positions", "/account", "/assets/icons", "/api"}
 
 // wantsWebUI: Das UI bedient nur GET/HEAD, nie API-Pfade, und nur "/", Dateien (mit Endung) und
 // Browser-Navigationen (Accept: text/html). Alles andere bleibt 404 not-found im API-Vertrag.

@@ -124,3 +124,19 @@ func format(value scaledDecimal) string {
 	}
 	return sign + integerPart + "." + fractionPart
 }
+
+// Multiply liefert das exakte, normalisierte Produkt zweier Dezimal-Strings.
+func Multiply(left, right string) (string, error) {
+	parsedLeft, err := parse(left)
+	if err != nil {
+		return "", err
+	}
+	parsedRight, err := parse(right)
+	if err != nil {
+		return "", err
+	}
+	return format(scaledDecimal{
+		units: new(big.Int).Mul(parsedLeft.units, parsedRight.units),
+		scale: parsedLeft.scale + parsedRight.scale,
+	}), nil
+}

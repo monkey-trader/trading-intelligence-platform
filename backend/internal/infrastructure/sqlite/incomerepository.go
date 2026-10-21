@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/position"
@@ -89,4 +90,35 @@ func (repo *IncomeRepository) ListIncomeSymbols(ctx context.Context) ([]string, 
 		return nil, fmt.Errorf("income-symbole lesen: %w", err)
 	}
 	return symbols, nil
+}
+
+// ListIncomeByTypesInRange liefert Einträge der Typen mit time in [fromInclusiveMs, toExclusiveMs).
+func (repo *IncomeRepository) ListIncomeByTypesInRange(ctx context.Context, types []string, fromInclusiveMs, toExclusiveMs int64) ([]position.Income, error) {
+	entries := []position.Income{}
+	if len(types) == 0 {
+		return entries, nil
+	}
+	arguments := make([]any, 0, len(types)+2)
+	for _, incomeType := range types {
+		arguments = append(arguments, incomeType)
+	}
+	arguments = append(arguments, fromInclusiveMs, toExclusiveMs)
+	query := `SELECT transaction_id, symbol, income_type, amount, time, asset, trade_id, raw FROM income WHERE income_type IN (` +
+		strings.TrimSuffix(strings.Repeat("?,", len(types)), ",") + `) AND time >= ? AND time < ? ORDER BY time, transaction_id`
+	rows, err := repo.db.QueryContext(ctx, query, arguments...)
+	if err != nil {
+		return nil, fmt.Errorf("income nach typ lesen: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		var entry position.Income
+		if err := rows.Scan(&entry.TranID, &entry.Symbol, &entry.IncomeType, &entry.Amount, &entry.Time, &entry.Asset, &entry.TradeID, &entry.Raw); err != nil {
+			return nil, fmt.Errorf("income-eintrag lesen: %w", err)
+		}
+		entries = append(entries, entry)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("income nach typ lesen: %w", err)
+	}
+	return entries, nil
 }

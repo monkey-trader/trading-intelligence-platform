@@ -222,3 +222,73 @@ func TestIncomeLookup_NurRealizedPnlGiltAlsBeleg(t *testing.T) {
 		t.Errorf("REALIZED_PNL ist ein Beleg: got=%v err=%v", got, err)
 	}
 }
+
+func incomeOf(tranID, incomeType, amount string, at int64) position.Income {
+	return position.Income{TranID: tranID, Symbol: "SUI-USDT", IncomeType: incomeType, Amount: amount, Time: at, Asset: "USDT", Raw: "{}"}
+}
+
+func TestIncomeRepository_ListIncomeByTypesInRange(t *testing.T) {
+	db := openMemory(t)
+	now := time.UnixMilli(1_800_000_000_000)
+	repo := NewIncomeRepository(db, fixedClock(&now))
+	seed := []position.Income{
+		incomeOf("a", "REALIZED_PNL", "1.10000000000000001", 1000), // untere Grenze, inklusiv
+		incomeOf("b", "TRADING_FEE", "-0.5", 1500),
+		incomeOf("c", "FUNDING_FEE", "0.25", 1999),
+		incomeOf("d", "REALIZED_PNL", "9", 2000), // obere Grenze, exklusiv
+		incomeOf("e", "REALIZED_PNL", "9", 999),  // davor
+		incomeOf("f", "TRANSFER", "100", 1500),   // falscher Typ
+	}
+	if err := repo.UpsertIncomeBatch(context.Background(), seed); err != nil {
+		t.Fatal(err)
+	}
+	tranIDs := func(entries []position.Income) map[string]bool {
+		ids := map[string]bool{}
+		for _, entry := range entries {
+			ids[entry.TranID] = true
+		}
+		return ids
+	}
+	t.Run("Typfilter und Grenzen (from inklusiv, to exklusiv)", func(t *testing.T) {
+		entries, err := repo.ListIncomeByTypesInRange(context.Background(), []string{"REALIZED_PNL", "TRADING_FEE", "FUNDING_FEE"}, 1000, 2000)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids := tranIDs(entries)
+		if len(entries) != 3 || !ids["a"] || !ids["b"] || !ids["c"] {
+			t.Errorf("ids = %v, erwartet a,b,c", ids)
+		}
+		for _, entry := range entries {
+			if entry.TranID == "a" && entry.Amount != "1.10000000000000001" {
+				t.Errorf("Amount nicht exakt als String: %s", entry.Amount)
+			}
+		}
+	})
+	t.Run("einzelner Typ", func(t *testing.T) {
+		entries, err := repo.ListIncomeByTypesInRange(context.Background(), []string{"TRADING_FEE"}, 0, 5000)
+		if err != nil || len(entries) != 1 || entries[0].TranID != "b" {
+			t.Errorf("entries=%v err=%v", entries, err)
+		}
+	})
+	t.Run("leere Typliste ergibt leer", func(t *testing.T) {
+		entries, err := repo.ListIncomeByTypesInRange(context.Background(), nil, 0, 5000)
+		if err != nil || len(entries) != 0 {
+			t.Errorf("entries=%v err=%v", entries, err)
+		}
+	})
+	t.Run("leeres Fenster", func(t *testing.T) {
+		entries, err := repo.ListIncomeByTypesInRange(context.Background(), []string{"REALIZED_PNL"}, 1000, 1000)
+		if err != nil || len(entries) != 0 {
+			t.Errorf("entries=%v err=%v", entries, err)
+		}
+	})
+}
+
+func TestSchema_IndexIncomeTypeTime(t *testing.T) {
+	db := openMemory(t)
+	var name string
+	err := db.QueryRow(`SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='income' AND sql LIKE '%income_type%' AND sql LIKE '%time%'`).Scan(&name)
+	if err != nil {
+		t.Errorf("Index auf income (income_type, time) fehlt: %v", err)
+	}
+}

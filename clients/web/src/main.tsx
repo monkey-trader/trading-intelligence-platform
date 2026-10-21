@@ -1,6 +1,7 @@
 // Composition Root: einzige Stelle, die Infrastructure und Presentation verdrahtet.
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { createHttpAccountSummaryGateway } from '@/infrastructure/api/httpAccountSummaryGateway';
 import { createHttpAssetIconsGateway } from '@/infrastructure/api/httpAssetIconsGateway';
 import { AppHeader } from '@/presentation/shared/components/AppHeader';
 import { createHttpInitialStopLossGateway } from '@/infrastructure/api/httpInitialStopLossGateway';
@@ -27,6 +28,7 @@ createRoot(rootElement).render(
   <StrictMode>
     <AppHeader />
     <OpenPositionsPage
+      accountSummaryGateway={createHttpAccountSummaryGateway(fetch, apiBase)}
       assetIconsGateway={assetIconsGateway}
       gateway={openPositionsGateway}
       initialStopLossGateway={createHttpInitialStopLossGateway()}

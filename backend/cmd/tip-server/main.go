@@ -16,13 +16,16 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	_ "time/tzdata" // Zeitzonen eingebettet, damit Europe/Zurich ohne System-tzdata geladen wird
 
+	appaccount "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/account"
 	appasset "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/asset"
 	appchart "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/chart"
 	appposition "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/position"
 	chartinterfaces "github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/chart/interfaces"
 	domainposition "github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/position"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/position/interfaces"
+	infraaccount "github.com/monkey-trader/trading-intelligence-platform/backend/internal/infrastructure/account"
 	infraasset "github.com/monkey-trader/trading-intelligence-platform/backend/internal/infrastructure/asset"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/infrastructure/bingx"
 	infrachart "github.com/monkey-trader/trading-intelligence-platform/backend/internal/infrastructure/chart"
@@ -125,6 +128,11 @@ func run(logger *slog.Logger) error {
 	settings.GetOpenPositions = getOpenPositions.Execute
 	settings.GetPositionChart = getPositionChart
 	settings.GetAssetIcons = getAssetIcons.Execute
+	getAccountSummary, err := newGetAccountSummary(chartClient, database)
+	if err != nil {
+		return err
+	}
+	settings.GetAccountSummary = getAccountSummary
 	settings.WebUI = newWebUI()
 	handler := httpapi.NewHandler(settings, logger)
 	server := httpapi.NewServer(handler, logger)
@@ -207,8 +215,9 @@ func startImport(ctx context.Context, logger *slog.Logger, lookupEnv func(string
 	if err != nil {
 		return nil, err
 	}
+	incomeImporter := appposition.NewImportIncomeUseCase(infraposition.NewBingXIncomeSource(client), incomeRepository, state, time.Now)
 	useCase := appposition.NewScheduledImportUseCase(appposition.ScheduledImportDeps{
-		Income:          appposition.NewImportIncomeUseCase(infraposition.NewBingXIncomeSource(client), incomeRepository, state, time.Now),
+		Income:          incomeImporter,
 		Positions:       positionImporter,
 		Symbols:         incomeRepository,
 		Contracts:       infraposition.NewBingXContractSource(client),
@@ -223,7 +232,7 @@ func startImport(ctx context.Context, logger *slog.Logger, lookupEnv func(string
 	ticker := time.NewTicker(importInterval)
 	ticks := make(chan struct{})
 	var background sync.WaitGroup
-	background.Add(2)
+	background.Add(3)
 	go func() { // Brücke time.Ticker -> chan struct{}
 		defer background.Done()
 		for {
@@ -237,6 +246,23 @@ func startImport(ctx context.Context, logger *slog.Logger, lookupEnv func(string
 					return
 				}
 			}
+		}
+	}()
+	go func() { // Einmalig: Income ab Monatsanfang nachladen, damit der Monats-PnL vollständig ist.
+		defer background.Done()
+		location, locationErr := time.LoadLocation(accountTimezone)
+		if locationErr != nil {
+			logger.Error("Income-Historie übersprungen", slog.String("error", locationErr.Error()))
+			return
+		}
+		now := time.Now().In(location)
+		monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, location)
+		historySince := monthStart.UnixMilli()
+		if thirtyDaysAgo := now.AddDate(0, 0, -30).UnixMilli(); thirtyDaysAgo < historySince {
+			historySince = thirtyDaysAgo
+		}
+		if historyErr := incomeImporter.EnsureHistorySince(ctx, historySince); historyErr != nil && ctx.Err() == nil {
+			logger.Error("Income-Historie nachladen fehlgeschlagen", slog.String("error", historyErr.Error()))
 		}
 	}()
 	go func() {
@@ -411,4 +437,29 @@ func newProtectiveOrderSource(lookupEnv func(string) string) (chartinterfaces.Pr
 	systemClock := clock.SystemClock{}
 	return infrachart.NewCachingProtectiveOrderSource(
 		infrachart.NewBingXProtectiveOrderSource(client, systemClock), systemClock, openPositionsTTL), nil
+}
+
+// accountTimezone bestimmt die Monatsgrenzen der Kontoübersicht.
+const accountTimezone = "Europe/Zurich"
+
+// accountBalanceTTL cached die Balance wie die offenen Positionen.
+const accountBalanceTTL = openPositionsTTL
+
+// newGetAccountSummary verdrahtet GET /account/summary. Ohne Client (keine Keys oder keine DB)
+// antwortet die Funktion immer not-configured (503).
+func newGetAccountSummary(client *bingx.Client, database *sql.DB) (func(context.Context) (appaccount.AccountSummary, error), error) {
+	if client == nil {
+		return func(context.Context) (appaccount.AccountSummary, error) {
+			return appaccount.AccountSummary{}, &domainposition.OpenPositionsUnavailableError{Reason: domainposition.ReasonNotConfigured}
+		}, nil
+	}
+	location, err := time.LoadLocation(accountTimezone)
+	if err != nil {
+		return nil, err
+	}
+	source := infraaccount.NewBingXBalanceSource(client)
+	useCase := appaccount.NewGetAccountSummaryUseCase(
+		infraaccount.NewCachingBalanceSource(source, time.Now, accountBalanceTTL),
+		sqlite.NewIncomeRepository(database, time.Now), func() int64 { return time.Now().UnixMilli() }, location)
+	return useCase.Execute, nil
 }

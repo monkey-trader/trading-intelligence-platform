@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import type { AccountSummaryGateway } from '@/domain/account/AccountSummaryGateway';
+import { useAccountSummary } from '@/presentation/account/hooks/useAccountSummary';
 import type { AssetIconsGateway } from '@/domain/asset/AssetIconsGateway';
 import { useAssetIcons } from '@/presentation/position/hooks/useAssetIcons';
 import type { PositionChartGateway } from '@/domain/position/PositionChartGateway';
@@ -20,6 +22,8 @@ type OpenPositionsPageProps = Readonly<{
   assetIconsGateway?: AssetIconsGateway;
   /** Ohne Gateway gibt es kein manuelles Eintragen des Ursprungs-SL. */
   initialStopLossGateway?: InitialStopLossGateway;
+  /** Ohne Gateway zeigt der Kopf keinen Kontostand. */
+  accountSummaryGateway?: AccountSummaryGateway;
 }>;
 
 /** Seite "Offene Positionen": lädt über das injizierte Gateway und pollt. */
@@ -29,8 +33,10 @@ export function OpenPositionsPage({
   createChartRenderer,
   assetIconsGateway,
   initialStopLossGateway,
+  accountSummaryGateway,
 }: OpenPositionsPageProps) {
   const { status, snapshot, errorMessage, isStale, refresh } = useOpenPositionsViewModel(gateway);
+  const account = useAccountSummary(accountSummaryGateway);
   const symbols = useMemo(
     () => snapshot?.positions.map((position) => position.symbol) ?? [],
     [snapshot],
@@ -69,6 +75,7 @@ export function OpenPositionsPage({
             positionCount={snapshot.positions.length}
             fetchedAt={snapshot.fetchedAt}
             onRefresh={refresh}
+            account={account}
           />
           {isStale && errorMessage && (
             <p role="status" className={styles.staleWarning}>

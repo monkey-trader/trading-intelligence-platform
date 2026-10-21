@@ -210,3 +210,30 @@ func TestFehlertexteSindNichtLeer(t *testing.T) {
 		}
 	}
 }
+
+func TestMultiply(t *testing.T) {
+	runBinary(t, decimal.Multiply, "*", []binaryCase{
+		{"1.5", "2", "3"},
+		{"0.1", "0.2", "0.02"},
+		{"123.456", "100", "12345.6"},
+		{"12.30", "100", "1230"},
+		{"-1.5", "2", "-3"},
+		{"-1.5", "-2", "3"},
+		{"0", "5.5", "0"},
+		{"-0", "5", "0"},
+		{"-0.5", "0", "0"},
+		{"0.00000000000000000001", "0.1", "0.000000000000000000001"},
+		{"123456789012345678", "1000", "123456789012345678000"},
+		{"007.10", "1", "7.1"},
+	})
+}
+
+func TestMultiply_UngueltigeEingabe(t *testing.T) {
+	for _, pair := range [][2]string{{"abc", "1"}, {"1", ""}, {"1e3", "2"}} {
+		_, err := decimal.Multiply(pair[0], pair[1])
+		var invalid *decimal.InvalidDecimalError
+		if !errors.As(err, &invalid) {
+			t.Errorf("Multiply(%q,%q) err=%v, erwartet *InvalidDecimalError", pair[0], pair[1], err)
+		}
+	}
+}

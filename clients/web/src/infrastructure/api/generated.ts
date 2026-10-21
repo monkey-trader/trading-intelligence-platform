@@ -44,6 +44,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/account/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Kontostand und Monats-Performance
+         * @description Kontostand (`balance`), Equity und verfügbare Margin kommen live von BingX (bis zu 5 s zwischengespeichert). Der Monats-PnL ist die Summe aus `REALIZED_PNL`, `TRADING_FEE` und `FUNDING_FEE` der lokalen Income-Tabelle im laufenden Kalendermonat (Europe/Zurich) und daher nur so aktuell wie der letzte Import; die Historie ab Monatsanfang wird beim Start einmalig nachgeladen. `monthlyPnlPercent` = Monats-PnL ÷ `equity` × 100, auf 2 Nachkommastellen (half-up); `null`, wenn `equity` 0 ist. `equity` entspricht dem Kontostand der BingX-Anzeige (USD-M Perp). Bezogen auf die aktuelle Equity, nicht aufs Startkapital des Monats; Ein-/Auszahlungen verzerren den Wert.
+         */
+        get: operations["getAccountSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/positions/{positionId}/chart": {
         parameters: {
             query?: never;
@@ -143,6 +163,31 @@ export interface components {
             source: "MANUAL";
             /** @description Zeitpunkt der Eingabe in Epoch-Millisekunden. */
             setAt: number;
+        };
+        AccountSummary: {
+            balance: components["schemas"]["Decimal"];
+            equity: components["schemas"]["Decimal"];
+            availableMargin: components["schemas"]["Decimal"];
+            /**
+             * @description Kalendermonat (Europe/Zurich), auf den sich der Monats-PnL bezieht.
+             * @example 2026-10
+             */
+            month: string;
+            monthlyRealizedPnl: components["schemas"]["Decimal"];
+            /** @description Monats-PnL in Prozent der Equity; `null` bei Equity 0. */
+            monthlyPnlPercent: components["schemas"]["Decimal"] | null;
+            /** @description Netto-PnL (REALIZED_PNL + TRADING_FEE + FUNDING_FEE) für Heute, 7T und 30T in dieser Reihenfolge. `today` beginnt um 00:00 Europe/Zurich, `7d`/`30d` sind gleitende Fenster bis jetzt. */
+            periods: components["schemas"]["PeriodPnl"][];
+            unrealizedPnl: components["schemas"]["Decimal"];
+            /** @description Unrealisierter PnL des Kontos in Prozent der `equity`; `null` bei Equity <= 0 oder unbekanntem Wert. */
+            unrealizedPnlPercent: components["schemas"]["Decimal"] | null;
+        };
+        PeriodPnl: {
+            /** @enum {string} */
+            period: "today" | "7d" | "30d";
+            realizedPnl: components["schemas"]["Decimal"];
+            /** @description PnL in Prozent der Equity am Periodenanfang (Equity jetzt minus PnL, Ein-/Auszahlungen werden nicht berücksichtigt); `null`, wenn diese Basis 0 oder negativ ist. */
+            pnlPercent: components["schemas"]["Decimal"] | null;
         };
         OpenPositionsSnapshot: {
             positions: components["schemas"]["OpenPosition"][];
@@ -351,6 +396,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OpenPositionsSnapshot"];
+                };
+            };
+            403: components["responses"]["Problem"];
+            500: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+            504: components["responses"]["Problem"];
+        };
+    };
+    getAccountSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Kontostand mit Monats-PnL. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountSummary"];
                 };
             };
             403: components["responses"]["Problem"];
