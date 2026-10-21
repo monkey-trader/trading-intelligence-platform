@@ -6,6 +6,7 @@
 export const OPERATION_TEST_NAMES = {
   getHealth: 'GET /health (getHealth)',
   getOpenPositions: 'GET /positions/open (getOpenPositions)',
+  getAccountSummary: 'GET /account/summary (getAccountSummary)',
   getPositionChart: 'GET /positions/{positionId}/chart (getPositionChart)',
   getAssetIcons: 'GET /assets/icons (getAssetIcons)',
   setInitialStopLoss: 'PUT /positions/{positionId}/initial-stop-loss (setInitialStopLoss)',
