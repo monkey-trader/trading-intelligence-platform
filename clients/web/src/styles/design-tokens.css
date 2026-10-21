@@ -75,7 +75,7 @@
   --radius-chip: 4px;
   --color-chip-surface: #ebdbb2; /* neutraler Chip */
   --color-chip-text: #3c3836;
-  --color-r-target-surface: #d8e3c4; /* Ziel-Pille (3R) */
+  --color-r-target-surface: #d8e3c4; /* TP3-Pille (3R) */
   --color-control-border: #7c6f64; /* Rahmen Buttons/Eingabe (WCAG 1.4.11 ≥ 3:1 auf surface und surface-raised) */
   --size-control-compact: 26px; /* schlanke Buttons/Felder bei Mauszeiger (pointer: fine) */
   --size-touch-target: 44px; /* Mindestgröße Touch-Ziele (Buttons, Eingabefelder) */

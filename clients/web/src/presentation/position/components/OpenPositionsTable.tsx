@@ -12,6 +12,8 @@ import type { ColumnKey } from '@/presentation/position/columnOrder';
 import { useColumnOrder } from '@/presentation/position/hooks/useColumnOrder';
 import type { InitialStopLossGateway } from '@/domain/position/InitialStopLossGateway';
 import { InitialStopLossControl } from '@/presentation/position/components/InitialStopLossControl';
+import { BreakEvenTargetInfo } from '@/presentation/position/components/BreakEvenTargetInfo';
+import { InfoDialog } from '@/presentation/shared/components/InfoDialog';
 import styles from '@/presentation/position/components/OpenPositionsTable.module.css';
 
 const COLUMN_LABELS = {
@@ -22,7 +24,7 @@ const COLUMN_LABELS = {
   realisedProfit: 'Real. PnL',
   entry: 'Einstieg',
   tpSl: 'TP / SL',
-  beTarget: 'BE / Ziel',
+  beTarget: 'TPs (je 33 %)',
 } as const;
 
 const SIDE_LABELS: Readonly<Record<OpenPosition['side'], string>> = {
@@ -65,6 +67,7 @@ export function OpenPositionsTable({
   const { order, move, reset, isDefault } = useColumnOrder();
   const [draggedKey, setDraggedKey] = useState<ColumnKey | null>(null);
   const [dropTargetKey, setDropTargetKey] = useState<ColumnKey | null>(null);
+  const [isBeTargetInfoOpen, setIsBeTargetInfoOpen] = useState(false);
 
   const endDrag = () => {
     setDraggedKey(null);
@@ -95,6 +98,12 @@ export function OpenPositionsTable({
     <>
       {/* Immer gerendert (leer, wenn nicht nötig), damit der Tabellenkopf nicht springt. */}
       <div className={styles.toolbar}>
+        <button
+          type="button"
+          className={`${styles.infoButton} ${styles.infoButtonToolbar}`}
+          aria-label="Erklärung zu den TPs"
+          onClick={() => setIsBeTargetInfoOpen(true)}
+        ></button>
         {!isDefault && (
           <button type="button" className={styles.resetButton} onClick={reset}>
             Spalten zurücksetzen
@@ -152,6 +161,14 @@ export function OpenPositionsTable({
                     onDragEnd={endDrag}
                   >
                     <span id={labelId}>{label}</span>
+                    {columnKey === 'beTarget' && (
+                      <button
+                        type="button"
+                        className={styles.infoButton}
+                        aria-label="Erklärung zu den TPs"
+                        onClick={() => setIsBeTargetInfoOpen(true)}
+                      ></button>
+                    )}
                     <button
                       type="button"
                       className={styles.dragHandle}
@@ -179,6 +196,13 @@ export function OpenPositionsTable({
           </tbody>
         </table>
       </div>
+      <InfoDialog
+        title="TP1 bis TP3"
+        isOpen={isBeTargetInfoOpen}
+        onClose={() => setIsBeTargetInfoOpen(false)}
+      >
+        <BreakEvenTargetInfo />
+      </InfoDialog>
     </>
   );
 }
@@ -206,8 +230,9 @@ function OpenPositionRow({
   const tickerFallback = (position.symbol.split('-')[0] ?? position.symbol).toUpperCase();
   const displayName = assetIcon?.displayName ?? tickerFallback;
 
-  const breakEvenLevel = position.levels?.find((level) => level.kind === 'TWO_R');
-  const targetLevel = position.levels?.find((level) => level.kind === 'THREE_R');
+  const firstLevel = position.levels?.find((level) => level.kind === 'ONE_R');
+  const secondLevel = position.levels?.find((level) => level.kind === 'TWO_R');
+  const thirdLevel = position.levels?.find((level) => level.kind === 'THREE_R');
   const cells: Record<ColumnKey, ReactNode> = {
     symbol: (
       <th
@@ -308,13 +333,16 @@ function OpenPositionRow({
     beTarget: (
       <td data-label={COLUMN_LABELS.beTarget} className={styles.cell}>
         <div className={styles.beTargetStack}>
-          {breakEvenLevel && targetLevel ? (
+          {firstLevel && secondLevel && thirdLevel ? (
             <div className={styles.levelStack}>
+              <span className={`${styles.levelPill} ${styles.levelFirst}`}>
+                {`TP1 ${formatDecimal(firstLevel.price)}`}
+              </span>
               <span className={`${styles.levelPill} ${styles.levelBe}`}>
-                {`BE ${formatDecimal(breakEvenLevel.price)}`}
+                {`TP2 ${formatDecimal(secondLevel.price)} · BE`}
               </span>
               <span className={`${styles.levelPill} ${styles.levelTarget}`}>
-                {`Ziel ${formatDecimal(targetLevel.price)}`}
+                {`TP3 ${formatDecimal(thirdLevel.price)}`}
               </span>
             </div>
           ) : (

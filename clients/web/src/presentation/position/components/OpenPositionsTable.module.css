@@ -85,6 +85,49 @@
   display: none;
 }
 
+/* (i)-Knopf: Erklärung zu den TPs. Im Kopf neben dem Spaltennamen, auf Mobile (kein Kopf) in der Toolbar. */
+.infoButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  inline-size: var(--space-4);
+  block-size: var(--space-4);
+  margin-left: var(--space-1);
+  padding: 0;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid var(--color-control-border);
+  border-radius: 50%;
+  font-size: var(--font-size-x-small);
+  font-style: italic;
+  font-weight: var(--font-weight-strong);
+  line-height: 1;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.infoButton::before {
+  content: 'i';
+}
+
+.infoButton:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.infoButton:focus-visible {
+  outline: var(--border-width-emphasis) solid var(--color-accent);
+  outline-offset: var(--border-width-emphasis);
+}
+
+.infoButtonToolbar {
+  inline-size: var(--size-touch-target);
+  block-size: var(--size-touch-target);
+  margin: 0 auto 0 0;
+  font-size: var(--font-size-base);
+}
+
 /* Toolbar über der Tabelle: auf Mobile ohne Inhalt ausgeblendet, ab 768 px reserviert sie
    immer dieselbe Höhe, damit der Tabellenkopf nicht springt, wenn "Spalten zurücksetzen" erscheint. */
 .toolbar:empty {
@@ -203,6 +246,11 @@
 
   .toolbar {
     min-block-size: var(--space-6);
+  }
+
+  /* Ab 768 px sitzt der (i)-Knopf im Spaltenkopf. */
+  .infoButtonToolbar {
+    display: none;
   }
 
   /* Griff: 16px-Box (Token), Glyphe mittig. Die ganze Kopfzelle ist als Drag-Quelle nutzbar,
@@ -403,8 +451,9 @@
   font-size: var(--font-size-small);
 }
 
-/* BE / Ziel: zwei Zeilen als Tonpillen (Text, nicht nur Farbe). BE = 2R-Linie (warning),
-   Ziel = 3R-Linie (chart-r-target). Pillen statt Präfix-Span, damit "BE 1.08" in einem Element steht. */
+/* TPs: drei Zeilen als Tonpillen (Text, nicht nur Farbe). TP1 = 1R (neutral), TP2 = 2R und BE-Auslöser
+   (warning, wie die 2R-Linie), TP3 = 3R (chart-r-target). Pillen statt Präfix-Span, damit "TP2 1.08 · BE"
+   in einem Element steht. */
 .levelStack {
   display: inline-flex;
   flex-direction: column;
@@ -418,6 +467,10 @@
   font-weight: var(--font-weight-strong);
   line-height: var(--line-height-base);
   white-space: nowrap;
+}
+.levelFirst {
+  background: var(--color-chip-surface);
+  color: var(--color-chip-text);
 }
 .levelBe {
   background: var(--color-warning-surface);
@@ -507,7 +560,7 @@
   color: var(--color-chip-text);
   font-size: var(--font-size-x-small);
 }
-/* Badge und Zurücksetzen untereinander, damit die BE/Ziel-Spalte nicht breiter wird. */
+/* Badge und Zurücksetzen untereinander, damit die TP-Spalte nicht breiter wird. */
 .manualRow {
   display: flex;
   flex-direction: column;

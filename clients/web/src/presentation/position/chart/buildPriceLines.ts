@@ -68,7 +68,7 @@ function addRLevelLine(
       lines[mergeTargetIndex] = { kind: 'target', price: mergeTarget.price, title: 'TP = 3R' };
       return;
     }
-    lines.push({ kind: 'r3', price, title: hasTakeProfit ? '3R' : '3R Ziel' });
+    lines.push({ kind: 'r3', price, title: hasTakeProfit ? '3R' : '3R TP3' });
     return;
   }
   const kind = R_LINE_KINDS[level.kind];

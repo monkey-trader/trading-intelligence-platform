@@ -238,12 +238,12 @@ export interface components {
             breakEvenTriggerReached?: boolean | null;
             /** @description Kerzenbeginn (Epoch-Millisekunden), in dem 2R erstmals erreicht wurde. null, wenn nicht erreicht oder unbekannt. */
             reached2RAt?: number | null;
-            /** @description CRV-Level 1R/2R/3R als Preise (2R = Preis, an dem der SL auf Break-even gezogen wird, 3R = Ziel). Fehlt, wenn das Risiko unbekannt ist. */
+            /** @description CRV-Level 1R/2R/3R als Preise (2R = Preis, an dem der SL auf Break-even gezogen wird, 3R = TP3). Fehlt, wenn das Risiko unbekannt ist. */
             levels?: components["schemas"]["RLevel"][];
         };
         RLevel: {
             /**
-             * @description TWO_R ist der Break-even-Trigger, THREE_R das CRV-Ziel.
+             * @description TWO_R ist der Break-even-Trigger, THREE_R das CRV-Ziel (TP3).
              * @enum {string}
              */
             kind: "ONE_R" | "TWO_R" | "THREE_R";
