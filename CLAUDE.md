@@ -32,7 +32,7 @@ backend/                Go-Backend: cmd/tip-server/, internal/{domain,applicatio
                         `golangci-lint run ./...`, `gofmt -l .` (muss leer sein)
 docs/openapi.yaml       API-Vertrag (Quelle der Wahrheit, es gibt nur diese eine Spec)
 docs/database/schema.md SQLite-Schema und State-Keys
-contract-tests/         Vertragstest gegen eine laufende API (`CONTRACT_BASE_URL=… npm test`),
+contracts/         Vertragstest gegen eine laufende API (`CONTRACT_BASE_URL=… npm test`),
                         backend-unabhängig (läuft in der CI gegen das Go-Backend)
 fixtures/bingx/         anonymisierte BingX-Antworten, sprachneutral (Go-Tests: Pfad relativ zum Repo-Root)
 clients/web/    Web-Client (Vite + React), spricht nur über die HTTP-API
@@ -115,7 +115,7 @@ Konsequenz für dieses Projekt:
 - **TDD:** erst Test, dann Code. Tests liegen neben dem Code (`Foo.ts` → `Foo.test.ts`).
 - Kein `any`; `unknown` plus Narrowing verwenden.
 - Sprechende Variablennamen.
-- Vor Commit: `npm run lint && npm test` (in `contract-tests/` ohne laufenden Server `npm run test:unit`).
+- Vor Commit: `npm run lint && npm test` (in `contracts/` ohne laufenden Server `npm run test:unit`).
 - Commits nur auf ausdrücklichen Wunsch. Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`),
   Branches `feature/<beschreibung>`.
 - **Releases sind automatisch:** Nur ein Push auf `main` löst über `.github/workflows/release.yml` (semantic-release, `.releaserc.json`) einen Release aus; die Version ergibt sich aus den Commit-Präfixen (`feat` → minor, `fix`/`perf` → patch, `!` oder `BREAKING CHANGE:` bei jedem Typ → major; `docs`/`chore`/`test`/`ci`/`refactor`/`style` lösen **keinen** Release aus). Tags nie von Hand setzen. Squash-Merge-Titel müssen Conventional Commits sein.

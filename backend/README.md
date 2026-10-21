@@ -109,14 +109,14 @@ Formatierung korrigieren: `gofmt -w .`
 
 ## Vertragstest
 
-Der Vertragstest in `../contract-tests/` prüft die laufende API gegen `docs/openapi.yaml`.
+Der Vertragstest in `../contracts/` prüft die laufende API gegen `docs/openapi.yaml`.
 Starte zuerst den Server in Terminal 1, dann in Terminal 2:
 ```bash
 # Terminal 1
 PORT=3001 go run ./cmd/tip-server
 
-# Terminal 2 (einmalig vorher: cd ../contract-tests && npm ci)
-cd ../contract-tests && CONTRACT_BASE_URL=http://127.0.0.1:3001 npm test
+# Terminal 2 (einmalig vorher: cd ../contracts && npm ci)
+cd ../contracts && CONTRACT_BASE_URL=http://127.0.0.1:3001 npm test
 ```
 
 ## Port belegt?

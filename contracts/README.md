@@ -1,4 +1,4 @@
-# Vertragstest (contract-tests)
+# Vertragstest (contracts)
 
 Sprachneutraler Vertragstest für die HTTP-API. Er spricht nur über HTTP mit einem
 **laufenden** Backend und prüft die Antworten gegen `../docs/openapi.yaml`. So muss jedes

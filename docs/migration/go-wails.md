@@ -77,7 +77,7 @@ Umsetzung (2026-10-17):
 - Spec 0.4.0: allgemeine Regeln in `info.description` (Host-Prüfung vor Routing, 404 `not-found`
   auch für `HEAD` und fremde Methoden, Fehler immer `problem+json`, `Retry-After` nur bei rate-limited).
   Das TS-Backend liefert 404/500 jetzt ebenfalls als Problem.
-- `contract-tests/`: eigenes npm-Paket, validiert Antworten mit Ajv gegen die Spec; statischer Check,
+- `contracts/`: eigenes npm-Paket, validiert Antworten mit Ajv gegen die Spec; statischer Check,
   dass jede `operationId` einen Vertragstest hat. CI-Job `contract` startet das TS-Backend ohne Keys.
 - `fixtures/bingx/` mit README, `docs/database/schema.md`.
 - Offen für Phase 3: Socket-Fehler vor dem HTTP-Parsing (z.B. 431, Header zu groß) liefert Node

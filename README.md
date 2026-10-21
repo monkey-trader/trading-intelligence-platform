@@ -16,7 +16,7 @@ Details und Regeln für die Entwicklung stehen in [`CLAUDE.md`](CLAUDE.md).
 Voraussetzung: Go 1.27 (`brew install go`), Node (siehe `.nvmrc`), für die Prüfungen zusätzlich golangci-lint v2.15 oder neuer,
 mit Go 1.27 gebaut: `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0`.
 ```bash
-(cd clients/web && npm ci) && (cd contract-tests && npm ci)
+(cd clients/web && npm ci) && (cd contracts && npm ci)
 export BX_KEY=… BX_SECRET=…   # Key nur mit Lese-Rechten; das Backend liest keine .env-Datei
 ```
 
@@ -39,11 +39,11 @@ Stoppen: `Ctrl+C` im jeweiligen Terminal. Die SQLite-Datei liegt standardmäßig
 ### 3. Vertragstest gegen das laufende Backend (Terminal 3)
 Prüft die Antworten des Backends gegen `docs/openapi.yaml`. Das Backend aus Terminal 1 muss laufen.
 ```bash
-cd contract-tests && CONTRACT_BASE_URL=http://127.0.0.1:3000 CONTRACT_EXPECT_CONFIGURED=true npm test
+cd contracts && CONTRACT_BASE_URL=http://127.0.0.1:3000 CONTRACT_EXPECT_CONFIGURED=true npm test
 ```
 - `CONTRACT_EXPECT_CONFIGURED=true` nur, wenn `BX_KEY`/`BX_SECRET` gesetzt sind (erwartet dann 200 für
   `/positions/open`). Ohne Keys weglassen, dann wird 503 `not-configured` erwartet (wie in CI).
-- Ohne laufenden Server (nur Validator und Abdeckungs-Check): `cd contract-tests && npm run test:unit`
+- Ohne laufenden Server (nur Validator und Abdeckungs-Check): `cd contracts && npm run test:unit`
 
 ### 4. Prüfungen des Backends
 ```bash
@@ -61,7 +61,7 @@ curl -i -H 'Host: evil.example' http://127.0.0.1:3000/health   # 403 forbidden-h
 ### Prüfungen vor einem Commit
 ```bash
 (cd clients/web && npm run lint && npm run typecheck && npm test)
-(cd contract-tests && npm run lint && npm run typecheck && npm run test:unit)
+(cd contracts && npm run lint && npm run typecheck && npm run test:unit)
 (cd backend && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...)
 ```
 

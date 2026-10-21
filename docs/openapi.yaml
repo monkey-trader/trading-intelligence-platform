@@ -5,7 +5,7 @@ info:
   description: |-
     HTTP/JSON-API des Backends. Diese Spezifikation ist der Vertrag zwischen Backend
     und Clients: erst hier anpassen, dann implementieren. Jedes Backend (TypeScript, später Go)
-    muss den Vertragstest in `contract-tests/` bestehen.
+    muss den Vertragstest in `contracts/` bestehen.
 
     Hinweis: Das Go-Backend liefert zusätzlich das Web-UI unter `/` aus (eingebettet, SPA-Fallback).
     Das ist kein Teil des API-Vertrags; `/health`, `/positions` und `/api` bleiben immer API.

@@ -106,7 +106,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: contract-tests/package-lock.json
+          cache-dependency-path: contracts/package-lock.json
 
       - name: OpenAPI-Spezifikation prüfen
         run: npx --yes @redocly/cli@2.64.1 lint docs/openapi.yaml
@@ -141,23 +141,23 @@ jobs:
           exit 1
 
       - name: Vertragstest-Abhängigkeiten installieren
-        working-directory: contract-tests
+        working-directory: contracts
         run: npm ci
 
       - name: Lint
-        working-directory: contract-tests
+        working-directory: contracts
         run: npm run lint
 
       - name: Typecheck
-        working-directory: contract-tests
+        working-directory: contracts
         run: npm run typecheck
 
       - name: Formatierung prüfen
-        working-directory: contract-tests
+        working-directory: contracts
         run: npm run format:check
 
       - name: Vertragstest
-        working-directory: contract-tests
+        working-directory: contracts
         env:
           CONTRACT_BASE_URL: http://127.0.0.1:3000
         run: npm test

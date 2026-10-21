@@ -24,7 +24,7 @@ export type ResponseToValidate = Readonly<{
 }>;
 
 /** Interne $id, unter der das ganze Dokument bei Ajv registriert wird. */
-const SPEC_ID = 'https://contract-tests.local/openapi.json';
+const SPEC_ID = 'https://contracts.local/openapi.json';
 
 /**
  * OpenAPI-Schlüsselwörter, die keine JSON-Schema-Keywords sind. Ajv kennt sie nicht und würde
