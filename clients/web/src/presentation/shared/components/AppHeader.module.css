@@ -3,6 +3,10 @@
   --header-inline: var(--space-3);
   padding: var(--space-3)
     max(var(--header-inline), calc((100% - var(--layout-max-width)) / 2 + var(--header-inline)));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
 }
@@ -17,4 +21,28 @@
   color: var(--color-text);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-strong);
+}
+
+.themeControl {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.themeSelect {
+  min-height: var(--size-touch-target);
+  padding: 0 var(--space-2);
+  color: var(--color-text);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-small);
+  font: inherit;
+}
+
+@media (pointer: fine) {
+  .themeSelect {
+    min-height: var(--size-control-compact);
+  }
 }
