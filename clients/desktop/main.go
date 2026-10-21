@@ -23,6 +23,7 @@ func main() {
 		Menu:                     buildMenu(app),
 		OnStartup:                app.startup,
 		OnBeforeClose:            app.beforeClose,
+		OnShutdown:               app.shutdown,
 		EnableDefaultContextMenu: false,
 		Mac: &mac.Options{
 			TitleBar:             mac.TitleBarHidden(),
