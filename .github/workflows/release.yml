@@ -1,13 +1,13 @@
 name: Release
 
 # Push auf main: Version aus Conventional Commits berechnen (feat → minor, fix/perf/chore/docs/refactor/test/ci/style → patch,
-# Breaking (`!` / BREAKING CHANGE, jeder Typ) → major), Tag + GitHub Release anlegen, danach bauen und Formula veröffentlichen.
+# Breaking (`!` / BREAKING CHANGE, jeder Typ) → major), Tag + GitHub Release anlegen, danach bauen und Formula (tip-server) sowie Cask (tip-app) veröffentlichen.
 # Tags vom GITHUB_TOKEN lösen keine weiteren Workflows aus, darum läuft der Build im selben Workflow.
 on:
   push:
     branches: [main]
   pull_request:
-    paths: ['.goreleaser.yaml', '.releaserc.json', '.github/workflows/release.yml']
+    paths: ['.goreleaser.yaml', '.releaserc.json', '.github/workflows/release.yml', '.github/scripts/render-cask.sh', 'clients/desktop/**']
   workflow_dispatch:
     inputs:
       tag:
@@ -110,3 +110,65 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Fine-grained PAT mit Contents: write auf monkey-trader/homebrew-tap
           TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+
+  desktop:
+    name: tip-app bauen und Homebrew-Cask veröffentlichen
+    needs: version
+    # Gleiche Bedingung wie der Server-Release; auf PRs wird nur gebaut und gezippt.
+    if: >-
+      always() && needs.version.result != 'failure' && needs.version.result != 'cancelled' &&
+      (github.event_name != 'push' || needs.version.outputs.published == 'true')
+    runs-on: macos-15
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.tag || needs.version.outputs.tag }}
+      WAILS_VERSION: v2.17.0 # wie in clients/desktop/go.mod
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.RELEASE_TAG || github.ref }}
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: clients/desktop/go.mod
+          cache-dependency-path: clients/desktop/go.sum
+
+      - name: Wails installieren
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@${WAILS_VERSION}
+
+      # Das UI liefert der tip-server aus; die App bringt nur das Fenster mit (kein Frontend-Build).
+      - name: App bauen (Intel + Apple Silicon)
+        working-directory: clients/desktop
+        run: wails build -skipbindings -s -platform darwin/universal
+
+      - name: ZIP erzeugen
+        working-directory: clients/desktop/build/bin
+        run: |
+          version="${RELEASE_TAG#v}"
+          ditto -c -k --keepParent "Trading Intelligence Platform.app" "tip-app_${version:-snapshot}_darwin_universal.zip"
+          ls -l *.zip
+
+      - name: ZIP ans GitHub-Release hängen
+        if: env.RELEASE_TAG != ''
+        working-directory: clients/desktop/build/bin
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${RELEASE_TAG}" tip-app_*_darwin_universal.zip --clobber --repo "${GITHUB_REPOSITORY}"
+
+      - name: Cask im Tap aktualisieren
+        if: env.RELEASE_TAG != ''
+        env:
+          # Fine-grained PAT mit Contents: write auf monkey-trader/homebrew-tap (wie für die Formula)
+          TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+        run: |
+          version="${RELEASE_TAG#v}"
+          sha256="$(shasum -a 256 clients/desktop/build/bin/tip-app_${version}_darwin_universal.zip | cut -d' ' -f1)"
+          git clone --depth 1 "https://x-access-token:${TAP_GITHUB_TOKEN}@github.com/monkey-trader/homebrew-tap.git" tap
+          mkdir -p tap/Casks
+          .github/scripts/render-cask.sh "${version}" "${sha256}" > tap/Casks/tip-app.rb
+          cd tap
+          git config user.name "c3smonkey"
+          git config user.email "marzelwidmer@gmail.com"
+          git add Casks/tip-app.rb
+          git diff --cached --quiet && { echo "Cask unverändert."; exit 0; }
+          git commit -m "Cask tip-app ${version}"
+          git push

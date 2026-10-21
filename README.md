@@ -22,8 +22,12 @@ Alles läuft lokal auf deinem Mac: Deine Daten bleiben bei dir, es gibt keine Cl
 Voraussetzung ist [Homebrew](https://brew.sh).
 
 ```bash
-brew install monkey-trader/tap/tip-server
+brew install monkey-trader/tap/tip-server          # der Dienst: Import, Datenbank, Web-UI
+brew install --cask monkey-trader/tap/tip-app      # optional: die Mac-App (Fenster auf den Dienst)
 ```
+
+Die Mac-App ist nur ein Fenster. Die Daten holt und speichert der Dienst `tip-server`, deshalb brauchst du ihn immer.
+Wer keine App will, nutzt das UI im Browser.
 
 ### 1. BingX-API-Key anlegen (nur Lese-Rechte)
 
@@ -50,11 +54,15 @@ brew services start tip-server
 ```
 
 Ersetze `dein-api-key` und `dein-secret-key` durch deine Werte.
-`brew services` startet die App im Hintergrund und nach jedem Neustart des Macs automatisch wieder.
+`brew services` startet den Dienst im Hintergrund und nach jedem Neustart des Macs automatisch wieder.
 
 ### 3. Öffnen
 
-Im Browser: **http://127.0.0.1:3000**
+- **Mac-App:** „Trading Intelligence Platform“ aus dem Programme-Ordner oder per Spotlight starten.
+  Sie ist nur ad-hoc signiert; Homebrew hebt die Gatekeeper-Sperre auf. Warnt macOS trotzdem, öffnest du sie einmal per Rechtsklick → **Öffnen**.
+- **Browser:** **http://127.0.0.1:3000**
+
+Beide zeigen dasselbe UI. Die App spricht intern mit dem lokalen Dienst, du musst die Adresse nicht eingeben.
 
 Der erste Import beginnt mit dem ersten Start. Geschlossene Positionen erscheinen, sobald BingX sie liefert.
 
@@ -62,17 +70,18 @@ Der erste Import beginnt mit dem ersten Start. Geschlossene Positionen erscheine
 
 | Was | Befehl |
 |---|---|
-| Aktualisieren | `brew upgrade tip-server && brew services restart tip-server` |
+| Aktualisieren | `brew upgrade tip-server tip-app && brew services restart tip-server` |
 | Stoppen | `brew services stop tip-server` |
 | Status prüfen | `curl http://127.0.0.1:3000/health` (Antwort: `{"status":"ok"}`) |
 | Log ansehen | `tail -f $(brew --prefix)/var/log/tip-server.log` |
-| Deinstallieren | `brew services stop tip-server && brew uninstall tip-server` |
+| Deinstallieren | `brew services stop tip-server && brew uninstall tip-server && brew uninstall --cask tip-app` |
 
 Deine Daten (SQLite) liegen unter `~/Library/Application Support/tip/journal.db`.
 Das Löschen dieser Datei setzt das Journal zurück (auch deine Notizen und Stop-Loss-Eingaben).
 
 ### Hilfe bei Problemen
 
+- **App zeigt „Server nicht erreichbar“:** Der Dienst läuft nicht. `brew services start tip-server` im Terminal.
 - **Seite lädt nicht:** `brew services list` zeigt, ob `tip-server` läuft. Sonst `brew services restart tip-server`.
 - **Keine Positionen / Fehler 503 „not-configured“:** Die Keys fehlen oder sind falsch. Prüfe `~/.config/tip/env` und starte neu.
 - **Fehler von BingX (502/504):** Meist vorübergehend oder ein Limit bei zu vielen Abfragen, kurz warten.
@@ -82,7 +91,7 @@ Das Löschen dieser Datei setzt das Journal zurück (auch deine Notizen und Stop
 
 - Der API-Key hat **nur Lese-Rechte**. Die App macht nur lesende Anfragen an BingX.
 - Die Keys stehen nur in `~/.config/tip/env` (Rechte 600), nie im Code, und die App gibt sie nie über ihre API aus.
-- Der Server lauscht **nur auf deinem Mac** (`127.0.0.1`) und hat keine Anmeldung. Gib den Port nicht ins Netz frei.
+- Der Dienst lauscht **nur auf deinem Mac** (`127.0.0.1`) und hat keine Anmeldung. Auch die Mac-App nutzt nur diesen lokalen Dienst. Gib den Port nicht ins Netz frei.
 
 ## Für Entwickler
 
