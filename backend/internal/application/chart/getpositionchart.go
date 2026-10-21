@@ -86,6 +86,14 @@ func (useCase *GetPositionChartUseCase) WithRiskResolver(resolver *appposition.R
 	return useCase
 }
 
+// WithInitialStopLossOverrides berücksichtigt manuelle Ursprungs-SLs; nach WithRisk aufrufen.
+func (useCase *GetPositionChartUseCase) WithInitialStopLossOverrides(overrides positioninterfaces.PositionInitialStopLossRepository) *GetPositionChartUseCase {
+	if useCase.resolver != nil {
+		useCase.resolver.WithOverrides(overrides)
+	}
+	return useCase
+}
+
 // WithStopHistory ergänzt die Suche des ursprünglichen SL in der Order-Historie; nach WithRisk aufrufen.
 func (useCase *GetPositionChartUseCase) WithStopHistory(history positioninterfaces.StopOrderHistorySource) *GetPositionChartUseCase {
 	if useCase.resolver != nil {

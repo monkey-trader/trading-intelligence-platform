@@ -426,3 +426,81 @@
   background: var(--color-r-target-surface);
   color: var(--color-chart-r-target);
 }
+
+.slControl {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+.slForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+.slLabel {
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+.slInput {
+  min-height: var(--size-touch-target);
+  width: var(--size-sl-input-width);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-family-numeric);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-base);
+  text-align: right;
+}
+.slButton {
+  min-height: var(--size-touch-target);
+  min-width: var(--size-touch-target);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-size: var(--font-size-small);
+  cursor: pointer;
+}
+.slButton:focus-visible,
+.slInput:focus-visible {
+  outline: var(--border-width-emphasis) solid var(--color-accent);
+  outline-offset: var(--border-width-emphasis);
+}
+.slButtonPrimary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+.slError {
+  margin: 0;
+  font-size: var(--font-size-small);
+  color: var(--color-negative);
+}
+.manualBadge {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-chip);
+  background: var(--color-chip-surface);
+  color: var(--color-chip-text);
+  font-size: var(--font-size-x-small);
+}
+.manualRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Platzhalter bzw. Level-Pillen und das Eintragen-Formular untereinander, rechtsbündig wie die Preise. */
+.beTargetStack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}

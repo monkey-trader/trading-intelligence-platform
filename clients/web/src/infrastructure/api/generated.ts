@@ -64,6 +64,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/positions/{positionId}/initial-stop-loss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Ursprünglichen Stop-Loss einer offenen Position manuell setzen
+         * @description BingX überschreibt einen nachgezogenen SL in derselben Order; der Ursprungswert steht danach in keiner Order-Historie. Mit diesem Endpunkt trägt der Nutzer ihn von Hand ein. Der Wert wird zusammen mit dem aktuellen Entry der Position gespeichert (damit die R-Level bei Nachkäufen nicht wandern) und hat Vorrang vor dem automatisch ermittelten Risiko. Danach liefern `GET /positions/open` und der Chart `levels`, `riskDistance`, `currentRMultiple` und `breakEvenTriggerReached` mit `initialStopLossSource: MANUAL`. Ein erneutes `PUT` ersetzt den Wert. Der SL muss auf der Verlustseite des Entry liegen (LONG darunter, SHORT darüber). Nur für aktuell offene Positionen. Schreibt nur in die eigene Datenbank, nie zu BingX.
+         */
+        put: operations["setInitialStopLoss"];
+        post?: never;
+        /**
+         * Manuellen Ursprungs-SL entfernen
+         * @description Entfernt den manuell gesetzten Wert; die Position fällt auf das automatisch ermittelte Risiko zurück (`initialStopLossSource: AUTO`, bzw. unbekannt, wenn es keins gibt). Die Antwort ist immer 204 (idempotent), auch ohne vorhandenen manuellen Wert und für unbekannte oder geschlossene Positionen.
+         */
+        delete: operations["clearInitialStopLoss"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/assets/icons": {
         parameters: {
             query?: never;
@@ -99,10 +123,26 @@ export interface components {
         Decimal: string;
         Problem: {
             /** @enum {string} */
-            type: "bad-request" | "forbidden-host" | "not-found" | "not-configured" | "rate-limited" | "unreachable" | "upstream-error" | "invalid-response" | "internal";
+            type: "bad-request" | "forbidden-host" | "forbidden-origin" | "not-found" | "payload-too-large" | "unsupported-media-type" | "invalid-stop-loss" | "not-configured" | "rate-limited" | "unreachable" | "upstream-error" | "invalid-response" | "internal";
             title: string;
             status: number;
             detail?: string;
+        };
+        SetInitialStopLossRequest: {
+            /** @description Ursprünglicher SL-Trigger. Muss auf der Verlustseite des aktuellen Entry liegen (LONG kleiner, SHORT größer); sonst 422 `invalid-stop-loss`. */
+            initialStopLoss: components["schemas"]["Decimal"];
+        };
+        InitialStopLoss: {
+            positionId: string;
+            initialStopLoss: components["schemas"]["Decimal"];
+            /** @description Entry der Position zum Zeitpunkt der Eingabe (Basis der R-Level). */
+            entryPrice: components["schemas"]["Decimal"];
+            /** @description Risiko-Distanz |entryPrice - initialStopLoss| (1R). */
+            riskDistance: components["schemas"]["Decimal"];
+            /** @enum {string} */
+            source: "MANUAL";
+            /** @description Zeitpunkt der Eingabe in Epoch-Millisekunden. */
+            setAt: number;
         };
         OpenPositionsSnapshot: {
             positions: components["schemas"]["OpenPosition"][];
@@ -143,6 +183,8 @@ export interface components {
             breakEven: boolean | null;
             /** @description Ursprünglicher SL (beim ersten Sehen der Position gespeichert, wird nie überschrieben). null, wenn die Position beim ersten Sehen schon auf Break-even stand oder kein SL existierte. */
             initialStopLoss?: components["schemas"]["Decimal"] | null;
+            /** @description Herkunft von `initialStopLoss`: MANUAL (per PUT eingetragen) oder AUTO (beim ersten Sehen oder aus der Order-Historie ermittelt). null, wenn das Risiko unbekannt ist. */
+            initialStopLossSource?: ("AUTO" | "MANUAL") | null;
             /** @description Risiko-Distanz |Entry - initialStopLoss| (1R in Preiseinheiten). null, wenn unbekannt. */
             riskDistance?: components["schemas"]["Decimal"] | null;
             /** @description Aktueller Gewinn in R ((Mark Price - Entry) / riskDistance, SHORT gespiegelt), negativ im Verlust. null, wenn das Risiko unbekannt ist. */
@@ -248,7 +290,7 @@ export interface components {
         };
     };
     responses: {
-        /** @description Fehlerantwort ohne interne Details: 400 bad-request, 403 forbidden-host, 404 not-found, 502 upstream-error/invalid-response, 503 not-configured/rate-limited, 504 unreachable, 500 internal. */
+        /** @description Fehlerantwort ohne interne Details: 400 bad-request, 403 forbidden-host/forbidden-origin, 404 not-found, 413 payload-too-large, 415 unsupported-media-type, 422 invalid-stop-loss, 502 upstream-error/invalid-response, 503 not-configured/rate-limited, 504 unreachable, 500 internal. */
         Problem: {
             headers: {
                 /** @description Sekunden bis zum nächsten Versuch, nur bei rate-limited (503). */
@@ -351,6 +393,68 @@ export interface operations {
             502: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
+        };
+    };
+    setInitialStopLoss: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description BingX-Positions-ID (19-stellig, immer String). */
+                positionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetInitialStopLossRequest"];
+            };
+        };
+        responses: {
+            /** @description Der gespeicherte manuelle Ursprungs-SL. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InitialStopLoss"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            413: components["responses"]["Problem"];
+            415: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+            500: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+            504: components["responses"]["Problem"];
+        };
+    };
+    clearInitialStopLoss: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description BingX-Positions-ID (19-stellig, immer String). */
+                positionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Der manuelle Wert ist entfernt (oder war nicht vorhanden). */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            500: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     getAssetIcons: {

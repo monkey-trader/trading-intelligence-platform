@@ -106,3 +106,40 @@ func TestLevels_OrdersNichtLadbarStuerztNichtAb(t *testing.T) {
 		t.Error("Fehler der Order-Source muss durchgereicht werden")
 	}
 }
+
+// Erwartet: (*GetPositionChartUseCase).WithInitialStopLossOverrides(overrides positioninterfaces.PositionInitialStopLossRepository)
+// (nach WithRisk); der Override hat Vorrang, Level beruhen auf Override-Entry und -SL.
+
+type fakeOverrideRepo struct {
+	stored map[string]position.InitialStopLossOverride
+}
+
+func (repo *fakeOverrideRepo) Set(context.Context, position.InitialStopLossOverride) error {
+	return nil
+}
+func (repo *fakeOverrideRepo) Delete(context.Context, string) error { return nil }
+func (repo *fakeOverrideRepo) Get(_ context.Context, positionID string) (position.InitialStopLossOverride, bool, error) {
+	override, found := repo.stored[positionID]
+	return override, found, nil
+}
+
+var _ positioninterfaces.PositionInitialStopLossRepository = (*fakeOverrideRepo)(nil)
+
+func TestLevels_OverrideHatVorrangUndNutztOverrideEntry(t *testing.T) {
+	f := newFixture()
+	risks := &fakeRisks{stored: map[string]position.PositionRisk{suiPositionID: {PositionID: suiPositionID, EntryPrice: suiAvgOpenPrice, InitialStopLoss: "0.9000"}}}
+	overrides := &fakeOverrideRepo{stored: map[string]position.InitialStopLossOverride{
+		suiPositionID: {PositionID: suiPositionID, EntryPrice: "1.0000", InitialStopLoss: "0.9000", SetAt: 1},
+	}}
+	logger := slog.New(slog.NewTextHandler(f.logs, nil))
+	useCase := appchart.NewGetPositionChartUseCase(f.positions, f.orders, f.source, f.repo, logger).
+		WithRisk(risks, func() int64 { return 42 }).WithInitialStopLossOverrides(overrides)
+
+	result, err := useCase.Execute(context.Background(), defaultQuery())
+	if err != nil || len(result.Levels) != 3 {
+		t.Fatalf("err=%v levels=%+v", err, result.Levels)
+	}
+	if result.Levels[0].Price != "1.1" || result.Levels[1].Price != "1.2" || result.Levels[2].Price != "1.3" {
+		t.Errorf("Level müssen auf Entry 1.0000 / SL 0.9000 beruhen: %+v", result.Levels)
+	}
+}

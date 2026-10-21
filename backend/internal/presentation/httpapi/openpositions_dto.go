@@ -26,6 +26,7 @@ type openPositionDto struct {
 	CurrentRMultiple        *string     `json:"currentRMultiple,omitempty"`
 	BreakEvenTriggerReached *bool       `json:"breakEvenTriggerReached,omitempty"`
 	Reached2RAt             *int64      `json:"reached2RAt,omitempty"`
+	InitialStopLossSource   *string     `json:"initialStopLossSource,omitempty"`
 	Levels                  []rLevelDto `json:"levels,omitempty"`
 	OpenTime                int64       `json:"openTime"`
 	UpdateTime              int64       `json:"updateTime"`
@@ -65,6 +66,7 @@ func toOpenPositionsSnapshotDto(overview appposition.OpenPositionsOverview) open
 			CurrentRMultiple:        entry.CurrentRMultiple,
 			BreakEvenTriggerReached: entry.BreakEvenTriggerReached,
 			Reached2RAt:             entry.Reached2RAt,
+			InitialStopLossSource:   entry.InitialStopLossSource,
 			Levels:                  toRLevelDtos(entry.Levels),
 			OpenTime:                entry.OpenTime,
 			UpdateTime:              entry.UpdateTime,

@@ -32,9 +32,10 @@ type historyCall struct {
 // RiskResolver liefert das ursprüngliche Risiko einer Position. Fehlt es und ist der aktuelle SL unbrauchbar
 // (fehlt oder liegt nicht auf der Verlustseite), wird optional die allOrders-Historie befragt.
 type RiskResolver struct {
-	risks   interfaces.PositionRiskRepository
-	now     func() int64
-	history interfaces.StopOrderHistorySource // optional
+	risks     interfaces.PositionRiskRepository
+	now       func() int64
+	history   interfaces.StopOrderHistorySource            // optional
+	overrides interfaces.PositionInitialStopLossRepository // optional
 
 	mutex         sync.Mutex
 	retryAfter    map[string]int64 // positionId -> frühester nächster Versuch (Epoch-ms)
@@ -52,6 +53,19 @@ func NewRiskResolver(risks interfaces.PositionRiskRepository, now func() int64) 
 func (resolver *RiskResolver) WithHistory(history interfaces.StopOrderHistorySource) *RiskResolver {
 	resolver.history = history
 	return resolver
+}
+
+// WithOverrides aktiviert manuell gesetzte ursprüngliche SLs; sie haben Vorrang und werden live gelesen.
+func (resolver *RiskResolver) WithOverrides(overrides interfaces.PositionInitialStopLossRepository) *RiskResolver {
+	resolver.overrides = overrides
+	return resolver
+}
+
+// ForgetPosition leert den Negativ-Cache einer Position, damit die Historie neu befragt wird.
+func (resolver *RiskResolver) ForgetPosition(positionID string) {
+	resolver.mutex.Lock()
+	defer resolver.mutex.Unlock()
+	delete(resolver.retryAfter, positionID)
 }
 
 // BeginRun startet einen Durchlauf (Poll): Das Abfrage-Budget wird zurückgesetzt, Einträge für nicht mehr
@@ -85,6 +99,38 @@ func ResolveRisk(
 // Resolve liefert das gespeicherte Risiko oder legt es an. known=false heißt: Risiko unbekannt
 // (Fehler werden geloggt, nie weitergereicht).
 func (resolver *RiskResolver) Resolve(ctx context.Context, openPosition domainposition.OpenPosition, stopTriggers []string) (domainposition.PositionRisk, bool) {
+	risk, _, known := resolver.ResolveWithSource(ctx, openPosition, stopTriggers)
+	return risk, known
+}
+
+// ResolveWithSource wie Resolve, nennt zusätzlich die Quelle (manuell gesetzt oder automatisch ermittelt).
+func (resolver *RiskResolver) ResolveWithSource(ctx context.Context, openPosition domainposition.OpenPosition, stopTriggers []string) (domainposition.PositionRisk, RiskSource, bool) {
+	if resolver.overrides != nil {
+		override, found, err := resolver.overrides.Get(ctx, openPosition.PositionID)
+		if err != nil {
+			slog.WarnContext(ctx, "Ursprungs-SL-Override nicht lesbar", slog.String("positionId", openPosition.PositionID), slog.String("error", err.Error()))
+			return domainposition.PositionRisk{}, "", false
+		}
+		if found {
+			return domainposition.PositionRisk{PositionID: override.PositionID, EntryPrice: override.EntryPrice,
+				InitialStopLoss: override.InitialStopLoss, FirstSeenAt: override.SetAt}, RiskSourceManual, true
+		}
+	}
+	risk, known := resolver.resolveAutomatic(ctx, openPosition, stopTriggers)
+	return risk, RiskSourceAuto, known
+}
+
+// RiskSource nennt die Herkunft des ursprünglichen SL.
+type RiskSource string
+
+const (
+	// RiskSourceManual steht für einen vom Nutzer gesetzten SL.
+	RiskSourceManual RiskSource = "MANUAL"
+	// RiskSourceAuto steht für einen automatisch aus Orders/Historie ermittelten SL.
+	RiskSourceAuto RiskSource = "AUTO"
+)
+
+func (resolver *RiskResolver) resolveAutomatic(ctx context.Context, openPosition domainposition.OpenPosition, stopTriggers []string) (domainposition.PositionRisk, bool) {
 	stored, found, err := resolver.risks.Get(ctx, openPosition.PositionID)
 	if err != nil {
 		slog.WarnContext(ctx, "Risiko nicht lesbar", slog.String("positionId", openPosition.PositionID), slog.String("error", err.Error()))

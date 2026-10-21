@@ -119,6 +119,7 @@ describe('createHttpOpenPositionsGateway', () => {
         currentRMultiple: null,
         breakEvenTriggerReached: null,
         reached2RAt: null,
+        initialStopLossSource: null,
       };
       expect(result).toEqual({
         kind: 'ok',

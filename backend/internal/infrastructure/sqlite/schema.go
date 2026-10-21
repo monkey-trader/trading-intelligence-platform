@@ -64,4 +64,10 @@ var schemaStatements = []string{
 		initial_stop_loss TEXT NOT NULL,
 		first_seen_at INTEGER NOT NULL
 	)`,
+	`CREATE TABLE IF NOT EXISTS position_initial_stop_override (
+		position_id TEXT PRIMARY KEY,
+		entry_price TEXT NOT NULL,
+		initial_stop_loss TEXT NOT NULL,
+		set_at INTEGER NOT NULL
+	)`,
 }

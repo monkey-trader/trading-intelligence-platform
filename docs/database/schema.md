@@ -124,6 +124,19 @@ zeitlich früheste STOP-Order-Trigger der Position auf der Verlustseite (Negativ
 
 Keine Schema-Version-Erhöhung (wie `candles`): Die Tabelle entsteht per `CREATE TABLE IF NOT EXISTS`.
 
+## Tabelle `position_initial_stop_override`
+Manuell gesetzter ursprünglicher SL (`PUT /positions/{positionId}/initial-stop-loss`). Hat Vorrang vor
+`position_risk`, wird live gelesen und mit `DELETE` entfernt; ein erneutes `PUT` ersetzt den Eintrag.
+
+| Spalte | Typ | Bedeutung |
+|---|---|---|
+| `position_id` | TEXT, PK | 19-stellige positionId, immer als String |
+| `entry_price` | TEXT | Entry der Position beim Setzen (Basis der R-Level) |
+| `initial_stop_loss` | TEXT | manueller Ursprungs-SL (Dezimal-String) |
+| `set_at` | INTEGER | Zeitpunkt des Setzens (Epoch-ms) |
+
+Keine Schema-Version-Erhöhung: Die Tabelle entsteht per `CREATE TABLE IF NOT EXISTS`.
+
 ## Tabelle `schema_version`
 Nur Go-Backend. Spalte `version INTEGER NOT NULL`, genau eine Zeile mit der aktuellen Version
 (`CurrentSchemaVersion`, derzeit 1). Eine TS-DB ohne diese Tabelle gilt als Version 0.

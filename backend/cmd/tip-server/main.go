@@ -92,6 +92,23 @@ func run(logger *slog.Logger) error {
 		riskResolver = appposition.NewRiskResolver(sqlite.NewPositionRiskRepository(database), time.Now().UnixMilli).
 			WithHistory(infrachart.NewBingXStopOrderHistorySource(chartClient))
 	}
+	// Manueller Ursprungs-SL: nur mit Datenbank und Resolver; der gemeinsame Resolver liest ihn live.
+	settings := httpapi.Settings{AllowRemote: os.Getenv("ALLOW_REMOTE") == "true"}
+	if riskResolver != nil {
+		overrides := sqlite.NewPositionInitialStopLossRepository(database)
+		riskResolver.WithOverrides(overrides)
+		setStopLoss := appposition.NewSetInitialStopLossUseCase(openPositionSource, overrides, riskResolver, time.Now().UnixMilli)
+		clearStopLoss := appposition.NewClearInitialStopLossUseCase(overrides, riskResolver)
+		settings.SetInitialStopLoss, settings.ClearInitialStopLoss = setStopLoss.Execute, clearStopLoss.Execute
+	} else {
+		// Ohne BingX-Zugang oder Datenbank bleiben die Routen registriert (Anfrageprüfung greift) und liefern 503 not-configured.
+		settings.SetInitialStopLoss = func(context.Context, string, string) (appposition.SetInitialStopLossResult, error) {
+			return appposition.SetInitialStopLossResult{}, &domainposition.OpenPositionsUnavailableError{Reason: domainposition.ReasonNotConfigured}
+		}
+		settings.ClearInitialStopLoss = func(context.Context, string) error {
+			return &domainposition.OpenPositionsUnavailableError{Reason: domainposition.ReasonNotConfigured}
+		}
+	}
 	getOpenPositions := newGetOpenPositions(openPositionSource, orderSource, database, riskResolver)
 	getPositionChart := newGetPositionChart(logger, chartClient, openPositionSource, orderSource, database, riskResolver)
 
@@ -104,13 +121,12 @@ func run(logger *slog.Logger) error {
 		return err
 	}
 
-	handler := httpapi.NewHandler(httpapi.Settings{
-		AllowedHosts:     serverConfig.AllowedHosts,
-		GetOpenPositions: getOpenPositions.Execute,
-		GetPositionChart: getPositionChart,
-		GetAssetIcons:    getAssetIcons.Execute,
-		WebUI:            newWebUI(),
-	}, logger)
+	settings.AllowedHosts = serverConfig.AllowedHosts
+	settings.GetOpenPositions = getOpenPositions.Execute
+	settings.GetPositionChart = getPositionChart
+	settings.GetAssetIcons = getAssetIcons.Execute
+	settings.WebUI = newWebUI()
+	handler := httpapi.NewHandler(settings, logger)
 	server := httpapi.NewServer(handler, logger)
 
 	signalContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
