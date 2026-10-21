@@ -39,7 +39,7 @@ const positions = [
     positionValue: '10267.50',
     unrealizedProfit: '187.50',
     pnlRatio: '0.1826',
-    openTime: now - hours(26),
+    openTime: now - hours(12),
     stopLoss: '67250.0',
     takeProfit: '70200.0',
     breakEven: true,
@@ -47,7 +47,7 @@ const positions = [
     riskDistance: '1000.0',
     currentRMultiple: '1.25',
     breakEvenTriggerReached: true,
-    reached2RAt: now - hours(5),
+    reached2RAt: now - hours(4),
     levels: levels(67200, 1000, 'LONG'),
   }),
   position({
@@ -133,6 +133,101 @@ const accountSummary = {
   unrealizedPnlPercent: '1.18',
 };
 
+const INTERVAL_MS = {
+  '5m': 300_000,
+  '15m': 900_000,
+  '1h': 3_600_000,
+  '4h': 14_400_000,
+  '1d': 86_400_000,
+};
+
+// Deterministische Zufallszahlen, damit der Screenshot bei jedem Lauf gleich aussieht.
+const seededRandom = (seed) => () => {
+  seed = (seed + 0x6d2b79f5) | 0;
+  let mixed = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+  mixed = (mixed + Math.imul(mixed ^ (mixed >>> 7), 61 | mixed)) ^ mixed;
+  return ((mixed ^ (mixed >>> 14)) >>> 0) / 4294967296;
+};
+
+/** Kerzen entlang einer Kurve: Start unter dem Einstieg, Einstieg bei 12 h, Anstieg mit Rücksetzern. */
+const chartFor = (position, interval, limit) => {
+  const step = INTERVAL_MS[interval] ?? INTERVAL_MS['5m'];
+  const count = Math.min(limit, 200);
+  const random = seededRandom(7);
+  const entry = Number(position.avgOpenPrice);
+  const mark = Number(position.markPrice);
+  const entryIndex = Math.max(1, Math.round(count - (now - position.openTime) / step));
+  const anchors = [
+    [0, entry * 0.9955],
+    [entryIndex, entry],
+    [Math.round((entryIndex + count) / 2), entry * 1.0105],
+    [count - 1, mark],
+  ];
+  const curve = (index) => {
+    for (let at = 1; at < anchors.length; at++) {
+      const [endIndex, endPrice] = anchors[at];
+      const [startIndex, startPrice] = anchors[at - 1];
+      if (index <= endIndex) {
+        return (
+          startPrice +
+          ((endPrice - startPrice) * (index - startIndex)) / (endIndex - startIndex || 1)
+        );
+      }
+    }
+    return mark;
+  };
+  const candles = [];
+  let previousClose = curve(0);
+  for (let index = 0; index < count; index++) {
+    const open = previousClose;
+    const wave = index < entryIndex ? Math.sin(index / 7) * entry * 0.0022 : 0; // Seitwärtsphase vor dem Einstieg
+    const close = curve(index) + wave + (random() - 0.5) * entry * 0.0016;
+    const high = Math.max(open, close) + random() * entry * 0.0009;
+    const low = Math.min(open, close) - random() * entry * 0.0009;
+    candles.push({
+      time: now - (count - index) * step,
+      open: open.toFixed(1),
+      high: high.toFixed(1),
+      low: low.toFixed(1),
+      close: close.toFixed(1),
+      volume: (40 + random() * 160).toFixed(2),
+    });
+    previousClose = close;
+  }
+  const ratio = (price) => ((price - mark) / mark).toFixed(4);
+  return {
+    positionId: position.positionId,
+    symbol: position.symbol,
+    side: position.side,
+    interval,
+    candles,
+    entry: { price: position.avgOpenPrice, time: position.openTime },
+    stopLoss: position.stopLoss
+      ? [
+          {
+            orderId: '2200000000000000001',
+            triggerPrice: position.stopLoss,
+            quantity: position.positionAmount,
+            distanceRatio: ratio(Number(position.stopLoss)),
+          },
+        ]
+      : [],
+    takeProfit: position.takeProfit
+      ? [
+          {
+            orderId: '2200000000000000002',
+            triggerPrice: position.takeProfit,
+            quantity: position.positionAmount,
+            distanceRatio: ratio(Number(position.takeProfit)),
+          },
+        ]
+      : [],
+    markers: [{ time: position.openTime, kind: 'ENTRY', price: position.avgOpenPrice }],
+    levels: position.levels ?? [],
+    fetchedAt: Date.now(),
+  };
+};
+
 const routes = {
   '/health': () => ({ status: 'ok' }),
   '/positions/open': () => ({ positions, totalUnrealizedProfit: '298.40', fetchedAt: Date.now() }),
@@ -151,7 +246,16 @@ const routes = {
 const port = Number(process.env.MOCK_PORT ?? 3299);
 createServer((request, response) => {
   const url = new URL(request.url ?? '/', 'http://127.0.0.1');
-  const handler = routes[url.pathname];
+  const chartMatch = url.pathname.match(/^\/positions\/(\d+)\/chart$/);
+  const chartPosition = chartMatch && positions.find((item) => item.positionId === chartMatch[1]);
+  const handler = chartPosition
+    ? () =>
+        chartFor(
+          chartPosition,
+          url.searchParams.get('interval') ?? '5m',
+          Number(url.searchParams.get('limit') ?? 200),
+        )
+    : routes[url.pathname];
   response.setHeader('Content-Type', handler ? 'application/json' : 'application/problem+json');
   response.statusCode = handler ? 200 : 404;
   response.end(
