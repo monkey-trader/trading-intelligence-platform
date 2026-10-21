@@ -2,7 +2,8 @@ import type { InitialStopLossProblemType } from '@/domain/position/InitialStopLo
 
 const PROBLEM_MESSAGES: Readonly<Record<InitialStopLossProblemType, string>> = {
   'invalid-stop-loss': 'SL muss auf der Verlustseite liegen',
-  'not-found': 'Position dem Backend unbekannt (nicht in der lokalen DB). Backend neu starten oder Liste neu laden.',
+  'not-found':
+    'Position dem Backend unbekannt (nicht in der lokalen DB). Backend neu starten oder Liste neu laden.',
   'bad-request': 'Ungültige Eingabe.',
   'forbidden-origin': 'Anfrage vom Backend abgelehnt (Origin-Prüfung).',
   'not-configured': 'BingX-Zugang fehlt (BX_KEY/BX_SECRET im Backend setzen).',
