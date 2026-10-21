@@ -1,179 +1,95 @@
 # Trading Intelligence Platform
 
-Persönliches Trading-Journal mit automatischem Import von BingX (USDT-M Futures).
-
-- **API-first:** Ein eigenes Backend besitzt Import, Datenbank und Fachlogik.
-  Clients (Web-UI, Skripte, …) sind austauschbar und sprechen nur über die HTTP/JSON-API.
-- **Architektur:** Onion / DDD, feature-sliced, Test-Driven.
-- **Stack:** Backend in Go (nur Standardbibliothek), Web-Client mit Vite + React + TypeScript, SQLite, npm, GitHub Actions.
-- **Referenz:** Der Python-Prototyp `../bingx-journal` (siehe CLAUDE.md, inkl. bekanntem Positions-Bug).
-
-Details und Regeln für die Entwicklung stehen in [`CLAUDE.md`](CLAUDE.md).
+Persönliches Trading-Journal mit automatischem Import von **BingX** (USDT-M Futures).
+Alles läuft lokal auf deinem Mac: Deine Daten bleiben bei dir, es gibt keine Cloud und kein Konto.
 
 ![Offene Positionen im Web-UI (Fake-Daten)](docs/images/app.png)
 
-*Screenshot mit erfundenen Daten. Neu erzeugen: `node clients/web/scripts/mock-api.mjs`, dann
-`BACKEND_URL=http://127.0.0.1:3299 npx vite --port 5174` (beides in `clients/web`) und
-`node scripts/screenshot.mjs`.*
+![Chart einer offenen Position mit Entry, Stop-Loss und R-Linien (Fake-Daten)](docs/images/app-chart.png)
 
-## Lokal starten
+*Screenshots mit erfundenen Daten.*
 
-### 1. Einmalig: installieren und Keys hinterlegen
-Voraussetzung: Go 1.27 (`brew install go`), Node (siehe `.nvmrc`), für die Prüfungen zusätzlich golangci-lint v2.15 oder neuer,
-mit Go 1.27 gebaut: `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0`.
+## Was die App kann
+
+- Offene Positionen live von BingX, mit Kontostand sowie PnL für Heute, 7 Tage und 30 Tage
+- Stop-Loss, Take-Profit und Break-even je Position, dazu CRV-Ziele (1R, 2R, 3R)
+- Chart je Position mit Einstieg, Stop-Loss und R-Linien
+- Automatischer Import der geschlossenen Positionen alle 5 Minuten
+- Hell, dunkel oder wie das System
+
+## Installation (macOS, mit Homebrew)
+
+Voraussetzung ist [Homebrew](https://brew.sh).
+
 ```bash
-(cd clients/web && npm ci) && (cd contracts && npm ci)
-export BX_KEY=… BX_SECRET=…   # Key nur mit Lese-Rechten; das Backend liest keine .env-Datei
+brew install monkey-trader/tap/tip-server
 ```
 
-### 2. App starten (zwei Terminals, jeweils im Repo-Root)
+### 1. BingX-API-Key anlegen (nur Lese-Rechte)
 
-**Terminal 1: Backend** (API auf http://127.0.0.1:3000, Import alle 5 Minuten, Details in [`backend/README.md`](backend/README.md))
+Die App braucht einen API-Key, um deine Positionen und Einkommens-Buchungen zu lesen.
+Sie handelt nie und kann kein Geld bewegen.
+
+1. In BingX einloggen (Web oder App) und das Profil-Menü öffnen, dann **API-Verwaltung** (*API Management*).
+2. **API erstellen** wählen und einen Namen vergeben, z.B. `tip-journal`.
+3. Bei den Berechtigungen **nur „Lesen“ (Read)** aktivieren. **Handeln, Auszahlen und Transfer bleiben aus.**
+4. Optional, aber empfohlen: die IP-Adresse deines Macs freigeben (IP-Beschränkung).
+5. Bestätigen (2FA). BingX zeigt dir **API Key** und **Secret Key**. Den Secret Key siehst du **nur einmal**, kopiere ihn sofort.
+
+> Die Menünamen bei BingX können sich leicht ändern. Wichtig ist nur: ein neuer Key, nur Lese-Recht.
+
+### 2. Key hinterlegen und starten
+
+Die Keys kommen in eine Datei in deinem Home-Ordner, die nur du lesen kannst (nie in ein Repo oder einen Chat):
+
 ```bash
-cd backend && go run ./cmd/tip-server
+mkdir -p ~/.config/tip && chmod 700 ~/.config/tip
+printf 'BX_KEY=dein-api-key\nBX_SECRET=dein-secret-key\n' > ~/.config/tip/env
+chmod 600 ~/.config/tip/env
+brew services start tip-server
 ```
 
-**Terminal 2: Web-UI** (Proxy `/api` → Backend)
-```bash
-cd clients/web && npm run dev
-```
+Ersetze `dein-api-key` und `dein-secret-key` durch deine Werte.
+`brew services` startet die App im Hintergrund und nach jedem Neustart des Macs automatisch wieder.
 
-Danach http://127.0.0.1:5173 öffnen (Vite bindet nur auf IPv4-Loopback; `localhost` kann auf `::1` zeigen).
-Stoppen: `Ctrl+C` im jeweiligen Terminal. Die SQLite-Datei liegt standardmäßig unter
-`<UserConfigDir>/tip/journal.db` (macOS: `~/Library/Application Support/tip/journal.db`, `JOURNAL_DB` überschreibt).
+### 3. Öffnen
 
-### 3. Vertragstest gegen das laufende Backend (Terminal 3)
-Prüft die Antworten des Backends gegen `docs/openapi.yaml`. Das Backend aus Terminal 1 muss laufen.
-```bash
-cd contracts && CONTRACT_BASE_URL=http://127.0.0.1:3000 CONTRACT_EXPECT_CONFIGURED=true npm test
-```
-- `CONTRACT_EXPECT_CONFIGURED=true` nur, wenn `BX_KEY`/`BX_SECRET` gesetzt sind (erwartet dann 200 für
-  `/positions/open`). Ohne Keys weglassen, dann wird 503 `not-configured` erwartet (wie in CI).
-- Ohne laufenden Server (nur Validator und Abdeckungs-Check): `cd contracts && npm run test:unit`
+Im Browser: **http://127.0.0.1:3000**
 
-### 4. Prüfungen des Backends
-```bash
-cd backend && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...
-```
+Der erste Import beginnt mit dem ersten Start. Geschlossene Positionen erscheinen, sobald BingX sie liefert.
 
-### API von Hand ausprobieren
-```bash
-curl -i http://127.0.0.1:3000/health                           # 200 {"status":"ok"}
-curl -s http://127.0.0.1:3000/positions/open                   # offene Positionen (JSON)
-curl -i http://127.0.0.1:3000/gibtsnicht                       # 404 not-found
-curl -i -H 'Host: evil.example' http://127.0.0.1:3000/health   # 403 forbidden-host
-```
+## Alltag
 
-### Prüfungen vor einem Commit
-```bash
-(cd clients/web && npm run lint && npm run typecheck && npm test)
-(cd contracts && npm run lint && npm run typecheck && npm run test:unit)
-(cd backend && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...)
-```
-
-### Server hängt im Hintergrund?
-```bash
-lsof -nP -iTCP:3000 -sTCP:LISTEN   # Port 3000 (Backend) bzw. 5173 (UI)
-kill <PID>
-```
-
----
-
-## Entwickeln mit AI-Agenten (Blueprint)
-
-> Visualisiert mit Diagrammen: [`docs/ai-setup.md`](docs/ai-setup.md)
-
-Dieses Repo wird mit [Claude Code](https://code.claude.com) entwickelt. Statt einem einzigen
-"Alles-Assistenten" gibt es **feste Rollen**, die sich gegenseitig kontrollieren.
-Das Setup ist bewusst einfach gehalten und lässt sich auf andere Projekte übertragen.
-
-### Bausteine
-
-```
-CLAUDE.md                     Projektgedächtnis: Ziel, Architektur, Regeln, Sicherheit
-.claude/agents/
-├── architect.md              prüft Schichtengrenzen und API-Vertrag (nur lesen)
-├── test-author.md            schreibt Tests zuerst, nie Produktivcode
-├── programmer.md             macht Tests grün, ändert keine Tests
-├── designer.md               UI-Gestaltung und Konsistenz, sieht das UI per Screenshot
-└── reviewer.md               Qualität + Sicherheit vor dem Commit (nur lesen)
-```
-
-**`CLAUDE.md`** wird bei jedem Start automatisch geladen. Hier steht alles, was *immer* gilt:
-Ziel, Stack, Architektur, Konventionen, Sicherheitsregeln, bekannte Probleme.
-Unterordner können eigene `CLAUDE.md` haben, die nur dort gelten.
-
-**Subagents** sind Markdown-Dateien mit einem Kopfblock (Frontmatter):
-
-```markdown
----
-name: reviewer
-description: Wann dieser Agent eingesetzt wird (Claude wählt danach aus).
-tools: Read, Grep, Glob, Bash     # Rechte bewusst einschränken
----
-
-Anweisungen für die Rolle …
-```
-
-Jeder Subagent arbeitet in einem eigenen Kontext und liefert nur sein Ergebnis zurück.
-Über `tools` bekommt jede Rolle nur die Rechte, die sie braucht.
-
-### Warum diese vier Rollen
-
-| Rolle | Darf schreiben | Zweck |
-|---|---|---|
-| architect | nein | Struktur vor Details: Abhängigkeiten zeigen nach innen |
-| test-author | nur Tests | TDD: das gewünschte Verhalten wird zuerst festgehalten |
-| programmer | nur Code | Tests grün machen, **ohne** Tests zu verbiegen |
-| designer | nur `clients/` | Design-Tokens, Konsistenz, Kontrast; prüft per Screenshot |
-| reviewer | nein | unabhängige Prüfung, v.a. Secrets und Fehlerbehandlung |
-
-Die Trennung von test-author und programmer ist der Kern: Wer den Code schreibt,
-darf die Messlatte nicht selbst verschieben. Einen "Manager"-Agenten gibt es bewusst nicht,
-die Koordination macht der Mensch.
-
-### Ablauf pro Feature
-
-1. Im Projektordner `claude` starten.
-2. Mit **Shift+Tab** in den *Plan Mode* wechseln, damit zuerst ein Plan entsteht.
-3. Feature beschreiben, z.B.:
-   ```
-   Feature: Positionen von BingX importieren.
-   Starte mit dem architect für den Schnitt, dann test-author,
-   dann programmer, am Schluss reviewer.
-   ```
-4. Plan prüfen und freigeben.
-5. Nach dem Review: `npm run lint && npm test`, dann committen lassen.
-
-### Nützliche Befehle
-
-| Was | Wie |
+| Was | Befehl |
 |---|---|
-| Definierte Agenten anzeigen | Claude fragen: "Welche Subagents sind definiert?" |
-| Laufende Agenten / Protokolle | `/tasks` |
-| Agent-Dateien prüfen | `claude plugin validate .claude/agents` |
-| Session als bestimmte Rolle starten | `claude --agent reviewer` |
-| Agent anlegen oder ändern | Datei in `.claude/agents/` bearbeiten (wirkt ohne Neustart) |
+| Aktualisieren | `brew upgrade tip-server && brew services restart tip-server` |
+| Stoppen | `brew services stop tip-server` |
+| Status prüfen | `curl http://127.0.0.1:3000/health` (Antwort: `{"status":"ok"}`) |
+| Log ansehen | `tail -f $(brew --prefix)/var/log/tip-server.log` |
+| Deinstallieren | `brew services stop tip-server && brew uninstall tip-server` |
 
-> Hinweis: Der frühere `/agents`-Wizard wurde in neueren Claude-Code-Versionen entfernt.
-> Agenten werden direkt über die Dateien verwaltet.
+Deine Daten (SQLite) liegen unter `~/Library/Application Support/tip/journal.db`.
+Das Löschen dieser Datei setzt das Journal zurück (auch deine Notizen und Stop-Loss-Eingaben).
 
-### Übertragbar auf andere Projekte und Tools
+### Hilfe bei Problemen
 
-Übertragbar sind die **Prinzipien**:
-- ein zentrales Projektgedächtnis mit Architektur, Regeln und bekannten Problemen,
-- getrennte Rollen mit minimalen Rechten,
-- Tests als Vertrag, den der Programmierer nicht ändern darf,
-- unabhängiges Review vor jedem Commit,
-- der Mensch koordiniert.
-
-Claude-Code-spezifisch sind die **Dateinamen und Formate** (`CLAUDE.md`, `.claude/agents/`).
-Andere AI-Coding-Tools haben eigene Dateien für Projektregeln und Rollen;
-der Inhalt lässt sich weitgehend übernehmen.
-
----
+- **Seite lädt nicht:** `brew services list` zeigt, ob `tip-server` läuft. Sonst `brew services restart tip-server`.
+- **Keine Positionen / Fehler 503 „not-configured“:** Die Keys fehlen oder sind falsch. Prüfe `~/.config/tip/env` und starte neu.
+- **Fehler von BingX (502/504):** Meist vorübergehend oder ein Limit bei zu vielen Abfragen, kurz warten.
+- **Port 3000 ist belegt:** Ein anderes Programm nutzt ihn. Mit `lsof -nP -iTCP:3000 -sTCP:LISTEN` findest du es.
 
 ## Sicherheit
 
-- BingX-API-Key **nur mit Lese-Rechten**.
-- `BX_KEY` / `BX_SECRET` nur als Umgebungsvariablen bzw. in `~/.config/tip/env` (nicht im Repo).
+- Der API-Key hat **nur Lese-Rechte**. Die App macht nur lesende Anfragen an BingX.
+- Die Keys stehen nur in `~/.config/tip/env` (Rechte 600), nie im Code, und die App gibt sie nie über ihre API aus.
+- Der Server lauscht **nur auf deinem Mac** (`127.0.0.1`) und hat keine Anmeldung. Gib den Port nicht ins Netz frei.
+
+## Für Entwickler
+
+Technische Doku liegt unter [`docs/`](docs/):
+
+- [`docs/entwicklung.md`](docs/entwicklung.md): aus dem Quellcode starten, Tests, Prüfungen
+- [`CLAUDE.md`](CLAUDE.md): Architektur (Onion/DDD, API-first), Regeln und Ablauf
+- [`docs/openapi.yaml`](docs/openapi.yaml): API-Vertrag
+- [`backend/README.md`](backend/README.md): Go-Backend
+- [`docs/ai-blueprint.md`](docs/ai-blueprint.md): Entwickeln mit AI-Agenten
