@@ -13,6 +13,7 @@ export function AppHeader() {
 
   return (
     <header className={styles.header}>
+      <div className={styles.titlebar} aria-hidden="true" />
       <span className={styles.title}>Trading Intelligence Platform</span>
       <label className={styles.themeControl}>
         <span className={styles.themeLabel}>Design</span>

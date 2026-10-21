@@ -80,6 +80,9 @@
   --size-control-compact: 26px; /* schlanke Buttons/Felder bei Mauszeiger (pointer: fine) */
   --size-touch-target: 44px; /* Mindestgröße Touch-Ziele (Buttons, Eingabefelder) */
   --size-sl-input-width: 8rem; /* Eingabefeld "Ursprünglicher SL" */
+  --size-titlebar-height: 32px; /* Titelleiste der Wails-App (macOS-Ampel-Buttons, 28px hoch); trägt den Titel */
+  --size-titlebar-side: 10rem; /* Randspalten der Wails-Titelleiste: links Ampel, rechts Design-Wahl; gleich breit, damit der Titel mittig steht */
+  --line-height-tight: 1.2; /* Zahlen und Titel in Kopfzeilen */
 }
 
 @media (prefers-color-scheme: dark) {

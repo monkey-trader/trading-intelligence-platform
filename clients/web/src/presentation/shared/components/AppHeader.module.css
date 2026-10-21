@@ -1,8 +1,11 @@
 /* Innenabstand wie die Seite: Der Titel steht bündig zur Seiteninhalt-Kante (gleiche Formel wie .page). */
 .header {
   --header-inline: var(--space-3);
-  padding: var(--space-3)
-    max(var(--header-inline), calc((100% - var(--layout-max-width)) / 2 + var(--header-inline)));
+  --header-inline-edge: max(
+    var(--header-inline),
+    calc((100% - var(--layout-max-width)) / 2 + var(--header-inline))
+  );
+  padding: var(--space-3) var(--header-inline-edge);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -45,4 +48,40 @@
   .themeSelect {
     min-height: var(--size-control-compact);
   }
+}
+
+/* Wails-Desktop-App (macOS): der Titel steht in der Titelleiste selbst (32 px), mittig im Fenster.
+   Ein Raster mit zwei gleich breiten Randspalten (links frei für die Ampel, rechts der Design-Schalter)
+   hält den Titel auch bei schmalem Fenster mittig. Ist der Platz knapp, kürzt er sich mit "…". */
+.titlebar {
+  display: none;
+}
+
+:root[data-desktop='wails'] .header {
+  --wails-draggable: drag;
+  display: grid;
+  grid-template-columns: var(--size-titlebar-side) minmax(0, 1fr) var(--size-titlebar-side);
+  align-items: center;
+  gap: 0;
+  height: var(--size-titlebar-height);
+  padding-block: 0;
+}
+
+:root[data-desktop='wails'] .titlebar {
+  display: block;
+}
+
+:root[data-desktop='wails'] .title {
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-regular);
+}
+
+:root[data-desktop='wails'] .themeControl {
+  justify-self: end;
 }

@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { createHttpAccountSummaryGateway } from '@/infrastructure/api/httpAccountSummaryGateway';
 import { createHttpAssetIconsGateway } from '@/infrastructure/api/httpAssetIconsGateway';
 import { AppHeader } from '@/presentation/shared/components/AppHeader';
+import { markWailsApp } from '@/presentation/shared/platform/wailsApp';
 import { createHttpInitialStopLossGateway } from '@/infrastructure/api/httpInitialStopLossGateway';
 import { createHttpOpenPositionsGateway } from '@/infrastructure/api/httpOpenPositionsGateway';
 import { createHttpPositionChartGateway } from '@/infrastructure/api/httpPositionChartGateway';
@@ -14,6 +15,11 @@ import '@/styles/global.css';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Element #root fehlt in index.html');
+
+markWailsApp(document.documentElement, {
+  hasWailsRuntime: 'runtime' in window,
+  userAgent: navigator.userAgent,
+});
 
 const openPositionsGateway = createHttpOpenPositionsGateway(
   fetch,

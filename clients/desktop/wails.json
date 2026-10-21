@@ -1,0 +1,9 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "Trading Intelligence Platform",
+  "outputfilename": "TIP",
+  "info": {
+    "productName": "Trading Intelligence Platform",
+    "companyName": "monkey-trader"
+  }
+}

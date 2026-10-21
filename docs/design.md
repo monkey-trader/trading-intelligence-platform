@@ -153,7 +153,7 @@ Zellaufbau (Klassen):
 - **Unreal. PnL**, **Real. PnL**: mit `+`/`-`, getönt über `pnlTone` (PnL auf 2 Stellen).
 - **Real. PnL** (`realisedProfit`): bereits realisierter Anteil der offenen Position. Nach den echten Daten
   vermutlich vor allem Gebühren und Funding, daher oft leicht negativ. 2 Nachkommastellen.
-- Header: Summe des unrealisierten PnL in `font-size-x-large`, mit `+`/`-` und Tönung.
+- Header: Summe des unrealisierten PnL in `font-size-large` (fett, Zeilenhöhe `line-height-tight`), mit `+`/`-` und Tönung. Kontostand und Perioden-PnL in `font-size-base`, Labels in `font-size-small`. Der Kennzahlen-Kopf ist kompakt: Innenabstand `space-2`/`space-3`, Zeitraum-Knöpfe mindestens `size-control-compact` (26 px), bei `pointer: coarse` mindestens `size-touch-target` (44 px). Desktop ca. 80 px hoch (vorher 120 px), Mobile ca. 167 px (vorher 236 px).
 
 ### Ursprungs-SL von Hand (Zelle "TPs (je 33 %)")
 - Bei unbekanntem Risiko (keine `levels`) erscheint der Button "SL eintragen" (accessible name
@@ -223,3 +223,31 @@ Radien 6/8 px, Borders statt Schatten, Seitenbreite 1360 px. Tabellenkopf auf
 
 ### Erklärung der TP-Spalte (i)
 - Kleiner (i)-Knopf (`.infoButton`, Kreis, „i“ per `::before`) im Kopf der Spalte „TPs (je 33 %)“; auf Mobile (kein Kopf) in der Toolbar (`.infoButtonToolbar`). Er öffnet den modalen `InfoDialog` (natives `<dialog>`, Esc/Hintergrund/„Schließen“) mit der Erklärung `BreakEvenTargetInfo`: 1R = ursprüngliches Risiko, TP1/TP2/TP3 bei 1R/2R/3R mit je 33 %, TP2 = BE-Auslöser.
+
+## Wails-Desktop-App (macOS)
+
+Die Desktop-Hülle (`clients/desktop`, Wails v2) zeigt denselben Web-Client mit `mac.TitleBarHiddenInset()`:
+Titelleiste unsichtbar, Ampel-Buttons (Schließen/Minimieren/Vollbild, ca. 80 px breit, 28 px hoch) liegen oben links
+über dem Inhalt. Im Browser ändert sich nichts.
+
+- **Erkennung**: `markWailsApp()` (`presentation/shared/platform/wailsApp.ts`) setzt `data-desktop="wails"` am `<html>`,
+  wenn `window.runtime` existiert oder der User-Agent "wails.io" enthält (Wails v2 setzt das auf macOS). Alle App-Regeln
+  hängen an diesem Attribut, nie am Browser-Standard.
+- **Titelleiste mit Titel**: In der App ist der `AppHeader` genau so hoch wie die Titelleiste (`--size-titlebar-height`,
+  32 px, Gesamthöhe inkl. Rahmen 33 px) und trägt selbst den Titel. Der Titel steht mittig im Fenster, in
+  `--font-size-small`, `regular` und `color-text-muted` (Kontrast 5.2:1 hell, 6.0:1 dunkel). Ein Raster mit zwei
+  gleich breiten Randspalten (`--size-titlebar-side`, 10 rem) hält ihn mittig: links bleibt die Ampel frei, rechts steht
+  die Design-Wahl. Unter 700 px kürzt sich der Titel mit "…" (`ellipsis`), er bricht nie um und rutscht nie unter die
+  Ampel. Der Header trägt `--wails-draggable: drag`. Die Ampel-Zone ist also kein eigener Balken mehr, keine zweite Zeile.
+  Im Browser bleibt der Header unverändert (Titel links, Höhe 51 px).
+- **Drag-Zonen**: `AppHeader` und die Kennzahlen-Kopfzeile (`OpenPositionsHeader`). Interaktive Elemente
+  (`a, button, input, select, textarea, label`) setzen `--wails-draggable: no-drag`, sonst zieht der Klick das Fenster.
+  Wails prüft nur das Computed-Style des Klick-Ziels, `--wails-draggable` vererbt sich aber. Deshalb explizit setzen.
+- **Text und Zeiger**: `user-select: none` auf allen Elementen der App. Ausnahme: Tabellenzellen (`td`) und Eingabefelder
+  bleiben markierbar, damit Preise und Positions-IDs kopierbar sind. Zeiger: `cursor: default`, Links und Eingabefelder
+  behalten `pointer` bzw. `text`. Die Klasse `.dragHandle` (grab) bleibt unverändert.
+- **Scrollen**: `overscroll-behavior: none` am `<html>`, dünne Scrollbars (`scrollbar-width: thin`) in
+  `--color-control-border` auf transparent.
+- **Tokens**: `--size-titlebar-height` (32 px), `--size-titlebar-side` (10 rem) und `--line-height-tight` (1.2) in `design-tokens.css`. Keine Farbe ist app-spezifisch.
+- **Offen**: Das Fenster ist translucent (`WindowIsTranslucent`), aber der Hintergrund bleibt deckend
+  (`--color-background`). Ein transparenter Hintergrund würde einen Materialeffekt brauchen und ist nicht umgesetzt.
