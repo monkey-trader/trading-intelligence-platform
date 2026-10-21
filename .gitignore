@@ -23,8 +23,8 @@ data/
 .idea/
 .claude/settings.local.json
 
-# Go-Binary aus `go build -o tip-server ./cmd/tip-server`
-/backend/tip-server
+# Go-Binary aus `go build -o trading-intelligence ./cmd/trading-intelligence`
+/backend/trading-intelligence
 
 # Screenshots des designer-Agenten
 clients/web/screenshots/

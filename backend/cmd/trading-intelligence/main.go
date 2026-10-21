@@ -1,4 +1,4 @@
-// Command tip-server startet die HTTP-API der Trading Intelligence Platform.
+// Command trading-intelligence startet die HTTP-API der Trading Intelligence Platform.
 package main
 
 import (

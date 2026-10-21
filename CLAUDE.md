@@ -27,7 +27,7 @@ sind austauschbar und sprechen nur über die API mit dem Backend.
 
 ## Ordnerstruktur
 ```
-backend/                Go-Backend: cmd/tip-server/, internal/{domain,application,
+backend/                Go-Backend: cmd/trading-intelligence/, internal/{domain,application,
                         infrastructure,presentation}/<feature>/; Befehle: `go test -race ./...`,
                         `golangci-lint run ./...`, `gofmt -l .` (muss leer sein)
 docs/openapi.yaml       API-Vertrag (Quelle der Wahrheit, es gibt nur diese eine Spec)
@@ -50,7 +50,7 @@ export BX_KEY=… BX_SECRET=…   # Key nur mit Lese-Rechten; das Backend liest 
 ```
 Dann zwei Terminals:
 ```bash
-cd backend && go run ./cmd/tip-server   # Terminal 1: API auf http://127.0.0.1:3000
+cd backend && go run ./cmd/trading-intelligence   # Terminal 1: API auf http://127.0.0.1:3000
 cd clients/web && npm run dev    # Terminal 2: Web-UI, Proxy /api → Backend
 ```
 Danach http://127.0.0.1:5173 öffnen (Vite bindet nur auf IPv4-Loopback; `localhost` kann auf `::1` zeigen).

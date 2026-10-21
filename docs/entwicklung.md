@@ -16,7 +16,7 @@ export BX_KEY=… BX_SECRET=…   # Key nur mit Lese-Rechten; das Backend liest 
 
 **Terminal 1: Backend** (API auf http://127.0.0.1:3000, Import alle 5 Minuten, Details in [`backend/README.md`](../backend/README.md))
 ```bash
-cd backend && go run ./cmd/tip-server
+cd backend && go run ./cmd/trading-intelligence
 ```
 
 **Terminal 2: Web-UI** (Proxy `/api` → Backend)

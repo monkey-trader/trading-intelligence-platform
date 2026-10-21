@@ -157,7 +157,7 @@ jobs:
 
       - name: Go-Backend bauen
         working-directory: backend
-        run: go build -o tip-server ./cmd/tip-server
+        run: go build -o trading-intelligence ./cmd/trading-intelligence
 
       - name: Backend ohne BingX-Keys starten
         env:
@@ -167,7 +167,7 @@ jobs:
           BX_KEY: ''
           BX_SECRET: ''
         run: |
-          (cd backend && nohup ./tip-server > "$SERVER_LOG" 2>&1 &)
+          (cd backend && nohup ./trading-intelligence > "$SERVER_LOG" 2>&1 &)
           for attempt in $(seq 1 30); do
             if curl -sf http://127.0.0.1:3000/health > /dev/null; then
               echo "Backend läuft nach ${attempt} Versuch(en)."

@@ -13,7 +13,7 @@ func main() {
 	app := &App{}
 
 	err := wails.Run(&options.App{
-		Title:                    "Trading Intelligence Platform",
+		Title:                    "Trading Intelligence",
 		Width:                    1440,
 		Height:                   900,
 		MinWidth:                 960,
@@ -29,7 +29,7 @@ func main() {
 			WebviewIsTransparent: true,
 			WindowIsTranslucent:  true,
 			About: &mac.AboutInfo{
-				Title:   "Trading Intelligence Platform",
+				Title:   "Trading Intelligence",
 				Message: "Persönliches Trading-Journal mit BingX-Import",
 			},
 		},
