@@ -16,7 +16,7 @@ Prüfe:
 - Tests decken das neue Verhalten wirklich ab.
 - **Go (`backend/`):** idiomatisch (Fehlerbehandlung, `context`, keine Goroutine-Lecks,
   Datenrennen mit `go test -race`), Schichtregeln laut `.golangci.yml` (depguard), Verhalten
-  gemäß Vertrag (Vertragstest `contract-tests/`).
+  gemäß Vertrag (Vertragstest `contracts/`).
 
 Gib das Ergebnis als Liste aus: Schweregrad (kritisch / mittel / klein), Datei:Zeile, Problem, Vorschlag.
 

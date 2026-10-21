@@ -1,5 +1,5 @@
 {
-  "name": "trading-intelligence-contract-tests",
+  "name": "trading-intelligence-contracts",
   "version": "0.1.0",
   "private": true,
   "description": "Sprachneutraler Vertragstest: prüft eine laufende API gegen docs/openapi.yaml",
