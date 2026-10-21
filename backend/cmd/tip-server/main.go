@@ -100,6 +100,14 @@ func run(logger *slog.Logger) error {
 		setStopLoss := appposition.NewSetInitialStopLossUseCase(openPositionSource, overrides, riskResolver, time.Now().UnixMilli)
 		clearStopLoss := appposition.NewClearInitialStopLossUseCase(overrides, riskResolver)
 		settings.SetInitialStopLoss, settings.ClearInitialStopLoss = setStopLoss.Execute, clearStopLoss.Execute
+	} else {
+		// Ohne BingX-Zugang oder Datenbank bleiben die Routen registriert (Anfrageprüfung greift) und liefern 503 not-configured.
+		settings.SetInitialStopLoss = func(context.Context, string, string) (appposition.SetInitialStopLossResult, error) {
+			return appposition.SetInitialStopLossResult{}, &domainposition.OpenPositionsUnavailableError{Reason: domainposition.ReasonNotConfigured}
+		}
+		settings.ClearInitialStopLoss = func(context.Context, string) error {
+			return &domainposition.OpenPositionsUnavailableError{Reason: domainposition.ReasonNotConfigured}
+		}
 	}
 	getOpenPositions := newGetOpenPositions(openPositionSource, orderSource, database, riskResolver)
 	getPositionChart := newGetPositionChart(logger, chartClient, openPositionSource, orderSource, database, riskResolver)
