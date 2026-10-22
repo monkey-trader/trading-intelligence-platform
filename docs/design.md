@@ -113,15 +113,15 @@ Zellaufbau (Klassen):
   Muted hell/dunkel 6.87:1, Long-Chip dunkel 6.69:1). Die Farbtöne `positive`/`negative` brauchen als Text auf
   `surface` dunkel 6.2:1 bis 8.2:1.
 - Kontrast R-Elemente (berechnet, Review): R-Linie 3R (`chart-r-target`) hell 5.96:1 auf `surface`, dunkel 8.70:1;
-  2R-Linie (`warning`) hell 6.56:1, dunkel 9.22:1; Chip "2R · BE ziehen" hell 5.98:1, dunkel 8.12:1; 3R auf
+  2R-Linie (`warning`) hell 6.56:1, dunkel 9.22:1; Chip "BE ziehen" hell 5.98:1, dunkel 8.12:1; 3R auf
   `surface-raised` hell 5.00:1. Chart-Titel sind die Linienfarbe auf `surface`, Achsenlabel setzt lightweight-charts
   selbst kontrastreich. Die 3R-Linie (Teal, Hue ~195°) und die TP-Linie (Grün, Hue ~152°) unterscheiden sich
   zusätzlich durch Linienstil (3R gepunktet, TP gestrichelt) und Titel.
 - Fehlender SL: "SL –" ohne Klasse `.slLine`, also gedämpft; rot (`.slLine`) nur bei gesetztem SL.
 - **R-Spalte entfernt** (2026-10-21): Die Spalte „TPs (je 33 %)“ mit den Preisen und der Chip ersetzen sie; `currentRMultiple` bleibt in der API (Journal, Stufe 3).
-- **Aktionschip "2R · BE ziehen"** (`.chipAction`, `warning-surface` mit Text `warning`) in der Chip-Zeile der
+- **Aktionschip "BE ziehen"** (`.chipAction`, `warning-surface` mit Text `warning`) in der Chip-Zeile der
   Symbolzelle, nur bei `breakEvenTriggerReached: true` und `breakEven` nicht `true`; bleibt auch mobil.
-- **R-Linien im Chart**: 1R `text-muted` gepunktet ("1R"), 2R `warning` gestrichelt ("2R · BE"), 3R neues Token
+- **R-Linien im Chart**: 1R `text-muted` gepunktet ("1R"), 2R `warning` gestrichelt ("BE"), 3R neues Token
   `--color-chart-r-target` gepunktet ("3R", ohne TP "3R TP3"); liegt 3R innerhalb 0,1 % des Entry am TP, eine
   TP-Linie "TP = 3R". Neues Token `--color-chart-r-target` (hell/dunkel); 2R nutzt `--color-warning`.
   Keine Legendeneinträge für R-Linien, der Titel an der Linie genügt.
