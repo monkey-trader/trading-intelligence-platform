@@ -21,15 +21,15 @@ cask "trading-intelligence-app" do
   app "Trading Intelligence.app"
 
   # Die App ist nur ad-hoc signiert (keine Apple-Developer-ID). Ohne diesen Schritt blockiert Gatekeeper den Start.
-  postflight do
-    system_command "/usr/bin/xattr",
-                   args: ["-dr", "com.apple.quarantine", "#{appdir}/Trading Intelligence.app"]
+  postflight_steps do
+    run "/usr/bin/xattr",
+        args: ["-dr", "com.apple.quarantine", "{{appdir}}/Trading Intelligence.app"]
   end
 
   # Nur Fenster-Einstellungen; die Datenbank (journal.db) bleibt bewusst erhalten.
   zap trash: [
-    "~/Library/Application Support/tip/window.json",
     "~/Library/Application Support/tip/server.log",
+    "~/Library/Application Support/tip/window.json",
   ]
 
   caveats <<~EOS
