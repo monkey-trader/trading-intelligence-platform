@@ -243,8 +243,8 @@ Titelleiste unsichtbar, Ampel-Buttons (Schließen/Minimieren/Vollbild, ca. 80 px
 - **Drag-Zonen**: `AppHeader` und die Kennzahlen-Kopfzeile (`OpenPositionsHeader`). Interaktive Elemente
   (`a, button, input, select, textarea, label`) setzen `--wails-draggable: no-drag`, sonst zieht der Klick das Fenster.
   Wails prüft nur das Computed-Style des Klick-Ziels, `--wails-draggable` vererbt sich aber. Deshalb explizit setzen.
-- **Text und Zeiger**: `user-select: none` auf allen Elementen der App. Ausnahme: Tabellenzellen (`td`) und Eingabefelder
-  bleiben markierbar, damit Preise und Positions-IDs kopierbar sind. Zeiger: `cursor: default`, Links und Eingabefelder
+- **Text und Zeiger**: Alle Texte sind markierbar, damit BE-Preis, SL, TP, Zahlen und Positions-IDs
+  kopierbar sind. Nur `button`, `summary`, `select` und `nav` haben `user-select: none`. Zeiger: `cursor: default`, Links und Eingabefelder
   behalten `pointer` bzw. `text`. Die Klasse `.dragHandle` (grab) bleibt unverändert.
 - **Scrollen**: `overscroll-behavior: none` am `<html>`, dünne Scrollbars (`scrollbar-width: thin`) in
   `--color-control-border` auf transparent.

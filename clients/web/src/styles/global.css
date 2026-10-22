@@ -38,15 +38,16 @@ p {
   scrollbar-color: var(--color-control-border) transparent;
 }
 
+/* Alle Texte (BE-Preis, SL, TP, Zahlen, Positions-ID) bleiben mit der Maus markier- und kopierbar. */
 :root[data-desktop='wails'] * {
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-/* Werte in Tabellen (Preise, Positions-ID) bleiben kopierbar. */
-:root[data-desktop='wails'] :is(td, input, textarea) {
   user-select: text;
   -webkit-user-select: text;
+}
+
+/* Nur Bedienelemente sind nicht markierbar, damit Klicks keine Textauswahl auslösen. */
+:root[data-desktop='wails'] :is(button, summary, select, nav) {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 :root[data-desktop='wails'] body {
