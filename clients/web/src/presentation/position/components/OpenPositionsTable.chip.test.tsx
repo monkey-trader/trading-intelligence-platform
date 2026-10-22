@@ -22,7 +22,7 @@ function renderRow(position: OpenPosition) {
 beforeEach(() => window.localStorage.clear());
 
 describe('OpenPositionsTable Aktionschip 2R', () => {
-  const chipName = /2R · BE ziehen/;
+  const chipName = /BE ziehen/;
 
   it('Chip bei breakEvenTriggerReached true und breakEven false', () => {
     const { row } = renderRow(withR({ breakEvenTriggerReached: true, breakEven: false }));

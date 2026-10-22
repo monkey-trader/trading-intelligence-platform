@@ -72,5 +72,5 @@ function addRLevelLine(
     return;
   }
   const kind = R_LINE_KINDS[level.kind];
-  lines.push({ kind, price, title: level.kind === 'TWO_R' ? '2R · BE' : '1R' });
+  lines.push({ kind, price, title: level.kind === 'TWO_R' ? 'BE' : '1R' });
 }

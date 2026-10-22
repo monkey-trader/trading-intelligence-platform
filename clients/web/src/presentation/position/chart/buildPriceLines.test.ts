@@ -20,7 +20,7 @@ describe('buildPriceLines R-Linien', () => {
   it('zeichnet 1R, 2R und 3R mit Kind, Preis und Titel', () => {
     expect(rLines(withLevels(xagLongChart, levels))).toEqual([
       { kind: 'r1', price: 57, title: '1R' },
-      { kind: 'r2', price: 59, title: '2R · BE' },
+      { kind: 'r2', price: 59, title: 'BE' },
       { kind: 'r3', price: 61, title: '3R' },
     ]);
   });

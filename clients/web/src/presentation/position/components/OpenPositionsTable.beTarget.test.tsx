@@ -41,11 +41,11 @@ describe('OpenPositionsTable Spalte TPs (je 33 %)', () => {
     );
   });
 
-  it('zeigt TP1 (1R), TP2 (2R, zugleich BE) und TP3 (3R), formatiert wie der Einstieg', () => {
+  it('zeigt TP1 (1R), BE (2R) und TP3 (3R), formatiert wie der Einstieg', () => {
     const { row } = renderRow({ ...suiLongPosition, levels });
     const cell = beTargetCell(row);
     expect(within(cell).getByText(`TP1 ${formatDecimal('1.0200')}`)).toBeInTheDocument();
-    expect(within(cell).getByText(`TP2 ${formatDecimal('1.0800')} · BE`)).toBeInTheDocument();
+    expect(within(cell).getByText(`BE ${formatDecimal('1.0800')}`)).toBeInTheDocument();
     expect(within(cell).getByText(`TP3 ${formatDecimal('1.1400')}`)).toBeInTheDocument();
   });
 

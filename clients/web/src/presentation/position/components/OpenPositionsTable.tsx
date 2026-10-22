@@ -265,7 +265,7 @@ function OpenPositionRow({
             <span className={styles.chip}>{position.isolated ? 'Isolated' : 'Cross'}</span>
             <span className={styles.chip}>{`${position.leverage}X`}</span>
             {position.breakEvenTriggerReached === true && position.breakEven !== true && (
-              <span className={`${styles.chip} ${styles.chipAction}`}>2R · BE ziehen</span>
+              <span className={`${styles.chip} ${styles.chipAction}`}>BE ziehen</span>
             )}
           </div>
         </div>
@@ -339,7 +339,7 @@ function OpenPositionRow({
                 {`TP1 ${formatDecimal(firstLevel.price)}`}
               </span>
               <span className={`${styles.levelPill} ${styles.levelBe}`}>
-                {`TP2 ${formatDecimal(secondLevel.price)} · BE`}
+                {`BE ${formatDecimal(secondLevel.price)}`}
               </span>
               <span className={`${styles.levelPill} ${styles.levelTarget}`}>
                 {`TP3 ${formatDecimal(thirdLevel.price)}`}

@@ -452,7 +452,7 @@
 }
 
 /* TPs: drei Zeilen als Tonpillen (Text, nicht nur Farbe). TP1 = 1R (neutral), TP2 = 2R und BE-Auslöser
-   (warning, wie die 2R-Linie), TP3 = 3R (chart-r-target). Pillen statt Präfix-Span, damit "TP2 1.08 · BE"
+   (warning, wie die 2R-Linie), TP3 = 3R (chart-r-target). Pillen statt Präfix-Span, damit "BE 1.08"
    in einem Element steht. */
 .levelStack {
   display: inline-flex;
