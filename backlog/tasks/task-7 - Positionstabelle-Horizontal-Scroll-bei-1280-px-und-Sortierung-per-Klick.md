@@ -4,7 +4,7 @@ title: 'Positionstabelle: Horizontal-Scroll bei 1280 px und Sortierung per Klick
 status: To Do
 assignee: []
 created_date: '2026-10-24T20:01:00Z'
-updated_date: '2026-10-24T20:41:00Z'
+updated_date: '2026-10-24T20:42:00Z'
 labels:
   - web
 dependencies:
@@ -37,4 +37,5 @@ Seit v1.0.0 scrollt die Positionstabelle bei 1280 px horizontal, und Zeilen lass
 - [ ] #10 Nur Design-Tokens; Kontrast Text ≥ 4.5:1 und Nicht-Text ≥ 3:1 in Hell und Dunkel
 - [ ] #11 Zeilen ohne SL (initialStopLoss unbekannt) stehen bei jeder Sortierung am Ende, auch bei absteigend; ihre Reihenfolge untereinander bleibt die der API
 - [ ] #12 Tastatur: Enter und Leertaste auf dem Spaltenkopf sortieren (Zyklus wie beim Klick); Alt+Pfeil links/rechts verschiebt die Spalte, Symbol bleibt links; Fokus bleibt auf dem verschobenen Kopf und die Änderung wird angesagt (aria-live)
+- [ ] #13 Chart-Panel bleibt unverändert und bezieht sich auf die gewählte Position (positionId), nicht auf die Zeilenposition: Sortieren oder Spalten verschieben ändert weder die Auswahl noch die Chart-Anzeige
 <!-- AC:END -->
