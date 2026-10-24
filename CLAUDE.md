@@ -160,41 +160,14 @@ Neuer Skill: in ai-os anlegen, Zeile in `skills.txt` ergänzen, `ai-link` ausfü
 - `docs/features/chart-journal.md` – Feature: Chart mit Entry, SL, TP (Stufen 1–3, read-only).
 
 
-## Code finden (repo-rag)
-Bevor du Ordner durchsuchst oder Dateien breit liest:
-`repo-rag search --files-only "<konkrete englische Frage mit Code-Begriffen>"`
-Beispiel: `repo-rag search --files-only "fetch open positions from bingx api"`
-Lies danach nur die gefundenen Dateien/Zeilen. Optional `--path backend` zum Eingrenzen.
-Nach grösseren Änderungen: `repo-rag index`.
+## Code finden und Token sparen
+Allgemeine Regeln im Skill `token-saving` (repo-rag zuerst, gezielt lesen, ask-local nur für eine Quelle).
+Projektspezifisch: `repo-rag search --files-only --path backend "<frage>"` zum Eingrenzen, nach größeren
+Änderungen `repo-rag index`.
 
-
-- **ask-local nur für EINE Quelle** (ein Log, ein Diff, eine Datei). Nicht für Vergleiche mehrerer Quellen oder Status-Fragen (z. B. Plan vs. Commits) – das machst du selbst, `git log --oneline -20` ist billig.
-- `ask-local` nutzt standardmässig das schnelle deepseek-coder-v2:16b (MoE) (gut im Herauslesen: Logs, Diffs, Fixtures, Commit-Messages). Nur wenn Verständnis/Gewichtung nötig ist: `ask-local --deep` (14b, ~2× langsamer).
-- Erscheint `[ask-local] WARNUNG: Eingabe zu lang`, Ergebnis nicht trauen: Eingabe eingrenzen und neu fragen.
-
-## Agenten-Orchestrierung (Token-Regeln für den Lead)
-
-**Starten und Übergeben**
-- Subagenten **immer neu starten, nie resumen** (ein Resume schleppt den ganzen Verlauf mit).
-- Jedem Agenten eine kurze Übergabe mitgeben: betroffene Dateien/Pakete, betroffene Tests, genaue Aufgabe,
-  was er NICHT anfassen darf. Er soll nicht selbst das Repo durchsuchen müssen.
-- Agenten berichten in höchstens 15 Zeilen: geänderte Dateien, Ergebnis (grün/rot), offene Punkte. Keine Logs.
-
-**Wann welcher Agent**
-- `architect`: nur bei neuen Features/Phasen oder Schichtfragen, nicht bei Nachziehern oder Bugfixes.
-- `test-author` → `programmer`: je eine Runde. Bleiben Tests rot, meldet der programmer den Grund,
-  statt dass die Kette erneut läuft.
-- `reviewer`: **genau einmal, ganz am Ende**, vor dem Commit.
-- `designer`: nur bei sichtbaren UI-Änderungen. `lead-designer`: nur für neue Designs oder Varianten.
-- Kleine Nachzieher (Review-Punkte, Kommentare, Konstanten, einzelne Tests) erledigt der Lead bzw.
-  ein einzelner programmer direkt, ohne die ganze Kette.
-
-**Vor jedem Commit (Pflicht)**
-- Go: `cd backend && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...`
-- `golangci-lint` läuft lokal (go install, built with go1.27). „Läuft erst in der CI“ ist kein gültiger Grund mehr.
-  Schlägt Lint fehl, wird vor dem Commit behoben, nicht nachgezogen.
-
-**Session klein halten**
-- Vor dem reviewer `/compact` vorschlagen, wenn die Session lang ist.
-- Nach jedem Commit den Abschnitt „Aktueller Stand“ in `docs/migration/go-wails.md` aktualisieren
-  und dem Nutzer `/clear` empfehlen.
+## Agenten-Orchestrierung
+Allgemeine Regeln (wann welcher Agent, Übergabe, Ergebnisse prüfen, Session klein halten) im Skill
+`agent-orchestration` – vor dem ersten Subagent laden. Projektspezifisch:
+- **Vor jedem Commit (Pflicht):** `cd backend && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...`
+  (`golangci-lint` läuft lokal, built with go1.27).
+- **Nach jedem Commit:** Abschnitt „Aktueller Stand“ in `docs/migration/go-wails.md` aktualisieren, `/clear` empfehlen.
