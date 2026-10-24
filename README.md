@@ -107,3 +107,7 @@ Technische Doku liegt unter [`docs/`](docs/):
 - [`docs/openapi.yaml`](docs/openapi.yaml): API-Vertrag
 - [`backend/README.md`](backend/README.md): Go-Backend
 - [`docs/ai-blueprint.md`](docs/ai-blueprint.md): Entwickeln mit AI-Agenten
+
+Für die Arbeit mit Claude Code: Agents und Skills kommen aus dem Repo
+[ai-c3smonkey/ai-os](https://github.com/ai-c3smonkey/ai-os). Nach dem Klonen beider Repos
+im Projektordner `ai-link` ausführen (Details in [`CLAUDE.md`](CLAUDE.md)).

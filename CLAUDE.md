@@ -2,6 +2,12 @@
 
 Leitlinien für Claude Code in diesem Repo. Doku, Kommentare und UI-Texte auf Deutsch.
 
+> **Voraussetzung: ai-os.** Agents und Skills dieses Repos kommen aus dem Repo
+> [ai-c3smonkey/ai-os](https://github.com/ai-c3smonkey/ai-os) (`ai/agents`, `ai/skills`).
+> Einmalig: `git clone git@github.com:ai-c3smonkey/ai-os.git ~/git/ai-c3smonkey/ai-os`,
+> `ai-os/ai/bin` in den PATH, dann hier `ai-link` ausführen. Ohne ai-os fehlen die Agents
+> (`.claude/agents.txt`) und Skills (`.claude/skills.txt`); Cloud-Sessions sehen sie nicht.
+
 ## Ziel
 Persönliches Trading-Journal mit **automatischem Import von BingX** als Kernfunktion
 (alle 5 Minuten inkrementell + einmaliger Vollimport der Historie).
