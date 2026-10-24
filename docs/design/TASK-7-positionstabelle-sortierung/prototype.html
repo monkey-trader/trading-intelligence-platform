@@ -1,0 +1,199 @@
+<!doctype html>
+<!--
+  Prototyp TASK-7: Positionstabelle, Variante B (zwei Werte je Zelle stapeln, Sortierung per Kopfklick)
+  Stand: 2026-10-24, freigegeben am 2026-10-24.
+  Momentaufnahme der Freigabe, nicht der App. Nutzt die echten Design-Tokens, keine festen Farben.
+-->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TASK-7 Prototyp B</title>
+<link rel="stylesheet" href="../../../clients/web/src/styles/design-tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--color-background); color: var(--color-text); font-family: var(--font-family-base); font-size: var(--font-size-base); line-height: var(--line-height-base); }
+  .bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; padding: var(--space-2) var(--space-4); background: var(--color-surface-raised); border-bottom: 1px solid var(--color-border); font-size: var(--font-size-small); }
+  .bar strong { font-weight: var(--font-weight-strong); }
+  .bar .note { color: var(--color-text-muted); }
+  .group { display: flex; gap: var(--space-1); align-items: center; }
+  .group button, .bar select { font: inherit; font-size: var(--font-size-small); color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-control-border); border-radius: var(--radius-small); padding: var(--space-1) var(--space-2); cursor: pointer; }
+  .group button[aria-pressed='true'] { background: var(--color-accent); color: var(--color-on-accent); border-color: var(--color-accent); }
+  .stage { padding: var(--space-4); }
+  .frame { margin: 0 auto; width: 1280px; max-width: 100%; }
+  .frame.mobile { width: 390px; }
+  .panel { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--panel-radius); overflow: hidden; }
+  .panel h2 { margin: 0; padding: var(--space-3) var(--space-4); font-size: var(--font-size-base); font-weight: var(--font-weight-strong); border-bottom: 1px solid var(--color-border); }
+  .banner { padding: var(--space-2) var(--space-4); background: var(--color-warning-surface); color: var(--color-warning); font-size: var(--font-size-small); border-bottom: 1px solid var(--color-border); }
+  .message { padding: var(--space-5) var(--space-4); color: var(--color-text-muted); }
+  .message.error { background: var(--color-negative-surface); color: var(--color-negative); }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  th, td { padding: var(--table-cell-padding-block) var(--table-cell-padding-inline); text-align: right; vertical-align: top; border-bottom: 1px solid var(--color-border); font-variant-numeric: tabular-nums; }
+  th:first-child, td:first-child { text-align: left; padding-left: var(--space-4); }
+  th { font-size: var(--font-size-x-small); font-weight: var(--font-weight-strong); text-transform: uppercase; color: var(--color-text-muted); background: var(--color-surface-raised); }
+  th[draggable='true'] { cursor: grab; }
+  th.drop { box-shadow: inset var(--border-width-emphasis) 0 0 var(--color-accent); }
+  .sort { font: inherit; color: inherit; text-transform: inherit; background: none; border: 0; padding: var(--space-1); cursor: pointer; display: inline-flex; gap: var(--space-1); align-items: center; border-radius: var(--radius-small); }
+  .sort:hover { color: var(--color-text); }
+  .sort:focus-visible { outline: var(--border-width-emphasis) solid var(--color-accent); }
+  .sort[data-dir] { color: var(--color-accent); }
+  .sort .arrow { display: inline-block; min-width: 1ch; }
+  .stack { display: flex; flex-direction: column; align-items: flex-end; }
+  .sub { color: var(--color-text-muted); font-size: var(--font-size-small); }
+  tr.barLong td:first-child { box-shadow: inset var(--size-side-bar) 0 0 var(--color-positive); }
+  tr.barShort td:first-child { box-shadow: inset var(--size-side-bar) 0 0 var(--color-negative); }
+  .mobile tr.barLong { box-shadow: inset var(--size-side-bar) 0 0 var(--color-positive); }
+  .mobile tr.barShort { box-shadow: inset var(--size-side-bar) 0 0 var(--color-negative); }
+  .mobile tr.barLong td:first-child, .mobile tr.barShort td:first-child { box-shadow: none; }
+  .pos { color: var(--color-positive); } .neg { color: var(--color-negative); }
+  .symbol { font-weight: var(--font-weight-strong); }
+  .chip { display: inline-block; margin-left: var(--space-1); padding: 0 var(--space-1); border-radius: var(--radius-chip); background: var(--color-chip-surface); color: var(--color-chip-text); font-size: var(--font-size-x-small); }
+  .skeleton td > span { display: block; height: 1em; border-radius: var(--radius-small); background: var(--color-surface-raised); }
+  .hint { margin-top: var(--space-3); color: var(--color-text-muted); font-size: var(--font-size-small); }
+  .todo { margin-top: var(--space-2); padding: var(--space-2) var(--space-3); border: 1px dashed var(--color-control-border); border-radius: var(--radius-small); color: var(--color-text-muted); font-size: var(--font-size-small); }
+  /* Mobil: Karten, Spaltenname aus data-label */
+  .mobile table, .mobile tbody, .mobile tr, .mobile td { display: block; width: 100%; }
+  .mobile thead { display: none; }
+  .mobile tr { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border); }
+  .mobile td { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-1) 0; border: 0; text-align: right; }
+  .mobile td::before { content: attr(data-label); color: var(--color-text-muted); font-size: var(--font-size-small); text-align: left; }
+  .mobile td:first-child { padding-left: 0; font-size: var(--font-size-large); }
+  .mobile td:first-child::before { content: none; }
+  .mobilesort { display: none; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border); gap: var(--space-2); align-items: center; font-size: var(--font-size-small); }
+  .mobile .mobilesort { display: flex; }
+  .mobilesort select, .mobilesort button { min-height: var(--size-touch-target); font: inherit; color: var(--color-text); background: var(--color-surface-raised); border: 1px solid var(--color-control-border); border-radius: var(--radius-small); padding: 0 var(--space-3); }
+  .mobilesort select { flex: 1; }
+</style>
+</head>
+<body>
+<div class="bar" role="toolbar" aria-label="Prototyp-Leiste">
+  <strong>TASK-7 · Variante B (angepasst) · freigegeben 2026-10-24</strong>
+  <span class="note">Stand der Freigabe, nicht der App</span>
+  <div class="group" id="g-state" aria-label="Zustand"></div>
+  <div class="group" id="g-theme" aria-label="Theme"></div>
+  <div class="group" id="g-width" aria-label="Breite"></div>
+</div>
+
+<div class="stage">
+  <div class="frame" id="frame">
+    <section class="panel" aria-labelledby="title">
+      <h2 id="title">Offene Positionen</h2>
+      <div id="content"></div>
+    </section>
+    <p class="hint">Klick auf einen Kopf: aufsteigend, absteigend, zurück zur Reihenfolge der API. Spalten mit zwei Werten haben je einen Knopf pro Wert. Drag am Kopf verschiebt die Spalte (Symbol bleibt links, Ziel wird mit Akzentlinie markiert). Klick sortiert, Drag verschiebt.</p>
+    <p class="todo">Nicht im Prototyp: Diagramm-Panel, Initial-SL-Eingabe, Tastatur-Alternative zum Drag, TP3, Persistenz der Sortierung.</p>
+  </div>
+</div>
+
+<script>
+  const RAW = [
+    { symbol: 'BTC-USDT', side: 'Long', value: 12480, margin: 1248, upnl: 312.4, rpnl: 45.1, entry: 64210, sl: 62900, tp: 66800 },
+    { symbol: 'ETH-USDT', side: 'Short', value: 8900, margin: 890, upnl: -120.7, rpnl: 0, entry: 3120, sl: 3240, tp: 2860 },
+    { symbol: 'SOL-USDT', side: 'Long', value: 3200, margin: 320, upnl: 88.2, rpnl: 12.3, entry: 148.2, sl: 141, tp: 162 },
+    { symbol: '1000PEPE-USDT', side: 'Long', value: 1450, margin: 145, upnl: -34.9, rpnl: -2.4, entry: 0.0114, sl: 0.0108, tp: 0.0131 },
+    { symbol: 'DOGE-USDT', side: 'Short', value: 5120, margin: 512, upnl: 201.6, rpnl: 78.9, entry: 0.1822, sl: 0.1901, tp: 0.1650 },
+  ];
+  const ROWS = RAW.map((r) => { const risk = Math.abs(r.entry - r.sl), dir = r.side === 'Long' ? 1 : -1; return { ...r, tp1: r.entry + dir * 3 * risk, be: r.entry + dir * 2 * risk }; });
+  // key: sortierbarer Wert; Spalten mit zwei Werten haben zwei Schlüssel
+  const COLS = [
+    { id: 'symbol', label: 'Symbol', keys: [['symbol', 'Symbol']] },
+    { id: 'valueMargin', label: 'Wert / Margin', keys: [['value', 'Wert'], ['margin', 'Margin']] },
+    { id: 'upnl', label: 'Unreal. PnL', keys: [['upnl', 'Unreal. PnL']] },
+    { id: 'rpnl', label: 'Real. PnL', keys: [['rpnl', 'Real. PnL']] },
+    { id: 'entrySl', label: 'Einstieg / SL', keys: [['entry', 'Einstieg'], ['sl', 'SL']] },
+    { id: 'be', label: 'BE (2R)', keys: [['be', 'BE (2R)']] },
+    { id: 'tp1', label: 'TP1 (3R)', keys: [['tp1', 'TP1 (3R)']] },
+  ];
+  const state = { order: COLS.map((c) => c.id), dragged: null, view: 'data', theme: 'system', width: 'desktop', sortKey: null, dir: null };
+
+  const fmt = (n) => { const d = Math.abs(n) < 1 ? 4 : Math.abs(n) < 1000 ? 2 : 0; const [int, frac] = n.toFixed(d).split('.'); return int.replace(/\B(?=(\d{3})+(?!\d))/g, "'") + (frac ? '.' + frac : ''); };
+  const signed = (n) => (n > 0 ? '+' : '') + fmt(n);
+  const cls = (n) => (n > 0 ? 'pos' : n < 0 ? 'neg' : '');
+  const LABELS = Object.fromEntries(COLS.flatMap((c) => c.keys.map(([k, l]) => [k, l])));
+
+  function sorted() {
+    const rows = ROWS.slice();
+    if (!state.sortKey) return rows;
+    const f = state.dir === 'asc' ? 1 : -1, k = state.sortKey;
+    return rows.sort((a, b) => (typeof a[k] === 'string' ? a[k].localeCompare(b[k]) : a[k] - b[k]) * f);
+  }
+  function cycle(key) {
+    if (state.sortKey !== key) { state.sortKey = key; state.dir = 'asc'; }
+    else if (state.dir === 'asc') state.dir = 'desc';
+    else { state.sortKey = null; state.dir = null; }
+    render();
+  }
+  const ariaSort = (col) => { const k = col.keys.find(([key]) => key === state.sortKey); return k ? (state.dir === 'asc' ? 'ascending' : 'descending') : 'none'; };
+  function sortButton(key, label) {
+    const active = state.sortKey === key;
+    const arrow = active ? (state.dir === 'asc' ? '↑' : '↓') : '';
+    const next = !active ? 'aufsteigend' : state.dir === 'asc' ? 'absteigend' : 'Sortierung aufheben';
+    return `<button class="sort" data-key="${key}" ${active ? `data-dir="${state.dir}"` : ''} aria-label="${label} sortieren: ${next}">${label}<span class="arrow" aria-hidden="true">${arrow}</span></button>`;
+  }
+  function head() {
+    return '<thead><tr>' + state.order.map((id) => { const c = COLS.find((col) => col.id === id);
+      return `<th scope="col" data-col="${id}" aria-sort="${ariaSort(c)}" ${id !== 'symbol' ? 'draggable="true"' : ''}>${c.keys.map(([k, l]) => sortButton(k, l)).join('<br>')}</th>`; }).join('') + '</tr></thead>';
+  }
+  const CELLS = {
+    symbol: (r) => `<td data-label="Symbol"><span class="symbol">${r.symbol}</span><span class="chip">${r.side}</span></td>`,
+    valueMargin: (r) => `<td data-label="Wert / Margin"><span class="stack"><span>${fmt(r.value)}</span><span class="sub">${fmt(r.margin)}</span></span></td>`,
+    upnl: (r) => `<td data-label="Unreal. PnL" class="${cls(r.upnl)}">${signed(r.upnl)}</td>`,
+    rpnl: (r) => `<td data-label="Real. PnL" class="${cls(r.rpnl)}">${signed(r.rpnl)}</td>`,
+    entrySl: (r) => `<td data-label="Einstieg / SL"><span class="stack"><span>${fmt(r.entry)}</span><span class="sub">SL ${fmt(r.sl)}</span></span></td>`,
+    be: (r) => `<td data-label="BE (2R)">${fmt(r.be)}</td>`,
+    tp1: (r) => `<td data-label="TP1 (3R)">${fmt(r.tp1)}</td>`,
+  };
+  function body() {
+    return '<tbody>' + sorted().map((r) => `<tr class="${r.side === 'Long' ? 'barLong' : 'barShort'}">` + state.order.map((id) => CELLS[id](r)).join('') + '</tr>').join('') + '</tbody>';
+  }
+  function skeleton() {
+    return '<table aria-busy="true">' + head().replace(/<button/g, '<button disabled') + '<tbody class="skeleton">' + '<tr>' + COLS.map(() => '<td><span></span></td>').join('') + '</tr>'.repeat(1) + ('<tr>' + COLS.map(() => '<td><span></span></td>').join('') + '</tr>').repeat(2) + '</tbody></table>';
+  }
+  function mobileSort() {
+    const opts = ['<option value="">Reihenfolge der API</option>'].concat(Object.entries(LABELS).map(([k, l]) => `<option value="${k}" ${state.sortKey === k ? 'selected' : ''}>${l}</option>`));
+    return `<div class="mobilesort"><label for="ms">Sortieren</label><select id="ms">${opts.join('')}</select><button id="md" ${state.sortKey ? '' : 'disabled'} aria-label="Richtung wechseln">${state.dir === 'desc' ? '↓' : '↑'}</button></div>`;
+  }
+  function render() {
+    const el = document.getElementById('content');
+    const v = state.view;
+    let html;
+    if (v === 'loading') html = skeleton();
+    else if (v === 'empty') html = '<div class="message">Keine offenen Positionen.</div>';
+    else if (v === 'error') html = '<div class="message error" role="alert">Positionen konnten nicht geladen werden (HTTP 502).</div>';
+    else html = (v === 'stale' ? '<div class="banner" role="status">Daten veraltet (Stand vor 6 Min.). Sortierung bleibt aktiv.</div>' : '') + mobileSort() + `<table aria-label="Offene Positionen">${head()}${body()}</table>`;
+    el.innerHTML = html;
+    document.getElementById('frame').classList.toggle('mobile', state.width === 'mobile');
+    el.querySelectorAll('.sort:not([disabled])').forEach((b) => b.addEventListener('click', () => cycle(b.dataset.key)));
+    el.querySelectorAll('th[draggable="true"]').forEach((th) => {
+      th.addEventListener('dragstart', (e) => { state.dragged = th.dataset.col; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', th.dataset.col); });
+      th.addEventListener('dragover', (e) => { e.preventDefault(); th.classList.add('drop'); });
+      th.addEventListener('dragleave', () => th.classList.remove('drop'));
+      th.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const from = state.dragged, to = th.dataset.col;
+        if (from && from !== to) { state.order.splice(state.order.indexOf(from), 1); state.order.splice(state.order.indexOf(to), 0, from); }
+        state.dragged = null; render();
+      });
+      th.addEventListener('dragend', () => { state.dragged = null; th.classList.remove('drop'); });
+    });
+    const ms = document.getElementById('ms'), md = document.getElementById('md');
+    if (ms) ms.addEventListener('change', () => { state.sortKey = ms.value || null; state.dir = ms.value ? 'asc' : null; render(); });
+    if (md) md.addEventListener('click', () => { state.dir = state.dir === 'asc' ? 'desc' : 'asc'; render(); });
+    document.querySelectorAll('.bar .group button').forEach((b) => b.setAttribute('aria-pressed', String(state[b.dataset.g] === b.dataset.v)));
+  }
+  function group(id, key, items) {
+    document.getElementById(id).innerHTML = items.map(([v, l]) => `<button data-g="${key}" data-v="${v}">${l}</button>`).join('');
+    document.getElementById(id).addEventListener('click', (e) => {
+      const b = e.target.closest('button'); if (!b) return;
+      state[key] = b.dataset.v;
+      if (key === 'theme') { if (b.dataset.v === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', b.dataset.v); }
+      render();
+    });
+  }
+  group('g-state', 'view', [['data', 'Daten'], ['empty', 'Leer'], ['loading', 'Lädt'], ['error', 'Fehler'], ['stale', 'Veraltet']]);
+  group('g-theme', 'theme', [['system', 'System'], ['light', 'Hell'], ['dark', 'Dunkel']]);
+  group('g-width', 'width', [['desktop', 'Desktop 1280'], ['mobile', 'Mobil 390']]);
+  render();
+</script>
+</body>
+</html>
