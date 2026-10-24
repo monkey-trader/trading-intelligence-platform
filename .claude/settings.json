@@ -1,5 +1,15 @@
 {
   "deniedMcpServers": [
     { "serverName": "claude.ai Claude Docs" }
-  ]
+  ],
+  "skillOverrides": {
+    "docs": "off",
+    "docx": "off",
+    "pptx": "off",
+    "xlsx": "off",
+    "google-workspace": "off",
+    "morning": "off",
+    "import-memory": "off",
+    "deep-research": "off"
+  }
 }
