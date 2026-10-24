@@ -2,8 +2,10 @@
 id: TASK-1
 title: 'Chart Stufe 3: abgeschlossene Trades im Journal'
 status: To Do
-assignee: []
+assignee:
+  - monkey
 created_date: '2026-10-24T20:01:00Z'
+updated_date: '2026-10-24T20:54:00Z'
 labels:
   - chart
   - backend
