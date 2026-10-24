@@ -131,7 +131,9 @@ Konsequenz für dieses Projekt:
 - Phase 1 ohne Authentifizierung: Der Server bindet nur auf Loopback (`127.0.0.1`), ein anderer
   `HOST` nur mit ausdrücklichem `ALLOW_REMOTE=true`.
 
-## Subagents (`.claude/agents/`)
+## Subagents (`.claude/agents.txt`)
+Generische Agents (Onion, DDD, TDD) aus ai-os, verlinkt mit `ai-link`. Projektspezifisches für die Agents
+steht in `.claude/agent-rules.md` (BingX, Pfade, Befehle, Testschwerpunkte), nicht in den Agents selbst.
 - `architect` – prüft Schichtengrenzen und den API-Vertrag
 - `test-author` – schreibt Tests zuerst
 - `programmer` – macht Tests grün, ohne sie zu ändern
@@ -139,13 +141,13 @@ Konsequenz für dieses Projekt:
 - `lead-designer` – neue Designs, Varianten, Umgestaltung (setzt die designer-Regeln voraus)
 - `reviewer` – Qualität und Sicherheit am Schluss
 
-Alle Agents laden den Skill `token-saving` (ai-os, `development/token-saving`) vor.
+Alle Agents laden den Skill `token-saving` vor.
 
 Ablauf pro Feature: architect (Schnitt) → test-author → programmer → reviewer.
 Bei sichtbaren UI-Änderungen: … → programmer → designer → reviewer.
 
 ## Skills (`.claude/skills.txt`)
-Skills liegen zentral in ai-os (`~/git/ai-c3smonkey/ai-os/ai/skills`). `.claude/skills.txt` listet,
+Skills (und Agents) liegen zentral in ai-os (`~/git/ai-c3smonkey/ai-os/ai/skills`). `.claude/skills.txt` listet,
 welche dieses Repo nutzt; `ai-link` legt die Links in `.claude/skills/` an (lokal, nicht versioniert).
 Neuer Skill: in ai-os anlegen, Zeile in `skills.txt` ergänzen, `ai-link` ausführen.
 

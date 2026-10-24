@@ -1,0 +1,8 @@
+# Agents aus ai-os (~/git/ai-c3smonkey/ai-os/ai/agents), Links anlegen mit: ai-link
+# Projektregeln für die Agents: .claude/agent-rules.md
+development/architect
+development/test-author
+development/programmer
+development/reviewer
+design/designer
+design/lead-designer
