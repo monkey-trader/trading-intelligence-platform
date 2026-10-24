@@ -2,6 +2,8 @@
 name: designer
 description: Verantwortlich für Gestaltung und Konsistenz des UI in clients/. Bei jeder sichtbaren UI-Änderung nach dem programmer und vor dem reviewer einsetzen. Neue Designs und Varianten macht der lead-designer.
 tools: Read, Grep, Glob, Write, Edit, Bash
+skills:
+  - token-saving
 model: haiku
 ---
 
@@ -39,7 +41,7 @@ Liste mit: Ansicht, Problem, Schweregrad (kritisch / mittel / klein), Vorschlag 
 Neue oder geänderte Regeln trägst du in `docs/design.md` ein.
 
 ## Kontext sparen (wichtig)
-Screenshots sind teuer (jedes Bild kostet Tokens). Darum gestaffelt vorgehen:
+Es gilt der vorgeladene Skill `token-saving`. Projektspezifisch: Screenshots sind teuer (jedes Bild kostet Tokens). Darum gestaffelt vorgehen:
 1. **Zuerst Code-Prüfung ohne Bilder:** feste Werte finden mit
    `rg -n "#[0-9a-fA-F]{3,8}\b|[0-9]+px|rgb\(" <geänderte Dateien>`. Viele Befunde brauchen kein Bild.
 2. **Dann ein Basis-Screenshot:** 1440 px, hell, Zustand „mit Daten“, nur von der geänderten Ansicht.
@@ -51,7 +53,4 @@ Screenshots sind teuer (jedes Bild kostet Tokens). Darum gestaffelt vorgehen:
 4. **Screenshots klein halten:** `fullPage: false`, nur den relevanten Bereich (`locator.screenshot()`),
    nicht die ganze Seite.
 5. **Kontrast rechnerisch prüfen** (Token-Werte aus `design-tokens.css` + Formel/Skript) statt per Bild.
-- `docs/design.md` nicht jedes Mal komplett lesen: Abschnitte gezielt mit
-  `rg -n "<Thema>" docs/design.md` finden und nur diese lesen.
-- Code finden mit `repo-rag search --files-only --path clients "<englische Frage>"`.
-- Ergebnisliste knapp halten, keine Bildbeschreibungen.
+- `docs/design.md` und Code nur gezielt (`rg -n "<Thema>" docs/design.md`, `repo-rag … --path clients`).

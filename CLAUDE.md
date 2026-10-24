@@ -135,8 +135,11 @@ Konsequenz für dieses Projekt:
 - `architect` – prüft Schichtengrenzen und den API-Vertrag
 - `test-author` – schreibt Tests zuerst
 - `programmer` – macht Tests grün, ohne sie zu ändern
-- `designer` – Gestaltung und Konsistenz des UI in `clients/` (Quelle: `docs/design.md`)
+- `designer` – Routine-Checks für Gestaltung und Konsistenz des UI in `clients/` (Quelle: `docs/design.md`)
+- `lead-designer` – neue Designs, Varianten, Umgestaltung (setzt die designer-Regeln voraus)
 - `reviewer` – Qualität und Sicherheit am Schluss
+
+Alle Agents laden den Skill `token-saving` (ai-os, `development/token-saving`) vor.
 
 Ablauf pro Feature: architect (Schnitt) → test-author → programmer → reviewer.
 Bei sichtbaren UI-Änderungen: … → programmer → designer → reviewer.
@@ -177,7 +180,7 @@ Nach grösseren Änderungen: `repo-rag index`.
 - `test-author` → `programmer`: je eine Runde. Bleiben Tests rot, meldet der programmer den Grund,
   statt dass die Kette erneut läuft.
 - `reviewer`: **genau einmal, ganz am Ende**, vor dem Commit.
-- `designer`: nur bei sichtbaren UI-Änderungen.
+- `designer`: nur bei sichtbaren UI-Änderungen. `lead-designer`: nur für neue Designs oder Varianten.
 - Kleine Nachzieher (Review-Punkte, Kommentare, Konstanten, einzelne Tests) erledigt der Lead bzw.
   ein einzelner programmer direkt, ohne die ganze Kette.
 
