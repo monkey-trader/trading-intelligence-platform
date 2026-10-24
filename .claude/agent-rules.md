@@ -61,4 +61,12 @@ Diese Regeln haben Vorrang vor den allgemeinen.
 - Playwright: `npm i -D @playwright/test` in `clients/web` und `npx playwright install chromium`, vorher fragen.
 
 ## lead-designer
-- Es gilt `## designer`. Fachlicher Kontext für Entscheidungen: Zahlen, Gewinn/Verlust, Margin, Liquidation, R-Linien im Chart.
+- Es gilt `## designer`.
+- Entwürfe: `docs/design/<TASK-ID>-<kurzname>/` mit `flow.excalidraw`, `flow.png`, `prototype.html`.
+- Tokens im Prototyp: `<link rel="stylesheet" href="../../../clients/web/src/styles/design-tokens.css">`
+  (Theme über `data-theme="light|dark"` am `<html>`), Grundstile aus `clients/web/src/styles/global.css`.
+- Fake-Daten realistisch: echte Symbole (BTC-USDT, ONDO-USDT, NCCOGOLD2USD → „Gold“), Long/Short, Hebel,
+  negative PnL, lange Namen, fehlender SL („kein SL“), BE-Badge.
+- Zustände der App: mit Daten, leer, lädt, Fehler (BingX nicht erreichbar), veraltet (letzter Import > 10 min).
+- Fachlicher Kontext für Entscheidungen: Zahlen, Gewinn/Verlust, Margin, Liquidation, R-Linien (1R/2R/3R), Break-even.
+- Bestehende Ansichten als Referenz: `docs/images/app.png`, `docs/images/app-chart.png`, `docs/design.md`.

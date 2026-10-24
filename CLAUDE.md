@@ -154,6 +154,8 @@ Der claude.ai-Connector „Claude Docs“ ist hier abgeschaltet (`.claude/settin
 
 Ablauf pro Feature: architect (Schnitt) → test-author → programmer → reviewer.
 Bei sichtbaren UI-Änderungen: … → programmer → designer → reviewer.
+Neue Ansicht / UI-Feature: zuerst Skill `ui-prototyping` (lead-designer: Flow + Varianten → klickbarer Prototyp
+unter `docs/design/`, Freigabe durch den Nutzer), dann Task mit Referenz auf den Prototyp.
 
 ## Skills (`.claude/skills.txt`)
 Skills (und Agents) liegen zentral in ai-os (`~/git/ai-c3smonkey/ai-os/ai/skills`). `.claude/skills.txt` listet,
