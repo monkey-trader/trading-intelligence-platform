@@ -3,3 +3,6 @@
 content/excalidraw-diagram
 content/remotion-best-practices
 development/token-saving
+development/systematic-debugging
+development/feature-planning
+development/review-feedback
