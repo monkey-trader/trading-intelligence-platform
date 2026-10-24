@@ -1,0 +1,4 @@
+# Skills aus ai-os (~/git/ai-c3smonkey/ai-os/ai/skills), Links anlegen mit: ai-link
+# Die Links sind lokal (.git/info/exclude), nur diese Liste ist versioniert.
+content/excalidraw-diagram
+content/remotion-best-practices

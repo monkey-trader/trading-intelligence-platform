@@ -141,6 +141,11 @@ Konsequenz für dieses Projekt:
 Ablauf pro Feature: architect (Schnitt) → test-author → programmer → reviewer.
 Bei sichtbaren UI-Änderungen: … → programmer → designer → reviewer.
 
+## Skills (`.claude/skills.txt`)
+Skills liegen zentral in ai-os (`~/git/ai-c3smonkey/ai-os/ai/skills`). `.claude/skills.txt` listet,
+welche dieses Repo nutzt; `ai-link` legt die Links in `.claude/skills/` an (lokal, nicht versioniert).
+Neuer Skill: in ai-os anlegen, Zeile in `skills.txt` ergänzen, `ai-link` ausführen.
+
 ## Planung (vor größeren Änderungen lesen)
 - `docs/migration/go-wails.md` – Migration des Backends auf Go, Desktop-App mit Wails,
   Auslieferung über Homebrew. Das Go-Backend liegt in `backend/`.
