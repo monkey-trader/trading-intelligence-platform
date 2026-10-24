@@ -1,0 +1,5 @@
+{
+  "deniedMcpServers": [
+    { "serverName": "claude.ai Claude Docs" }
+  ]
+}

@@ -142,6 +142,7 @@ steht in `.claude/agent-rules.md` (BingX, Pfade, Befehle, Testschwerpunkte), nic
 - `reviewer` – Qualität und Sicherheit am Schluss
 
 Alle Agents laden den Skill `token-saving` vor.
+Der claude.ai-Connector „Claude Docs“ ist hier abgeschaltet (`.claude/settings.json`), damit seine Anweisungen nicht in jedem Agent Tokens kosten.
 
 Ablauf pro Feature: architect (Schnitt) → test-author → programmer → reviewer.
 Bei sichtbaren UI-Änderungen: … → programmer → designer → reviewer.
