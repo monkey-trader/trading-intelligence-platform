@@ -2,7 +2,11 @@
 
 Status: Phase 0 bis 5 und 7 (Server) erledigt, Release automatisch über semantic-release; Phase 6 (Wails): App, Cask `tip-app` und macOS-Runner umgesetzt; offen: Vite-Fallback, Vibrancy, Signierung
 
-## Aktueller Stand (2026-10-22)
+> **Ab 2026-10-24 wird dieser Abschnitt nicht mehr fortgeschrieben.** Status, offene Punkte und neue Arbeit
+> stehen im Backlog (`backlog board`, Ordner `backlog/`), Entscheidungen unter `backlog/decisions/`.
+> Die offenen Punkte unten sind als TASK-1 bis TASK-12 erfasst.
+
+## Verlauf bis 2026-10-24 (vormals „Aktueller Stand“)
 - **Text markierbar (2026-10-22, PR #34, `fix:`):** In der Desktop-App (`data-desktop="wails"`) sind alle Texte markier- und kopierbar (BE-Preis, SL, TP, Zahlen, Positions-ID); `user-select: none` gilt nur noch für `button`, `summary`, `select`, `nav` (`clients/web/src/styles/global.css`, Regel in `docs/design.md`).
 - **Port-belegt-Hinweis (2026-10-21, Branch `fix/ui-pruefung`):** Antwortet unter `127.0.0.1:3000` ein fremder Server ohne UI (z.B. ein alter `go run`), nutzt die App ihn wie einen eigenen und zeigte nur dessen JSON. Der Proxy erkennt jetzt für `/` mit `Accept: text/html` eine `application/problem+json`-Antwort und ersetzt sie durch die Seite „Port belegt“ (502, mit `lsof`-Hinweis). API-Aufrufe und andere Pfade bleiben unverändert.
 - **Eine App (2026-10-21, Branch `feature/eine-app`):** Die Cask `trading-intelligence-app` bringt den Server mit (`Contents/Resources/trading-intelligence`, Universal-Binary, Release-Job baut Web-UI und Server und signiert die App danach ad-hoc neu). Die App startet ihn beim Start, falls unter `127.0.0.1:3000` kein `/health` antwortet (`clients/desktop/backend.go`), gibt ihm `PORT` und `BX_KEY`/`BX_SECRET` aus `~/.config/tip/env` (nur diese Schlüssel), loggt nach `<UserConfigDir>/tip/server.log` und stoppt ihn beim Beenden (SIGTERM, nach 10 s Kill). Eine gesetzte `TIP_SERVER_URL` oder ein laufender Brew-Dienst werden nie angefasst. Die Cask hat keine `depends_on formula` mehr; die Formula bleibt für den Dauerbetrieb im Hintergrund. Folge: Der 5-Minuten-Import läuft nur bei offener App. Offen (Variante 2): Menüleisten-Symbol, Server läuft nach Fensterschließen weiter, „Beim Login starten“; ein abgestürzter App-Prozess lässt den Server als Waise zurück.

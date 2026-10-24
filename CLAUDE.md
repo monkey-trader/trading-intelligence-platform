@@ -161,6 +161,7 @@ welche dieses Repo nutzt; `ai-link` legt die Links in `.claude/skills/` an (loka
 Neuer Skill: in ai-os anlegen, Zeile in `skills.txt` ergänzen, `ai-link` ausführen.
 
 ## Planung (vor größeren Änderungen lesen)
+- **Backlog:** `backlog task list --plain` bzw. `backlog board` – offene und laufende Arbeit, Akzeptanzkriterien.
 - `docs/migration/go-wails.md` – Migration des Backends auf Go, Desktop-App mit Wails,
   Auslieferung über Homebrew. Das Go-Backend liegt in `backend/`.
 - `docs/features/chart-journal.md` – Feature: Chart mit Entry, SL, TP (Stufen 1–3, read-only).
@@ -176,4 +177,5 @@ Allgemeine Regeln (wann welcher Agent, Übergabe, Ergebnisse prüfen, Session kl
 `agent-orchestration` – vor dem ersten Subagent laden. Projektspezifisch:
 - **Vor jedem Commit (Pflicht):** `cd backend && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...`
   (`golangci-lint` läuft lokal, built with go1.27).
-- **Nach jedem Commit:** Abschnitt „Aktueller Stand“ in `docs/migration/go-wails.md` aktualisieren, `/clear` empfehlen.
+- **Status und offene Arbeit:** im Backlog (Backlog.md, Ordner `backlog/`, Regeln im Skill `backlog`). Task-Status und Notizen
+  gehören in denselben Commit wie der Code. `docs/migration/go-wails.md` ist nur noch Verlauf. Nach jedem Commit `/clear` empfehlen.

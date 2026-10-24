@@ -251,7 +251,7 @@ Referenz: Phase 2b (≈ 2100 Zeilen, architect → test-author → programmer �
 - test-author und programmer je eine Runde, reviewer genau einmal am Ende
 - test-author auf Sonnet + „Tests nie aufweichen“
 - `golangci-lint` lokal vor jedem Commit (Version built with go1.27, via `go install`)
-- `/clear` nach jedem Commit, Stand in `docs/migration/go-wails.md` → „Aktueller Stand“
+- `/clear` nach jedem Commit, Stand im Backlog (`backlog board`, Task-Status und Notizen)
 
 **Lehre aus der CI:** Lint, das „erst in der CI“ läuft, sammelt Fehler über mehrere Phasen an (PR #2 war rot). Seit dem lokalen Lint ist das behoben.
 
