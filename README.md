@@ -107,6 +107,27 @@ Technische Doku liegt unter [`docs/`](docs/):
 - [`docs/openapi.yaml`](docs/openapi.yaml): API-Vertrag
 - [`backend/README.md`](backend/README.md): Go-Backend
 - [`docs/ai-blueprint.md`](docs/ai-blueprint.md): Entwickeln mit AI-Agenten
+- [`backlog/`](backlog/): Aufgaben, Status und Ideen (Backlog.md)
+- [`docs/design/`](docs/design/): UI-Entwürfe (Flow, Wireframes, klickbare Prototypen)
+
+### Aufgaben und Stand
+
+Offene Arbeit, laufende Arbeit und Ideen stehen im Backlog unter [`backlog/`](backlog/),
+verwaltet mit [Backlog.md](https://github.com/MrLesk/Backlog.md):
+
+| Befehl | Zeigt |
+|---|---|
+| `backlog board` | Kanban im Terminal |
+| `backlog browser` | Kanban im Browser (http://localhost:6420) |
+| `backlog task list --plain` | Liste aller Tasks |
+| `backlog task view TASK-1` | Details mit Akzeptanzkriterien |
+| `backlog draft list` | Ideen |
+
+Installation: `brew install backlog-md`.
+
+Tasks werden nur über die CLI geändert und im selben Commit wie der Code versioniert.
+Der frühere Abschnitt „Aktueller Stand“ in [`docs/migration/go-wails.md`](docs/migration/go-wails.md)
+ist nur noch Verlauf bis 2026-10-24.
 
 Für die Arbeit mit Claude Code: Agents und Skills kommen aus dem Repo
 [ai-c3smonkey/ai-os](https://github.com/ai-c3smonkey/ai-os). Nach dem Klonen beider Repos
