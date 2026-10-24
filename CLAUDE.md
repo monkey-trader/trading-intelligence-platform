@@ -2,6 +2,12 @@
 
 Leitlinien für Claude Code in diesem Repo. Doku, Kommentare und UI-Texte auf Deutsch.
 
+> **Voraussetzung: ai-os.** Agents und Skills dieses Repos kommen aus dem Repo
+> [ai-c3smonkey/ai-os](https://github.com/ai-c3smonkey/ai-os) (`ai/agents`, `ai/skills`).
+> Einmalig: `git clone git@github.com:ai-c3smonkey/ai-os.git ~/git/ai-c3smonkey/ai-os`,
+> `ai-os/ai/bin` in den PATH, dann hier `ai-link` ausführen. Ohne ai-os fehlen die Agents
+> (`.claude/agents.txt`) und Skills (`.claude/skills.txt`); Cloud-Sessions sehen sie nicht.
+
 ## Ziel
 Persönliches Trading-Journal mit **automatischem Import von BingX** als Kernfunktion
 (alle 5 Minuten inkrementell + einmaliger Vollimport der Historie).
@@ -131,57 +137,47 @@ Konsequenz für dieses Projekt:
 - Phase 1 ohne Authentifizierung: Der Server bindet nur auf Loopback (`127.0.0.1`), ein anderer
   `HOST` nur mit ausdrücklichem `ALLOW_REMOTE=true`.
 
-## Subagents (`.claude/agents/`)
+## Subagents (`.claude/agents.txt`)
+Generische Agents (Onion, DDD, TDD) aus ai-os, verlinkt mit `ai-link`. Projektspezifisches für die Agents
+steht in `.claude/agent-rules.md` (BingX, Pfade, Befehle, Testschwerpunkte), nicht in den Agents selbst.
 - `architect` – prüft Schichtengrenzen und den API-Vertrag
 - `test-author` – schreibt Tests zuerst
 - `programmer` – macht Tests grün, ohne sie zu ändern
-- `designer` – Gestaltung und Konsistenz des UI in `clients/` (Quelle: `docs/design.md`)
+- `designer` – Routine-Checks für Gestaltung und Konsistenz des UI in `clients/` (Quelle: `docs/design.md`)
+- `lead-designer` – neue Designs, Varianten, Umgestaltung (setzt die designer-Regeln voraus)
 - `reviewer` – Qualität und Sicherheit am Schluss
+
+Alle Agents laden den Skill `token-saving` vor.
+Für den Lead: `feature-planning` vor größeren Features, `review-feedback` beim Verarbeiten von Review-Befunden,
+`systematic-debugging` bei Bugs (erst Ursache, dann Fix). Agent-Meldungen („grün“) vor dem Weitermachen am Diff prüfen.
+Der claude.ai-Connector „Claude Docs“ ist hier abgeschaltet (`.claude/settings.json`), damit seine Anweisungen nicht in jedem Agent Tokens kosten.
 
 Ablauf pro Feature: architect (Schnitt) → test-author → programmer → reviewer.
 Bei sichtbaren UI-Änderungen: … → programmer → designer → reviewer.
+Neue Ansicht / UI-Feature: zuerst Skill `ui-prototyping` (lead-designer: Flow + Varianten → klickbarer Prototyp
+unter `docs/design/`, Freigabe durch den Nutzer), dann Task mit Referenz auf den Prototyp.
+
+## Skills (`.claude/skills.txt`)
+Skills (und Agents) liegen zentral in ai-os (`~/git/ai-c3smonkey/ai-os/ai/skills`). `.claude/skills.txt` listet,
+welche dieses Repo nutzt; `ai-link` legt die Links in `.claude/skills/` an (lokal, nicht versioniert).
+Neuer Skill: in ai-os anlegen, Zeile in `skills.txt` ergänzen, `ai-link` ausführen.
 
 ## Planung (vor größeren Änderungen lesen)
+- **Backlog:** `backlog task list --plain` bzw. `backlog board` – offene und laufende Arbeit, Akzeptanzkriterien.
 - `docs/migration/go-wails.md` – Migration des Backends auf Go, Desktop-App mit Wails,
   Auslieferung über Homebrew. Das Go-Backend liegt in `backend/`.
 - `docs/features/chart-journal.md` – Feature: Chart mit Entry, SL, TP (Stufen 1–3, read-only).
 
 
-## Code finden (repo-rag)
-Bevor du Ordner durchsuchst oder Dateien breit liest:
-`repo-rag search --files-only "<konkrete englische Frage mit Code-Begriffen>"`
-Beispiel: `repo-rag search --files-only "fetch open positions from bingx api"`
-Lies danach nur die gefundenen Dateien/Zeilen. Optional `--path backend` zum Eingrenzen.
-Nach grösseren Änderungen: `repo-rag index`.
+## Code finden und Token sparen
+Allgemeine Regeln im Skill `token-saving` (repo-rag zuerst, gezielt lesen, ask-local nur für eine Quelle).
+Projektspezifisch: `repo-rag search --files-only --path backend "<frage>"` zum Eingrenzen, nach größeren
+Änderungen `repo-rag index`.
 
-
-- **ask-local nur für EINE Quelle** (ein Log, ein Diff, eine Datei). Nicht für Vergleiche mehrerer Quellen oder Status-Fragen (z. B. Plan vs. Commits) – das machst du selbst, `git log --oneline -20` ist billig.
-- `ask-local` nutzt standardmässig das schnelle deepseek-coder-v2:16b (MoE) (gut im Herauslesen: Logs, Diffs, Fixtures, Commit-Messages). Nur wenn Verständnis/Gewichtung nötig ist: `ask-local --deep` (14b, ~2× langsamer).
-- Erscheint `[ask-local] WARNUNG: Eingabe zu lang`, Ergebnis nicht trauen: Eingabe eingrenzen und neu fragen.
-
-## Agenten-Orchestrierung (Token-Regeln für den Lead)
-
-**Starten und Übergeben**
-- Subagenten **immer neu starten, nie resumen** (ein Resume schleppt den ganzen Verlauf mit).
-- Jedem Agenten eine kurze Übergabe mitgeben: betroffene Dateien/Pakete, betroffene Tests, genaue Aufgabe,
-  was er NICHT anfassen darf. Er soll nicht selbst das Repo durchsuchen müssen.
-- Agenten berichten in höchstens 15 Zeilen: geänderte Dateien, Ergebnis (grün/rot), offene Punkte. Keine Logs.
-
-**Wann welcher Agent**
-- `architect`: nur bei neuen Features/Phasen oder Schichtfragen, nicht bei Nachziehern oder Bugfixes.
-- `test-author` → `programmer`: je eine Runde. Bleiben Tests rot, meldet der programmer den Grund,
-  statt dass die Kette erneut läuft.
-- `reviewer`: **genau einmal, ganz am Ende**, vor dem Commit.
-- `designer`: nur bei sichtbaren UI-Änderungen.
-- Kleine Nachzieher (Review-Punkte, Kommentare, Konstanten, einzelne Tests) erledigt der Lead bzw.
-  ein einzelner programmer direkt, ohne die ganze Kette.
-
-**Vor jedem Commit (Pflicht)**
-- Go: `cd backend && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...`
-- `golangci-lint` läuft lokal (go install, built with go1.27). „Läuft erst in der CI“ ist kein gültiger Grund mehr.
-  Schlägt Lint fehl, wird vor dem Commit behoben, nicht nachgezogen.
-
-**Session klein halten**
-- Vor dem reviewer `/compact` vorschlagen, wenn die Session lang ist.
-- Nach jedem Commit den Abschnitt „Aktueller Stand“ in `docs/migration/go-wails.md` aktualisieren
-  und dem Nutzer `/clear` empfehlen.
+## Agenten-Orchestrierung
+Allgemeine Regeln (wann welcher Agent, Übergabe, Ergebnisse prüfen, Session klein halten) im Skill
+`agent-orchestration` – vor dem ersten Subagent laden. Projektspezifisch:
+- **Vor jedem Commit (Pflicht):** `cd backend && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...`
+  (`golangci-lint` läuft lokal, built with go1.27).
+- **Status und offene Arbeit:** im Backlog (Backlog.md, Ordner `backlog/`, Regeln im Skill `backlog`). Task-Status und Notizen
+  gehören in denselben Commit wie der Code. `docs/migration/go-wails.md` ist nur noch Verlauf. Nach jedem Commit `/clear` empfehlen.

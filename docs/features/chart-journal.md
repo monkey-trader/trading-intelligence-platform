@@ -1,6 +1,6 @@
 # Feature: Chart im Journal (Entry, SL, TP)
 
-Status: geplant · Umsetzung nach Phase 3 des Migrationsplans (`docs/migration/go-wails.md`)
+Status: Stufe 1 und 2 umgesetzt, Stufe 3 offen (Backlog TASK-1) · Spezifikation, Status im Backlog
 
 ## Ziel
 Zu jeder Position einen Kerzen-Chart anzeigen, auf dem Entry, Stop-Loss und Take-Profit
