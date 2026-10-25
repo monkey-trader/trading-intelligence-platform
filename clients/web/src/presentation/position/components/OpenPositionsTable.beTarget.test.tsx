@@ -6,8 +6,7 @@ import { DEFAULT_COLUMN_ORDER } from '@/presentation/position/columnOrder';
 import { OpenPositionsTable } from '@/presentation/position/components/OpenPositionsTable';
 import { formatDecimal } from '@/presentation/position/format/formatDecimal';
 
-// Erwartet: OpenPosition.levels?: readonly { kind: 'TWO_R'|'THREE_R'; rMultiple: number; price: string; percent: string }[]
-// Spalte 'beTarget' (Label "BE / TP1") am Ende; Zelle: Zeile "BE <2R-Preis>" und Zeile "TP1 <3R-Preis>".
+// Spalten 'be' (Label "BE (2R)") und 'tp1' (Label "TP1 (3R)") am Ende; Zelle: reine Zahl ohne Präfix.
 
 const levels = [
   { kind: 'TWO_R', rMultiple: 2, price: '1.0800', percent: '12.5' },
@@ -20,30 +19,32 @@ function renderRow(position: OpenPosition) {
   return { table, row: within(table).getAllByRole('row')[1] as HTMLElement };
 }
 
-function beTargetCell(row: HTMLElement): HTMLElement {
-  const cell = row.querySelector<HTMLElement>('[data-label="BE / TP1"]');
-  if (!cell) throw new Error('BE / TP1-Zelle fehlt');
+function levelCell(row: HTMLElement, label: string): HTMLElement {
+  const cell = row.querySelector<HTMLElement>(`[data-label="${label}"]`);
+  if (!cell) throw new Error(`${label}-Zelle fehlt`);
   return cell;
 }
 
 beforeEach(() => window.localStorage.clear());
 
-describe('OpenPositionsTable Spalte BE / TP1', () => {
-  it('beTarget steht in der Standardreihenfolge am Ende', () => {
-    expect(DEFAULT_COLUMN_ORDER[DEFAULT_COLUMN_ORDER.length - 1]).toBe('beTarget');
+describe('OpenPositionsTable Spalten BE und TP1', () => {
+  it('be und tp1 stehen in der Standardreihenfolge am Ende', () => {
+    expect(DEFAULT_COLUMN_ORDER.slice(-2)).toEqual(['be', 'tp1']);
   });
 
-  it('Header trägt das Label "BE / TP1"', () => {
+  it('Header tragen die Labels "BE (2R)" und "TP1 (3R)"', () => {
     const { table } = renderRow({ ...suiLongPosition, levels });
-    expect(table.querySelector('th[data-column-key="beTarget"]')).toHaveTextContent(/^BE \/ TP1$/);
+    expect(table.querySelector('th[data-column-key="be"]')).toHaveTextContent(/BE \(2R\)/);
+    expect(table.querySelector('th[data-column-key="tp1"]')).toHaveTextContent(/TP1 \(3R\)/);
   });
 
-  it('zeigt BE (2R) und TP1 (3R), formatiert wie der Einstieg', () => {
+  it('zeigt BE (2R) und TP1 (3R) als reine Zahl, formatiert wie der Einstieg', () => {
     const { row } = renderRow({ ...suiLongPosition, levels });
-    const cell = beTargetCell(row);
-    expect(within(cell).getByText(`BE ${formatDecimal('1.0800')}`)).toBeInTheDocument();
-    expect(within(cell).getByText(`TP1 ${formatDecimal('1.1400')}`)).toBeInTheDocument();
-    expect(cell.textContent).not.toMatch(/TP[23]/);
+    expect(levelCell(row, 'BE (2R)')).toHaveTextContent(new RegExp(`^${formatDecimal('1.0800')}$`));
+    expect(levelCell(row, 'TP1 (3R)')).toHaveTextContent(
+      new RegExp(`^${formatDecimal('1.1400')}$`),
+    );
+    expect(row.textContent).not.toMatch(/TP[23]/);
   });
 
   it.each([
@@ -51,9 +52,11 @@ describe('OpenPositionsTable Spalte BE / TP1', () => {
     ['levels leer', []],
   ])('%s: "–" mit aria-label "Risiko unbekannt"', (_name, value) => {
     const { row } = renderRow({ ...suiLongPosition, levels: value });
-    const cell = beTargetCell(row);
-    expect(cell).toHaveTextContent('–');
-    expect(within(cell).getByLabelText('Risiko unbekannt')).toBeInTheDocument();
-    expect(cell.textContent).not.toMatch(/(BE|TP\d) /);
+    for (const label of ['BE (2R)', 'TP1 (3R)']) {
+      const cell = levelCell(row, label);
+      expect(cell).toHaveTextContent('–');
+      expect(within(cell).getByLabelText('Risiko unbekannt')).toBeInTheDocument();
+      expect(cell.textContent).not.toMatch(/(BE|TP\d) /);
+    }
   });
 });

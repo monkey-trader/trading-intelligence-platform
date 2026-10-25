@@ -31,7 +31,6 @@ describe('OpenPositionsPage', () => {
     render(<OpenPositionsPage gateway={createPendingGateway()} />);
 
     expect(screen.getByText(/lade/i)).toBeInTheDocument();
-    expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
@@ -40,7 +39,9 @@ describe('OpenPositionsPage', () => {
 
     render(<OpenPositionsPage gateway={gateway} />);
 
-    const table = await screen.findByRole('table', { name: /offene positionen/i });
+    await screen.findByRole('table', { name: /offene positionen/i });
+    await waitFor(() => expect(screen.queryByTestId('position-placeholder-row')).toBeNull());
+    const table = screen.getByRole('table', { name: /offene positionen/i });
     expect(within(table).getAllByRole('row')).toHaveLength(3);
     expect(within(table).getByText('SUI', { exact: false, selector: 'span' })).toBeInTheDocument();
     expect(within(table).getByText(/NCCOGOLD2USD/)).toBeInTheDocument();
@@ -232,7 +233,9 @@ describe('OpenPositionsPage: Coin-Icons und Anzeigenamen', () => {
 
     render(<OpenPositionsPage gateway={gateway} assetIconsGateway={{ fetchAssetIcons }} />);
 
-    const table = await screen.findByRole('table', { name: /offene positionen/i });
+    await screen.findByRole('table', { name: /offene positionen/i });
+    await waitFor(() => expect(screen.queryByTestId('position-placeholder-row')).toBeNull());
+    const table = screen.getByRole('table', { name: /offene positionen/i });
     expect(await within(table).findByText('Gold')).toBeInTheDocument();
     expect(table.textContent).not.toContain('-USDT');
     expect(fetchAssetIcons).toHaveBeenCalledTimes(1);
@@ -248,7 +251,9 @@ describe('OpenPositionsPage: Coin-Icons und Anzeigenamen', () => {
 
     render(<OpenPositionsPage gateway={gateway} assetIconsGateway={{ fetchAssetIcons }} />);
 
-    const table = await screen.findByRole('table', { name: /offene positionen/i });
+    await screen.findByRole('table', { name: /offene positionen/i });
+    await waitFor(() => expect(screen.queryByTestId('position-placeholder-row')).toBeNull());
+    const table = screen.getByRole('table', { name: /offene positionen/i });
     await waitFor(() => expect(fetchAssetIcons).toHaveBeenCalled());
     expect(within(table).getByText(/NCCOGOLD2USD/)).toBeInTheDocument();
     expect(table.textContent).not.toContain('-USDT');

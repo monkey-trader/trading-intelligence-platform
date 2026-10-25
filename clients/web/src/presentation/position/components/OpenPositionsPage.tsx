@@ -68,6 +68,16 @@ export function OpenPositionsPage({
         </div>
       )}
 
+      {status === 'loading' && !snapshot && (
+        <OpenPositionsTable
+          positions={[]}
+          iconsBySymbol={iconsBySymbol}
+          isLoading
+          initialStopLossGateway={initialStopLossGateway}
+          onInitialStopLossChanged={refresh}
+        />
+      )}
+
       {snapshot && (
         <>
           <OpenPositionsHeader
@@ -86,6 +96,7 @@ export function OpenPositionsPage({
             <OpenPositionsTable
               positions={snapshot.positions}
               iconsBySymbol={iconsBySymbol}
+              isLoading={status === 'loading'}
               initialStopLossGateway={initialStopLossGateway}
               onInitialStopLossChanged={refresh}
               selectedPositionId={chartPositionId}

@@ -7,25 +7,72 @@ import {
 import type { AssetIcon } from '@/domain/asset/AssetIcon';
 import { CoinIcon } from '@/presentation/position/components/CoinIcon';
 import { pnlTone } from '@/presentation/position/format/pnlTone';
-import { Fragment, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react';
+import {
+  Fragment,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
 import type { ColumnKey } from '@/presentation/position/columnOrder';
 import { useColumnOrder } from '@/presentation/position/hooks/useColumnOrder';
 import type { InitialStopLossGateway } from '@/domain/position/InitialStopLossGateway';
 import { InitialStopLossControl } from '@/presentation/position/components/InitialStopLossControl';
 import { BreakEvenTargetInfo } from '@/presentation/position/components/BreakEvenTargetInfo';
+import { useTableSort } from '@/presentation/position/hooks/useTableSort';
+import { sortPositions, type SortKey } from '@/presentation/position/sorting/sortPositions';
 import { InfoDialog } from '@/presentation/shared/components/InfoDialog';
 import styles from '@/presentation/position/components/OpenPositionsTable.module.css';
 
 const COLUMN_LABELS = {
   symbol: 'Symbol',
-  positionValue: 'Positionswert',
+  valueMargin: 'Wert / Margin',
+  unrealizedProfit: 'Unreal. PnL',
+  realisedProfit: 'Real. PnL',
+  entrySl: 'Einstieg / SL',
+  be: 'BE (2R)',
+  tp1: 'TP1 (3R)',
+} as const;
+
+const SORT_LABELS: Readonly<Record<SortKey, string>> = {
+  symbol: 'Symbol',
+  value: 'Wert',
   margin: 'Margin',
   unrealizedProfit: 'Unreal. PnL',
   realisedProfit: 'Real. PnL',
   entry: 'Einstieg',
-  tpSl: 'TP / SL',
-  beTarget: 'BE / TP1',
-} as const;
+  stopLoss: 'SL',
+  be: 'BE (2R)',
+  tp1: 'TP1 (3R)',
+};
+
+/** Sortierbare Werte je Spalte; gestapelte Spalten haben zwei. */
+const COLUMN_SORT_KEYS: Readonly<Record<ColumnKey, readonly SortKey[]>> = {
+  symbol: ['symbol'],
+  valueMargin: ['value', 'margin'],
+  unrealizedProfit: ['unrealizedProfit'],
+  realisedProfit: ['realisedProfit'],
+  entrySl: ['entry', 'stopLoss'],
+  be: ['be'],
+  tp1: ['tp1'],
+};
+
+const SORT_KEY_ORDER: readonly SortKey[] = [
+  'symbol',
+  'value',
+  'margin',
+  'unrealizedProfit',
+  'realisedProfit',
+  'entry',
+  'stopLoss',
+  'be',
+  'tp1',
+];
+
+const PLACEHOLDER_ROW_COUNT = 3;
 
 const SIDE_LABELS: Readonly<Record<OpenPosition['side'], string>> = {
   LONG: 'Long',
@@ -43,6 +90,8 @@ type OpenPositionsTableProps = Readonly<{
   initialStopLossGateway?: InitialStopLossGateway | undefined;
   /** Wird nach erfolgreichem Speichern/Zurücksetzen aufgerufen (Liste neu laden). */
   onInitialStopLossChanged?: (() => void) | undefined;
+  /** Lädt gerade: Sortieren gesperrt, Platzhalterzeilen statt leerer Tabelle. */
+  isLoading?: boolean | undefined;
 }>;
 
 /** Beträge in USDT: 2 Nachkommastellen. */
@@ -63,8 +112,44 @@ export function OpenPositionsTable({
   iconsBySymbol,
   initialStopLossGateway,
   onInitialStopLossChanged,
+  isLoading = false,
 }: OpenPositionsTableProps) {
   const { order, move, reset, isDefault } = useColumnOrder();
+  const { sort, cycle, select, toggleDirection } = useTableSort();
+  const [announcement, setAnnouncement] = useState('');
+  const focusHandleKey = useRef<ColumnKey | null>(null);
+  const focusButtonIndex = useRef(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sortedPositions = useMemo(() => sortPositions(positions, sort), [positions, sort]);
+  const isSortDisabled = isLoading || positions.length === 0;
+
+  // Nach dem Verschieben bleibt der Fokus am Griff, auch wenn React die Kopfzelle umhängt.
+  useEffect(() => {
+    const columnKey = focusHandleKey.current;
+    if (columnKey === null) return;
+    focusHandleKey.current = null;
+    scrollRef.current
+      ?.querySelectorAll<HTMLElement>(`th[data-column-key="${columnKey}"] button`)
+      [focusButtonIndex.current]?.focus();
+  }, [order]);
+
+  const describeSort = (key: SortKey, direction: 'asc' | 'desc' | null): string =>
+    direction === null
+      ? 'Sortierung aufgehoben, Reihenfolge der API'
+      : `Sortiert nach ${SORT_LABELS[key]}, ${direction === 'asc' ? 'aufsteigend' : 'absteigend'}`;
+
+  const handleCycle = (key: SortKey) => {
+    cycle(key);
+    const direction = sort?.key === key ? (sort.direction === 'asc' ? 'desc' : null) : 'asc';
+    setAnnouncement(describeSort(key, direction));
+  };
+
+  const moveColumnAndAnnounce = (fromKey: ColumnKey, toKey: ColumnKey) => {
+    move(fromKey, toKey);
+    setAnnouncement(
+      `Spalte ${COLUMN_LABELS[fromKey]} verschoben, von Stelle ${order.indexOf(fromKey) + 1} auf Stelle ${order.indexOf(toKey) + 1} von ${order.length}`,
+    );
+  };
   const [draggedKey, setDraggedKey] = useState<ColumnKey | null>(null);
   const [dropTargetKey, setDropTargetKey] = useState<ColumnKey | null>(null);
   const [isBeTargetInfoOpen, setIsBeTargetInfoOpen] = useState(false);
@@ -76,12 +161,18 @@ export function OpenPositionsTable({
 
   const handleDrop = (event: DragEvent, targetKey: ColumnKey) => {
     event.preventDefault();
-    if (draggedKey !== null) move(draggedKey, targetKey);
+    if (draggedKey !== null) moveColumnAndAnnounce(draggedKey, targetKey);
     endDrag();
   };
 
-  const handleHandleKeyDown = (event: KeyboardEvent, columnKey: ColumnKey) => {
+  const handleHeaderKeyDown = (event: KeyboardEvent<HTMLElement>, columnKey: ColumnKey) => {
     if (!event.altKey) return;
+    const buttons = Array.from(event.currentTarget.querySelectorAll('button'));
+    const focusedButton = event.target instanceof HTMLButtonElement ? event.target : undefined;
+    focusButtonIndex.current = Math.max(
+      0,
+      focusedButton === undefined ? 0 : buttons.indexOf(focusedButton),
+    );
     const index = order.indexOf(columnKey);
     const neighbourKey =
       event.key === 'ArrowRight'
@@ -91,13 +182,51 @@ export function OpenPositionsTable({
           : undefined;
     if (neighbourKey === undefined) return;
     event.preventDefault();
-    move(columnKey, neighbourKey);
+    focusHandleKey.current = columnKey;
+    moveColumnAndAnnounce(columnKey, neighbourKey);
   };
 
   return (
     <>
-      {/* Immer gerendert (leer, wenn nicht nötig), damit der Tabellenkopf nicht springt. */}
+      {/* Immer gerendert, damit der Tabellenkopf nicht springt. Mobil: Sortierauswahl statt Kopf. */}
       <div className={styles.toolbar}>
+        <div className={styles.mobileSort}>
+          <label htmlFor="positions-sort-select" className={styles.mobileSortLabel}>
+            Sortieren
+          </label>
+          <select
+            id="positions-sort-select"
+            className={styles.mobileSortSelect}
+            value={sort?.key ?? ''}
+            disabled={isSortDisabled}
+            onChange={(event) => {
+              const key = SORT_KEY_ORDER.find((candidate) => candidate === event.target.value);
+              select(key ?? null);
+              setAnnouncement(describeSort(key ?? 'symbol', key === undefined ? null : 'asc'));
+            }}
+          >
+            <option value="">Reihenfolge der API</option>
+            {SORT_KEY_ORDER.map((key) => (
+              <option key={key} value={key}>
+                {SORT_LABELS[key]}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className={styles.mobileSortDirection}
+            aria-label="Richtung wechseln"
+            disabled={isSortDisabled || sort === null}
+            onClick={() => {
+              toggleDirection();
+              if (sort !== null) {
+                setAnnouncement(describeSort(sort.key, sort.direction === 'asc' ? 'desc' : 'asc'));
+              }
+            }}
+          >
+            {sort?.direction === 'desc' ? '↓' : '↑'}
+          </button>
+        </div>
         <button
           type="button"
           className={`${styles.infoButton} ${styles.infoButtonToolbar}`}
@@ -110,32 +239,77 @@ export function OpenPositionsTable({
           </button>
         )}
       </div>
-      {/* Zwischen 768 px und voller Tabellenbreite scrollt die Tabelle horizontal im Panel,
-          das Symbol bleibt dabei links stehen. tabIndex, damit man auch per Tastatur scrollen kann. */}
+      <p role="status" className={styles.visuallyHidden}>
+        {announcement}
+      </p>
+      {/* Ab 768 px passt die Tabelle in die Breite (auch bei 1280 px); der Container fängt nur
+          Ausnahmen (sehr breite Werte) ab. tabIndex, damit man dann per Tastatur scrollen kann. */}
       <div
+        ref={scrollRef}
         className={styles.scrollContainer}
         role="region"
         aria-label="Offene Positionen, horizontal scrollbar"
         tabIndex={0}
       >
-        <table className={styles.table} aria-label="Offene Positionen">
+        <table
+          className={styles.table}
+          aria-label="Offene Positionen"
+          aria-busy={isLoading || undefined}
+        >
           <thead>
             <tr>
               {order.map((columnKey) => {
                 const label = COLUMN_LABELS[columnKey];
+                const sortKeys = COLUMN_SORT_KEYS[columnKey];
+                const activeKey = sortKeys.find((key) => key === sort?.key);
+                const ariaSort =
+                  activeKey === undefined
+                    ? 'none'
+                    : sort?.direction === 'asc'
+                      ? 'ascending'
+                      : 'descending';
+                const sortButtons = (
+                  <span className={styles.sortGroup}>
+                    {sortKeys.map((key, index) => (
+                      <Fragment key={key}>
+                        {index > 0 && <span className={styles.sortSeparator}>/</span>}
+                        <button
+                          type="button"
+                          className={styles.sortButton}
+                          disabled={isSortDisabled}
+                          aria-label={`${SORT_LABELS[key]} sortieren: ${
+                            sort?.key !== key
+                              ? 'aufsteigend'
+                              : sort.direction === 'asc'
+                                ? 'absteigend'
+                                : 'aus'
+                          }`}
+                          onClick={() => handleCycle(key)}
+                        >
+                          {SORT_LABELS[key]}
+                          {sort?.key === key && (
+                            <span aria-hidden="true" className={styles.sortArrow}>
+                              {sort.direction === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </button>
+                      </Fragment>
+                    ))}
+                  </span>
+                );
                 if (columnKey === 'symbol') {
                   return (
                     <th
                       key={columnKey}
                       scope="col"
                       data-column-key={columnKey}
+                      aria-sort={ariaSort}
                       className={styles.headerCell}
                     >
-                      {label}
+                      {sortButtons}
                     </th>
                   );
                 }
-                const labelId = `column-label-${columnKey}`;
                 const dropClass =
                   dropTargetKey === columnKey && draggedKey !== columnKey
                     ? ` ${styles.dropTarget}`
@@ -145,7 +319,7 @@ export function OpenPositionsTable({
                     key={columnKey}
                     scope="col"
                     data-column-key={columnKey}
-                    aria-labelledby={labelId}
+                    aria-sort={ariaSort}
                     draggable
                     className={`${styles.headerCell}${dropClass}`}
                     onDragStart={(event) => {
@@ -159,9 +333,10 @@ export function OpenPositionsTable({
                     }}
                     onDrop={(event) => handleDrop(event, columnKey)}
                     onDragEnd={endDrag}
+                    onKeyDown={(event) => handleHeaderKeyDown(event, columnKey)}
                   >
-                    <span id={labelId}>{label}</span>
-                    {columnKey === 'beTarget' && (
+                    {sortButtons}
+                    {columnKey === 'tp1' && (
                       <button
                         type="button"
                         className={styles.infoButton}
@@ -171,9 +346,9 @@ export function OpenPositionsTable({
                     )}
                     <button
                       type="button"
+                      data-drag-handle
                       className={styles.dragHandle}
                       aria-label={`Spalte verschieben: ${label}`}
-                      onKeyDown={(event) => handleHandleKeyDown(event, columnKey)}
                     />
                   </th>
                 );
@@ -181,7 +356,22 @@ export function OpenPositionsTable({
             </tr>
           </thead>
           <tbody>
-            {positions.map((position) => (
+            {isLoading &&
+              positions.length === 0 &&
+              Array.from({ length: PLACEHOLDER_ROW_COUNT }, (_, index) => (
+                <tr
+                  key={index}
+                  className={styles.placeholderRow}
+                  data-testid="position-placeholder-row"
+                >
+                  {order.map((columnKey) => (
+                    <td key={columnKey} className={styles.placeholderCell} aria-hidden="true">
+                      <span className={styles.placeholderBar} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            {sortedPositions.map((position) => (
               <OpenPositionRow
                 key={`${position.positionId}-${position.side}`}
                 position={position}
@@ -270,15 +460,17 @@ function OpenPositionRow({
         </div>
       </th>
     ),
-    positionValue: (
-      <td data-label={COLUMN_LABELS.positionValue} className={styles.cell}>
-        {formatDecimal(position.positionValue, USDT_FORMAT)}{' '}
-        <span className={styles.unit}>USDT</span>
-      </td>
-    ),
-    margin: (
-      <td data-label={COLUMN_LABELS.margin} className={styles.cell}>
-        {formatDecimal(position.margin, USDT_FORMAT)} <span className={styles.unit}>USDT</span>
+    valueMargin: (
+      <td data-label={COLUMN_LABELS.valueMargin} className={styles.cell}>
+        <div className={styles.twoLine}>
+          <span>
+            {formatDecimal(position.positionValue, USDT_FORMAT)}{' '}
+            <span className={styles.unit}>USDT</span>
+          </span>
+          <span className={styles.lineSub}>
+            {formatDecimal(position.margin, USDT_FORMAT)} <span className={styles.unit}>USDT</span>
+          </span>
+        </div>
       </td>
     ),
     unrealizedProfit: (
@@ -302,18 +494,10 @@ function OpenPositionRow({
         {formatDecimal(position.realisedProfit, PNL_FORMAT)}
       </td>
     ),
-    entry: (
-      <td data-label={COLUMN_LABELS.entry} className={styles.cell}>
-        {formatDecimal(position.avgOpenPrice)}
-      </td>
-    ),
-    tpSl: (
-      <td data-label={COLUMN_LABELS.tpSl} className={styles.cell}>
+    entrySl: (
+      <td data-label={COLUMN_LABELS.entrySl} className={styles.cell}>
         <div className={styles.twoLine}>
-          <span>
-            <span className={styles.lineMuted}>TP </span>
-            {position.takeProfit === null ? MISSING_VALUE : formatDecimal(position.takeProfit)}
-          </span>
+          <span>{formatDecimal(position.avgOpenPrice)}</span>
           <span className={position.stopLoss === null ? undefined : styles.slLine}>
             <span className={styles.lineMuted}>SL </span>
             {position.stopLoss === null ? MISSING_VALUE : formatDecimal(position.stopLoss)}
@@ -326,24 +510,6 @@ function OpenPositionRow({
               <span className={styles.noStopLossHint}>kein SL</span>
             )}
           </span>
-        </div>
-      </td>
-    ),
-    beTarget: (
-      <td data-label={COLUMN_LABELS.beTarget} className={styles.cell}>
-        <div className={styles.beTargetStack}>
-          {secondLevel && thirdLevel ? (
-            <div className={styles.levelStack}>
-              <span className={`${styles.levelPill} ${styles.levelBe}`}>
-                {`BE ${formatDecimal(secondLevel.price)}`}
-              </span>
-              <span className={`${styles.levelPill} ${styles.levelTarget}`}>
-                {`TP1 ${formatDecimal(thirdLevel.price)}`}
-              </span>
-            </div>
-          ) : (
-            <span aria-label="Risiko unbekannt">{MISSING_VALUE}</span>
-          )}
           {initialStopLossGateway && (
             <InitialStopLossControl
               position={position}
@@ -352,6 +518,24 @@ function OpenPositionRow({
             />
           )}
         </div>
+      </td>
+    ),
+    be: (
+      <td data-label={COLUMN_LABELS.be} className={styles.cell}>
+        {secondLevel ? (
+          formatDecimal(secondLevel.price)
+        ) : (
+          <span aria-label="Risiko unbekannt">{MISSING_VALUE}</span>
+        )}
+      </td>
+    ),
+    tp1: (
+      <td data-label={COLUMN_LABELS.tp1} className={styles.cell}>
+        {thirdLevel ? (
+          formatDecimal(thirdLevel.price)
+        ) : (
+          <span aria-label="Risiko unbekannt">{MISSING_VALUE}</span>
+        )}
       </td>
     ),
   };

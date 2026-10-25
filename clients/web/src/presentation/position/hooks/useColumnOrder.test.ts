@@ -29,11 +29,11 @@ describe('useColumnOrder', () => {
   it('liest gespeicherte Reihenfolge', () => {
     const stored = [
       'symbol',
-      'entry',
-      ...DEFAULT_COLUMN_ORDER.filter((k) => k !== 'symbol' && k !== 'entry'),
+      'entrySl',
+      ...DEFAULT_COLUMN_ORDER.filter((k) => k !== 'symbol' && k !== 'entrySl'),
     ];
     const { result } = renderHook(() => useColumnOrder(fakeStorage(JSON.stringify(stored))));
-    expect(result.current.order.slice(0, 2)).toEqual(['symbol', 'entry']);
+    expect(result.current.order.slice(0, 2)).toEqual(['symbol', 'entrySl']);
     expect(result.current.isDefault).toBe(false);
   });
   it('kaputtes JSON -> Standard, kein Absturz', () => {
@@ -51,8 +51,8 @@ describe('useColumnOrder', () => {
   it('move speichert als JSON-Array', () => {
     const storage = fakeStorage();
     const { result } = renderHook(() => useColumnOrder(storage));
-    act(() => result.current.move('margin', 'positionValue'));
-    expect(result.current.order.slice(0, 3)).toEqual(['symbol', 'margin', 'positionValue']);
+    act(() => result.current.move('unrealizedProfit', 'valueMargin'));
+    expect(result.current.order.slice(0, 3)).toEqual(['symbol', 'unrealizedProfit', 'valueMargin']);
     const saved: unknown = JSON.parse(storage.data.get(COLUMN_ORDER_STORAGE_KEY) ?? 'null');
     expect(saved).toEqual(result.current.order);
   });
@@ -62,13 +62,13 @@ describe('useColumnOrder', () => {
       throw new Error('voll');
     });
     const { result } = renderHook(() => useColumnOrder(storage));
-    act(() => result.current.move('margin', 'positionValue'));
-    expect(result.current.order[1]).toBe('margin');
+    act(() => result.current.move('unrealizedProfit', 'valueMargin'));
+    expect(result.current.order[1]).toBe('unrealizedProfit');
   });
   it('reset stellt Standard her und löscht den Eintrag', () => {
     const storage = fakeStorage();
     const { result } = renderHook(() => useColumnOrder(storage));
-    act(() => result.current.move('margin', 'positionValue'));
+    act(() => result.current.move('unrealizedProfit', 'valueMargin'));
     act(() => result.current.reset());
     expect(result.current.order).toEqual([...DEFAULT_COLUMN_ORDER]);
     expect(result.current.isDefault).toBe(true);
@@ -81,7 +81,7 @@ describe('useColumnOrder', () => {
       throw new Error('gesperrt');
     });
     const { result } = renderHook(() => useColumnOrder(storage));
-    act(() => result.current.move('margin', 'positionValue'));
+    act(() => result.current.move('unrealizedProfit', 'valueMargin'));
     act(() => result.current.reset());
     expect(result.current.isDefault).toBe(true);
   });

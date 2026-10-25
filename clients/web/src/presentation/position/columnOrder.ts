@@ -2,13 +2,12 @@ export const COLUMN_ORDER_STORAGE_KEY = 'tip_open_positions_column_order_v2';
 
 export const DEFAULT_COLUMN_ORDER = [
   'symbol',
-  'positionValue',
-  'margin',
+  'valueMargin',
   'unrealizedProfit',
   'realisedProfit',
-  'entry',
-  'tpSl',
-  'beTarget',
+  'entrySl',
+  'be',
+  'tp1',
 ] as const;
 
 export type ColumnKey = (typeof DEFAULT_COLUMN_ORDER)[number];

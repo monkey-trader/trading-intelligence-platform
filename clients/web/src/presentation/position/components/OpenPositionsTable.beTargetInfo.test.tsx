@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { suiLongPosition } from '@/test/fixtures/openPositions';
@@ -29,9 +29,13 @@ describe('OpenPositionsTable: Erklärung zu den TPs', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('benennt die Spalte (Kopf heißt "BE / TP1")', () => {
+  it('benennt die Spalten (Köpfe heißen "BE (2R)" und "TP1 (3R)"), Info-Knopf im TP1-Kopf', () => {
     render(<OpenPositionsTable positions={[suiLongPosition]} />);
 
-    expect(screen.getByRole('columnheader', { name: 'BE / TP1' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /BE \(2R\)/ })).toBeInTheDocument();
+    const tp1Header = screen.getByRole('columnheader', { name: /TP1 \(3R\)/ });
+    expect(
+      within(tp1Header).getByRole('button', { name: 'Erklärung zu den TPs' }),
+    ).toBeInTheDocument();
   });
 });
