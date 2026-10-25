@@ -42,7 +42,12 @@ Diese Regeln haben Vorrang vor den allgemeinen.
 - Web: kein `any`, Imports über `@/`.
 - Einzelne Tests: `cd backend && go test ./internal/<paket>/...` bzw. `cd clients/web && npx vitest run <pfad>`.
 - Abschluss Go: `cd backend && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...`
-- Abschluss Web (wenn geändert): `cd clients/web && npm run lint && npm test`
+- Abschluss Web (wenn geändert), **1:1 wie die CI** (`ci.yml`, Job Web-Client):
+  `cd clients/web && npm run generate:api && test -z "$(git status --porcelain -- src/infrastructure/api/)" && npm run lint && npm run typecheck && npm run format:check && npm test && npm run build`
+  Schlägt `format:check` an: `npm run format`, dann alles erneut. Nach jeder Änderung **nach** dem Review (auch ein
+  einzelner Test) die ganze Liste erneut ausführen.
+- Abschluss Vertragstests (wenn `contracts/` geändert): `cd contracts && npm run lint && npm run typecheck && npm run format:check`
+- Ändert sich `.github/workflows/ci.yml`, diese Abschlussbefehle im selben PR angleichen.
 
 ## reviewer
 - BingX: nur GET-Requests; Fehlerbehandlung (429-Backoff, `code != 0`, leere Antworten).
