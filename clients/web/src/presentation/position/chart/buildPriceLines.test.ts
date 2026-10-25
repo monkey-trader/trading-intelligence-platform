@@ -27,7 +27,12 @@ describe('buildPriceLines R-Linien', () => {
   });
 
   it('coincidesWithTakeProfit=true: nur der zusammenfallende TP entfällt, ein weiter entfernter bleibt', () => {
-    const farTakeProfit = { orderId: 'far', triggerPrice: '80.00', quantity: '1', distanceRatio: '0.4' };
+    const farTakeProfit = {
+      orderId: 'far',
+      triggerPrice: '80.00',
+      quantity: '1',
+      distanceRatio: '0.4',
+    };
     const chart = {
       ...withLevels(xagLongChart, [twoR, merged]),
       takeProfit: [farTakeProfit, ...xagLongChart.takeProfit],
