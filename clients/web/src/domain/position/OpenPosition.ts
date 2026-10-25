@@ -1,6 +1,6 @@
-/** CRV-Level (1R/2R/3R) als Preis; 2R = Break-even-Trigger, 3R = TP3. */
+/** CRV-Level (2R/3R) als Preis; 2R = Break-even-Trigger, 3R = TP1. */
 export type OpenPositionLevel = Readonly<{
-  kind: 'ONE_R' | 'TWO_R' | 'THREE_R';
+  kind: 'TWO_R' | 'THREE_R';
   rMultiple: number;
   price: string;
   percent: string;

@@ -11,14 +11,16 @@ type rLevelDto struct {
 	RMultiple int    `json:"rMultiple"`
 	Price     string `json:"price"`
 	Percent   string `json:"percent"`
+
+	CoincidesWithTakeProfit *bool `json:"coincidesWithTakeProfit,omitempty"`
 }
 
-var rLevelKinds = map[int]string{1: "ONE_R", 2: "TWO_R", 3: "THREE_R"}
+var rLevelKinds = map[int]string{2: "TWO_R", 3: "THREE_R"}
 
 func toRLevelDtos(levels []position.RLevel) []rLevelDto {
 	dtos := make([]rLevelDto, 0, len(levels))
 	for _, level := range levels {
-		dtos = append(dtos, rLevelDto{Kind: rLevelKinds[level.Multiple], RMultiple: level.Multiple, Price: level.Price, Percent: level.Percent})
+		dtos = append(dtos, rLevelDto{Kind: rLevelKinds[level.Multiple], RMultiple: level.Multiple, Price: level.Price, Percent: level.Percent, CoincidesWithTakeProfit: level.CoincidesWithTakeProfit})
 	}
 	return dtos
 }

@@ -21,7 +21,7 @@ const COLUMN_LABELS = [
   'Real. PnL',
   'Einstieg',
   'TP / SL',
-  'TPs (je 33 %)',
+  'BE / TP1',
 ] as const;
 
 type ColumnLabel = (typeof COLUMN_LABELS)[number];

@@ -28,7 +28,7 @@ type OpenPositionEntry struct {
 	CurrentRMultiple        *string
 	BreakEvenTriggerReached *bool                   // nil auch, wenn die Kerzen nicht lesbar waren
 	Reached2RAt             *int64                  // Kerzenbeginn, nil wenn nicht erreicht oder unbekannt
-	Levels                  []domainposition.RLevel // 1R/2R/3R, nil bei unbekanntem Risiko
+	Levels                  []domainposition.RLevel // 2R/3R, nil bei unbekanntem Risiko
 	InitialStopLossSource   *string                 // "MANUAL" | "AUTO", nil bei unbekanntem Risiko
 }
 
@@ -240,7 +240,11 @@ func (useCase *GetOpenPositionsUseCase) twoRStatus(ctx context.Context, entry *O
 	for _, candle := range candles {
 		ranges = append(ranges, domainposition.CandleRange{OpenTime: candle.OpenTime, High: candle.High, Low: candle.Low})
 	}
-	reachedAt, err := domainposition.ReachedAt(entry.Side, levels[1].Price, entry.OpenTime, ranges)
+	twoR, found := domainposition.LevelAt(levels, 2)
+	if !found {
+		return nil, nil
+	}
+	reachedAt, err := domainposition.ReachedAt(entry.Side, twoR.Price, entry.OpenTime, ranges)
 	if err != nil {
 		slog.WarnContext(ctx, "2R nicht berechenbar", slog.String("positionId", entry.PositionID), slog.String("error", err.Error()))
 		return nil, nil

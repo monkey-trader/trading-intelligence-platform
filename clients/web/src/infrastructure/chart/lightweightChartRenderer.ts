@@ -30,8 +30,6 @@ function lineColor(kind: ChartPriceLine['kind']): string {
       return readToken('--color-chart-take-profit');
     case 'entry':
       return readToken('--color-chart-entry');
-    case 'r1':
-      return readToken('--color-text-muted');
     case 'r2':
       return readToken('--color-warning');
     case 'r3':
@@ -39,9 +37,9 @@ function lineColor(kind: ChartPriceLine['kind']): string {
   }
 }
 
-/** 1R/3R gepunktet, 2R (Break-even-Trigger) gestrichelt, alles andere wie bisher gestrichelt. */
+/** 3R gepunktet, 2R (Break-even-Trigger) gestrichelt, alles andere wie bisher gestrichelt. */
 function lineStyle(kind: ChartPriceLine['kind']): LineStyle {
-  return kind === 'r1' || kind === 'r3' ? LineStyle.Dotted : LineStyle.Dashed;
+  return kind === 'r3' ? LineStyle.Dotted : LineStyle.Dashed;
 }
 
 /** Adapter des ChartRenderer-Ports auf lightweight-charts (braucht Canvas, nicht per Unit-Test geprüft). */

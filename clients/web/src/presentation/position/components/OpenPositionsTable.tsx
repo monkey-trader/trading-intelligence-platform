@@ -24,7 +24,7 @@ const COLUMN_LABELS = {
   realisedProfit: 'Real. PnL',
   entry: 'Einstieg',
   tpSl: 'TP / SL',
-  beTarget: 'TPs (je 33 %)',
+  beTarget: 'BE / TP1',
 } as const;
 
 const SIDE_LABELS: Readonly<Record<OpenPosition['side'], string>> = {
@@ -197,7 +197,7 @@ export function OpenPositionsTable({
         </table>
       </div>
       <InfoDialog
-        title="TP1 bis TP3"
+        title="BE und TP1"
         isOpen={isBeTargetInfoOpen}
         onClose={() => setIsBeTargetInfoOpen(false)}
       >
@@ -230,7 +230,6 @@ function OpenPositionRow({
   const tickerFallback = (position.symbol.split('-')[0] ?? position.symbol).toUpperCase();
   const displayName = assetIcon?.displayName ?? tickerFallback;
 
-  const firstLevel = position.levels?.find((level) => level.kind === 'ONE_R');
   const secondLevel = position.levels?.find((level) => level.kind === 'TWO_R');
   const thirdLevel = position.levels?.find((level) => level.kind === 'THREE_R');
   const cells: Record<ColumnKey, ReactNode> = {
@@ -333,16 +332,13 @@ function OpenPositionRow({
     beTarget: (
       <td data-label={COLUMN_LABELS.beTarget} className={styles.cell}>
         <div className={styles.beTargetStack}>
-          {firstLevel && secondLevel && thirdLevel ? (
+          {secondLevel && thirdLevel ? (
             <div className={styles.levelStack}>
-              <span className={`${styles.levelPill} ${styles.levelFirst}`}>
-                {`TP1 ${formatDecimal(firstLevel.price)}`}
-              </span>
               <span className={`${styles.levelPill} ${styles.levelBe}`}>
                 {`BE ${formatDecimal(secondLevel.price)}`}
               </span>
               <span className={`${styles.levelPill} ${styles.levelTarget}`}>
-                {`TP3 ${formatDecimal(thirdLevel.price)}`}
+                {`TP1 ${formatDecimal(thirdLevel.price)}`}
               </span>
             </div>
           ) : (

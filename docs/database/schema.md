@@ -109,7 +109,7 @@ Standard 365). Wird der Zeitraum größer, gilt die Suche als unvollständig und
 Einen Schlüssel umzubenennen erzwingt einen vollständigen Neu-Import der betroffenen Daten.
 
 ## Tabelle `position_risk`
-Ursprüngliches Risiko einer offenen Position (Grundlage der R-Level 1R/2R/3R). Wird beim ersten Sehen einer
+Ursprüngliches Risiko einer offenen Position (Grundlage der R-Level 2R/3R). Wird beim ersten Sehen einer
 Position angelegt und nie überschrieben, nur wenn der SL auf der Verlustseite des Entry liegt (SL = Entry oder
 kein SL: kein Eintrag, Risiko unbekannt).
 Der ursprüngliche SL kann auch aus der `allOrders`-Historie stammen: Ist der aktuelle SL unbrauchbar, gilt der

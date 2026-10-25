@@ -11,6 +11,8 @@ import (
 const (
 	// rLevelMaxMultiple ist das höchste CRV-Ziel (3R).
 	rLevelMaxMultiple = 3
+	// rLevelMinMultiple ist das niedrigste angezeigte CRV-Ziel (2R).
+	rLevelMinMultiple = 2
 	// priceScale und percentScale begrenzen nur nicht abbrechende Dezimalbrüche; übliche Werte sind exakt.
 	priceScale     = 18
 	percentScale   = 8
@@ -39,6 +41,45 @@ type RLevel struct {
 	Multiple int
 	Price    string
 	Percent  string
+	// CoincidesWithTakeProfit ist nur beim 3R-Level im Chart gesetzt (sonst nil).
+	CoincidesWithTakeProfit *bool
+}
+
+// LevelAt liefert das Level mit dem Vielfachen multiple; false, wenn es fehlt.
+func LevelAt(levels []RLevel, multiple int) (RLevel, bool) {
+	for _, level := range levels {
+		if level.Multiple == multiple {
+			return level, true
+		}
+	}
+	return RLevel{}, false
+}
+
+// tpCoincidenceTolerance ist der größte Abstand (Anteil des Entry), bei dem ein TP als auf dem Level liegend gilt.
+var tpCoincidenceTolerance = big.NewRat(1, 1000)
+
+// TakeProfitCoincides meldet, ob ein TP-Trigger höchstens 0.1 % des Entry vom Level entfernt liegt (Grenze gehört dazu).
+func TakeProfitCoincides(entry, levelPrice string, triggers []string) (bool, error) {
+	entryValue, err := parseExact(entry)
+	if err != nil {
+		return false, err
+	}
+	level, err := parseExact(levelPrice)
+	if err != nil {
+		return false, err
+	}
+	limit := new(big.Rat).Mul(new(big.Rat).Abs(entryValue), tpCoincidenceTolerance)
+	for _, trigger := range triggers {
+		triggerValue, err := parseExact(trigger)
+		if err != nil {
+			return false, err
+		}
+		distance := new(big.Rat).Abs(new(big.Rat).Sub(triggerValue, level))
+		if distance.Cmp(limit) <= 0 {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // CandleRange sind Hoch und Tief einer Kerze ab OpenTime (Epoch-ms).
@@ -87,14 +128,14 @@ func RiskDistance(side PositionSide, entry, initialStopLoss string) (string, err
 	return formatRat(risk, priceScale), nil
 }
 
-// RLevels liefert die Level 1R, 2R und 3R aus Entry und ursprünglichem SL.
+// RLevels liefert die Level 2R und 3R aus Entry und ursprünglichem SL.
 func RLevels(side PositionSide, entry, initialStopLoss string) ([]RLevel, error) {
 	entryValue, risk, err := riskDistanceRat(side, entry, initialStopLoss)
 	if err != nil {
 		return nil, err
 	}
-	levels := make([]RLevel, 0, rLevelMaxMultiple)
-	for multiple := 1; multiple <= rLevelMaxMultiple; multiple++ {
+	levels := make([]RLevel, 0, rLevelMaxMultiple-rLevelMinMultiple+1)
+	for multiple := rLevelMinMultiple; multiple <= rLevelMaxMultiple; multiple++ {
 		move := new(big.Rat).Mul(risk, big.NewRat(int64(multiple), 1))
 		if side != Long {
 			move.Neg(move)

@@ -121,9 +121,9 @@ Zellaufbau (Klassen):
 - **R-Spalte entfernt** (2026-10-21): Die Spalte „TPs (je 33 %)“ mit den Preisen und der Chip ersetzen sie; `currentRMultiple` bleibt in der API (Journal, Stufe 3).
 - **Aktionschip "BE ziehen"** (`.chipAction`, `warning-surface` mit Text `warning`) in der Chip-Zeile der
   Symbolzelle, nur bei `breakEvenTriggerReached: true` und `breakEven` nicht `true`; bleibt auch mobil.
-- **R-Linien im Chart**: 1R `text-muted` gepunktet ("1R"), 2R `warning` gestrichelt ("BE"), 3R neues Token
-  `--color-chart-r-target` gepunktet ("3R", ohne TP "3R TP3"); liegt 3R innerhalb 0,1 % des Entry am TP, eine
-  TP-Linie "TP = 3R". Neues Token `--color-chart-r-target` (hell/dunkel); 2R nutzt `--color-warning`.
+- **R-Linien im Chart** (seit TASK-14): 2R `warning` gestrichelt ("BE"), 3R neues Token
+  `--color-chart-r-target` gepunktet ("TP1"); 1R entfällt. Liegt 3R innerhalb 0,1 % des Entry an einem TP
+  (`coincidesWithTakeProfit` vom Backend), eine Linie "TP = 3R". Neues Token `--color-chart-r-target` (hell/dunkel); 2R nutzt `--color-warning`.
   Keine Legendeneinträge für R-Linien, der Titel an der Linie genügt.
 - **BE-Badge und "kein SL"** in der SL-Zeile der TP/SL-Zelle: **Badge "BE"** (`.breakEvenBadge`, nur bei
   `breakEven: true`): `positive-surface`-Hintergrund, Text `positive`, `font-size-small`, fett,
@@ -222,7 +222,7 @@ Radien 6/8 px, Borders statt Schatten, Seitenbreite 1360 px. Tabellenkopf auf
 - Die früheren Design-Lab-Varianten (Terminal, Clean, Exchange) wurden verworfen.
 
 ### Erklärung der TP-Spalte (i)
-- Kleiner (i)-Knopf (`.infoButton`, Kreis, „i“ per `::before`) im Kopf der Spalte „TPs (je 33 %)“; auf Mobile (kein Kopf) in der Toolbar (`.infoButtonToolbar`). Er öffnet den modalen `InfoDialog` (natives `<dialog>`, Esc/Hintergrund/„Schließen“) mit der Erklärung `BreakEvenTargetInfo`: 1R = ursprüngliches Risiko, TP1/TP2/TP3 bei 1R/2R/3R mit je 33 %, TP2 = BE-Auslöser.
+- Kleiner (i)-Knopf (`.infoButton`, Kreis, „i“ per `::before`) im Kopf der Spalte „TPs (je 33 %)“; auf Mobile (kein Kopf) in der Toolbar (`.infoButtonToolbar`). Er öffnet den modalen `InfoDialog` (natives `<dialog>`, Esc/Hintergrund/„Schließen“) mit der Erklärung `BreakEvenTargetInfo`: 1R = ursprüngliches Risiko, BE ab 2R (SL auf Break-even), TP1 bei 3R (33 % nur Richtwert); 1R, TP2, TP3 entfallen (TASK-14, Tabellenumbau in TASK-7).
 
 ## Wails-Desktop-App (macOS)
 

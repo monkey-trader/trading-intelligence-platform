@@ -438,14 +438,15 @@ func TestToOpenPositionsSnapshotDto_Levels(t *testing.T) {
 	t.Run("mit Levels: kind, rMultiple, price, percent", func(t *testing.T) {
 		entry := goldEntry
 		entry.Levels = []position.RLevel{
-			{Multiple: 1, Price: "1.02", Percent: "6.25"},
 			{Multiple: 2, Price: "1.08", Percent: "12.5"},
 			{Multiple: 3, Price: "1.14", Percent: "18.75"},
 		}
 		encoded, err := json.Marshal(toOpenPositionsSnapshotDto(appposition.OpenPositionsOverview{Positions: []appposition.OpenPositionEntry{entry}, TotalUnrealizedProfit: "0"}))
+		if strings.Contains(string(encoded), "coincidesWithTakeProfit") || strings.Contains(string(encoded), "ONE_R") {
+			t.Errorf("OpenPosition.levels: kein coincidesWithTakeProfit, kein ONE_R: %s", encoded)
+		}
 		for _, part := range []string{
 			`"levels":[`,
-			`{"kind":"ONE_R","rMultiple":1,"price":"1.02","percent":"6.25"}`,
 			`{"kind":"TWO_R","rMultiple":2,"price":"1.08","percent":"12.5"}`,
 			`{"kind":"THREE_R","rMultiple":3,"price":"1.14","percent":"18.75"}`,
 		} {

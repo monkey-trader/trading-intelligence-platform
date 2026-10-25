@@ -8,7 +8,7 @@ export type ChartCandle = Readonly<{
 }>;
 
 export type ChartPriceLine = Readonly<{
-  kind: 'entry' | 'stop' | 'target' | 'r1' | 'r2' | 'r3';
+  kind: 'entry' | 'stop' | 'target' | 'r2' | 'r3';
   price: number;
   title: string;
 }>;

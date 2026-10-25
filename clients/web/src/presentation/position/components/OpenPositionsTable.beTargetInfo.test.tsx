@@ -13,7 +13,7 @@ describe('OpenPositionsTable: Erklärung zu den TPs', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await userEvent.click(screen.getAllByRole('button', { name: 'Erklärung zu den TPs' })[0]!);
 
-    const dialog = screen.getByRole('dialog', { name: 'TP1 bis TP3' });
+    const dialog = screen.getByRole('dialog', { name: 'BE und TP1' });
     expect(dialog).toHaveTextContent('2R');
     expect(dialog).toHaveTextContent('3R');
     expect(dialog).toHaveTextContent('Break-even');
@@ -29,9 +29,9 @@ describe('OpenPositionsTable: Erklärung zu den TPs', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('ändert den Namen der Spalte nicht (Kopf bleibt "TPs (je 33 %)")', () => {
+  it('benennt die Spalte (Kopf heißt "BE / TP1")', () => {
     render(<OpenPositionsTable positions={[suiLongPosition]} />);
 
-    expect(screen.getByRole('columnheader', { name: 'TPs (je 33 %)' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'BE / TP1' })).toBeInTheDocument();
   });
 });

@@ -15,10 +15,10 @@ const position = (fields) => ({
 });
 
 const levels = (entry, risk, side) =>
-  [1, 2, 3].map((multiple) => {
+  [2, 3].map((multiple) => {
     const price = side === 'LONG' ? entry + risk * multiple : entry - risk * multiple;
     return {
-      kind: ['ONE_R', 'TWO_R', 'THREE_R'][multiple - 1],
+      kind: multiple === 2 ? 'TWO_R' : 'THREE_R',
       rMultiple: multiple,
       price: price.toFixed(2),
       percent: ((Math.abs(price - entry) / entry) * 100).toFixed(2),

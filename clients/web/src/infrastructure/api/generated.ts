@@ -238,20 +238,25 @@ export interface components {
             breakEvenTriggerReached?: boolean | null;
             /** @description Kerzenbeginn (Epoch-Millisekunden), in dem 2R erstmals erreicht wurde. null, wenn nicht erreicht oder unbekannt. */
             reached2RAt?: number | null;
-            /** @description CRV-Level 1R/2R/3R als Preise (2R = Preis, an dem der SL auf Break-even gezogen wird, 3R = TP3). Fehlt, wenn das Risiko unbekannt ist. */
+            /** @description CRV-Level 2R/3R als Preise (2R = Preis, an dem der SL auf Break-even gezogen wird, 3R = TP1). Fehlt, wenn das Risiko unbekannt ist. */
             levels?: components["schemas"]["RLevel"][];
         };
         RLevel: {
             /**
-             * @description TWO_R ist der Break-even-Trigger, THREE_R das CRV-Ziel (TP3).
+             * @description TWO_R ist der Break-even-Trigger (SL auf BE), THREE_R das CRV-Ziel (TP1).
              * @enum {string}
              */
-            kind: "ONE_R" | "TWO_R" | "THREE_R";
-            /** @description 1, 2 oder 3. */
-            rMultiple: number;
+            kind: "TWO_R" | "THREE_R";
+            /**
+             * @description 2 oder 3.
+             * @enum {integer}
+             */
+            rMultiple: 2 | 3;
             price: components["schemas"]["Decimal"];
             /** @description Abstand des Levels zum Entry relativ zum Entry (0.03 = 3 %). */
             percent: components["schemas"]["Decimal"];
+            /** @description Nur bei THREE_R im Chart (`PositionChart.levels`): true, wenn eine offene Take-Profit-Order höchstens 0.1 % des Entry-Preises von diesem Level entfernt liegt. Der Client zeichnet dann eine gemeinsame Linie "TP = 3R". Fehlt bei TWO_R und in `OpenPosition.levels`. */
+            coincidesWithTakeProfit?: boolean;
         };
         PositionChart: {
             positionId: string;
@@ -270,7 +275,7 @@ export interface components {
             takeProfit: components["schemas"]["ProtectiveOrder"][];
             /** @description Ereignisse auf der Zeitachse. In Stufe 1 nur der Einstieg. */
             markers: components["schemas"]["ChartMarker"][];
-            /** @description CRV-Level 1R/2R/3R aus dem ursprünglichen Risiko (Entry bis initialStopLoss). Leer, wenn das Risiko unbekannt ist. */
+            /** @description CRV-Level 2R (BE) und 3R (TP1) aus dem ursprünglichen Risiko (Entry bis initialStopLoss). Leer, wenn das Risiko unbekannt ist. */
             levels?: components["schemas"]["RLevel"][];
             /** @description Zeitpunkt der Abfrage der Orders bei BingX in Epoch-Millisekunden. */
             fetchedAt: number;
