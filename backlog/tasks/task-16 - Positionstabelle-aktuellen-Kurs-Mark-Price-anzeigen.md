@@ -1,10 +1,10 @@
 ---
 id: TASK-16
 title: 'Positionstabelle: aktuellen Kurs (Mark Price) anzeigen'
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-25T15:08:00Z'
-updated_date: '2026-10-25T15:13:00Z'
+updated_date: '2026-10-25T15:33:00Z'
 labels:
   - web
 dependencies: []
@@ -40,3 +40,21 @@ Offene Entscheidung (Quelle im Backend): (1) REST-Polling alle ~2 s mit einem Re
 - [ ] #6 Bei 1280 px bleibt die Tabelle ohne horizontales Scrollen (lange Symbole, große Zahlen); mobil Karte mit Spaltenname aus data-label; Ticks ändern die Spaltenbreite nicht (tabellarische Ziffern); Screenreader werden nicht bei jedem Tick angesprochen
 - [ ] #7 Abstand des Kurses zu BE und TP1 (Prozent oder R) wird im Backend berechnet und von der API geliefert, der Client zeigt ihn nur an
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+Entscheidung 2026-10-25 (Nutzer): Quelle Variante 1, REST-Polling alle ~2 s, ein Request /quote/ticker für alle Symbole, nur Standardbibliothek, hinter einem Port (später durch WebSocket austauschbar).
+1. architect: Schnitt (Port PriceSource, Use Case, SSE-Route), Rate-Limit-Budget, Sortierung bei Ticks (einfrieren oder entprellen).
+2. docs/openapi.yaml zuerst: SSE-Stream der Kurse (symbol, price, change24hPercent) und Abstand zu BE/TP1; Contract-Test.
+3. test-author, programmer Backend: BingX-Ticker-Adapter (Fixture aus echter Antwort), Fan-out an Abonnenten, Reconnect/Backoff.
+4. ui-prototyping/lead-designer: Kurs-Spalte (Farbe nach 24h, Vorzeichen, tabellarische Ziffern, Stream-Ausfall), Freigabe durch Nutzer.
+5. test-author, programmer Web: Stream-Hook, Spalte price direkt nach Symbol, Sortierung, API-Typen per generate:api.
+6. designer, reviewer, CI-Liste, unify.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+2026-10-25: Quelle entschieden (Variante 1). Noch nichts umgesetzt; Start mit architect-Schnitt und openapi.yaml.
+<!-- SECTION:NOTES:END -->
