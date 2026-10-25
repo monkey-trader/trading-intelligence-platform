@@ -112,7 +112,7 @@
     --color-chip-surface: #504945;
     --color-chip-text: #ebdbb2;
     --color-r-target-surface: #32403c;
-    --color-control-border: #928374;
+    --color-control-border: #a89984; /* dunkel: ≥ 3:1 auch auf surface-raised (vorher #928374, 2.40:1) */
   }
 }
 
@@ -147,7 +147,7 @@
   --color-chip-surface: #504945;
   --color-chip-text: #ebdbb2;
   --color-r-target-surface: #32403c;
-  --color-control-border: #928374;
+  --color-control-border: #a89984; /* dunkel: ≥ 3:1 auch auf surface-raised (vorher #928374, 2.40:1) */
 }
 
 @media (min-width: 768px) {

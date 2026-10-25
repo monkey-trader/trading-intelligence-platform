@@ -147,8 +147,21 @@ Zellaufbau (Klassen):
   nicht-Standard-Reihenfolge). Rechtsbündig, `surface-raised`, 1px `border`, `radius-small`,
   `font-size-small`, Fokusrahmen 2px. Auf Mobile ohne Inhalt ausgeblendet.
 
+- **Ladezustand** (Status `loading` ohne Daten, Prototyp `prototype.html`, Zustand "Lädt"): Die Tabelle
+  bleibt mit Kopf stehen, die Sortier-Knöpfe sind `disabled` (Cursor `default`, Schrift wie im Kopf), die
+  Tabelle trägt `aria-busy`. Es gibt drei Platzhalterzeilen (`position-placeholder-row`, `aria-hidden`):
+  Desktop wie Datenzeilen mit 40 px Höhe und einem Balken (1em, `surface-raised`, Radius `radius-small`) je
+  Spalte; mobil eine Karte mit einer Zeile je Spalte (Balken halb so breit). Der Ladetext bleibt
+  `role="status"`. Beim ersten Laden wächst der Inhalt beim Wechsel zu Daten (Kopf der Ansicht kommt dazu,
+  ca. 24 px am Desktop, ca. 60 px mobil). Beim Neuladen mit Daten bleibt alles stehen (kein Platzhalter).
+  Platzhalter sind dekorativ; ihr Kontrast (ca. 1.1:1 bzw. 1.3:1) ist bewusst keine Anforderung.
+- **CSS-Reihenfolge (Gotcha):** Mobile Basisregeln (Karten, Platzhalter, Mobil-Sortierung) stehen vor dem
+  `@media (min-width: 768px)`-Block. Stünden sie danach, überschrieben sie dort gleich spezifische
+  Desktop-Regeln (so war die Mobil-Sortierung am Desktop sichtbar und die Platzhalter als Kästen).
 - **Mobile Karte**: Das Symbol ist der Kartentitel (links, ohne Spaltennamen), der Chart-Button
   steht rechts (`margin-left: auto`). Ab 768 px steht der Chart-Button direkt neben dem Symbol.
+  Auf Touch-Geräten (`pointer: coarse`) mindestens `--size-touch-target` (44 px) hoch; ohne Regel waren es 21 px (TASK-7).
+  Der Long/Short-Balken der Mobilkarte sitzt am Kartenrand (`.row:has(...)`); die Desktop-Regel (ab 768 px, an der Symbol-Zelle) steht nach der Basisregel, sonst gewinnt die Basis.
 
 - **Unreal. PnL**, **Real. PnL**: mit `+`/`-`, getönt über `pnlTone` (PnL auf 2 Stellen).
 - **Real. PnL** (`realisedProfit`): bereits realisierter Anteil der offenen Position. Nach den echten Daten
@@ -163,7 +176,8 @@ Zellaufbau (Klassen):
 - Bei `initialStopLossSource: MANUAL` zeigt die Zelle das Badge "manuell" und den Button "Zurücksetzen".
 - Touch-Ziele mindestens 44 px (`--size-touch-target`), Farben und Abstände nur über Tokens, auch in der mobilen Karte.
 - Button und Eingabefeld: Fläche `surface-raised` (Button) bzw. `surface` (Feld), Rahmen `--color-control-border`
-  (≥ 3:1 auf surface und surface-raised, hell 3.38:1 auf raised, dunkel 3.68:1), Text `text` (hell 14.2:1, dunkel 13.1:1).
+  (≥ 3:1 auf surface und surface-raised; berechnet hell 3.87:1 auf surface, 3.55:1 auf raised; dunkel 4.17:1 auf surface, 3.17:1 auf raised).
+  Dunkel war `#928374` (2.40:1 auf raised, Befund TASK-7) und ist jetzt `#a89984`. Text `text` (hell 14.2:1, dunkel 13.1:1).
   Ohne diesen Rahmen verschwindet der Button weiß auf weiß bzw. dunkel auf dunkel.
 - Fokus: `:focus-visible` mit `--border-width-emphasis` und `--color-accent` (Ring, 2px Abstand) an Button und Feld; das Feld erhält den Fokus beim Öffnen, Escape bricht ab.
 - Feld-Breite `--size-sl-input-width`, Zahlen `tabular-nums`, rechtsbündig wie die Preise.
@@ -188,13 +202,18 @@ Chart-Tokens angelegt in `design-tokens.css` (hell und dunkel):
   über `@custom-media` (PostCSS-Plugin oder Lightning CSS als Vite-Transformer). Das ändert die
   CSS-Pipeline und lohnt sich bei drei Stellen noch nicht. Neu bewerten, wenn mehr Ansichten
   (Chart, Historie) dazukommen oder ein zweiter Breakpoint nötig wird.
-- **Scroll-Hinweis in der Tabelle:** Bei 1440 px passt die Tabelle ohne Scrollen (gemessen: 1310 px
-  Panelbreite, Tabelle 1310 px nach Reduktion von `--table-cell-padding-inline` auf `space-2` und
-  Griff ohne Abstand). Unter ca. 1'306 px (gemessen 1280 px: Tabelle 1306 px, Panel 1230 px) scrollt
-  sie wieder; dort sind die rechten Spalten (SL, TP, Eröffnet) erst nach horizontalem Scrollen sichtbar. Unter macOS sind
-  Scrollbalken standardmäßig ausgeblendet, der Hinweis fehlt also. Optionen: Schatten am rechten
-  Rand als Scroll-Andeutung, oder den Tabellen-Breakpoint anheben und dazwischen Karten im
-  Raster zeigen. Mit dem Panel-Layout (Seitenbreite) zusammen entscheiden.
+- **Scroll-Verhalten der Tabelle (gemessen 2026-10-25, TASK-7):** Ab 1100 px passt die Tabelle ohne
+  Scrollen, auch mit langen Symbolen und sechsstelligen Werten (Tabelle 1050 px bei 1100 px Fenster).
+  Bei 1280 px mit Extremwerten (36-stelliges Symbol, 7-stellige Beträge, Preise mit 11 Nachkommastellen)
+  bleiben ca. 30 px Reserve (Tabelle mindestens 1200 px, Panel 1230 px). Darunter scrollt der Container
+  innerhalb des Panels (Symbol bleibt sticky): 1024 px mit langen Werten 75 px, 900 px 199 px, 768 px
+  331 px (normale Werte 768 px: 97 px). Unter macOS sind Scrollbalken ausgeblendet, der Hinweis fehlt also.
+  Optionen: Schatten am rechten Rand als Scroll-Andeutung, oder den Tabellen-Breakpoint anheben und
+  dazwischen Karten im Raster zeigen. Mit dem Panel-Layout (Seitenbreite) zusammen entscheiden.
+- **Leerer Raum über der Tabelle am Desktop:** Die reservierte Toolbar (32 px) plus Abstand ergeben
+  ca. 90 px Luft zwischen Panel-Kopf und Tabelle (gemessen 1280 px, Fenster mit Daten). Der Prototyp
+  hat diesen Raum nicht. Vorschlag: Toolbar nur reservieren, wenn der Reset-Knopf sichtbar ist, oder
+  den Abstand kleiner setzen (Entscheidung offen).
 - **Scroll-Container der Tabelle (Review-Befunde, klein, im Browser noch nicht geprüft):**
   - Unter 768 px (Kartenansicht) scrollt der Container nicht, hat aber `role="region"` und
     `tabIndex={0}`: ein überflüssiger Tab-Stopp. Lösung wäre `tabIndex` nur ab 768 px (`matchMedia`).

@@ -15,13 +15,12 @@ import { OpenPositionsTable } from '@/presentation/position/components/OpenPosit
 
 const COLUMN_LABELS = [
   'Symbol',
-  'Positionswert',
-  'Margin',
+  'Wert / Margin',
   'Unreal. PnL',
   'Real. PnL',
-  'Einstieg',
-  'TP / SL',
-  'BE / TP1',
+  'Einstieg / SL',
+  'BE (2R)',
+  'TP1 (3R)',
 ] as const;
 
 type ColumnLabel = (typeof COLUMN_LABELS)[number];
@@ -83,13 +82,22 @@ function hasTone(cell: HTMLElement, tone: 'positive' | 'negative' | 'neutral'): 
 }
 
 describe('OpenPositionsTable', () => {
-  it('ist eine semantische Tabelle mit den 8 Spalten in fester Reihenfolge', () => {
+  it('ist eine semantische Tabelle mit den 7 Spalten in fester Reihenfolge', () => {
     const table = renderTable([suiLongPosition]);
 
+    // Gestapelte Spalten tragen zwei Sortierknöpfe ("Wert" / "Margin"), daher ohne Leerzeichen.
     const headers = within(table)
       .getAllByRole('columnheader')
       .map((header) => header.textContent?.trim());
-    expect(headers).toEqual([...COLUMN_LABELS]);
+    expect(headers).toEqual([
+      'Symbol',
+      'Wert/Margin',
+      'Unreal. PnL',
+      'Real. PnL',
+      'Einstieg/SL',
+      'BE (2R)',
+      'TP1 (3R)',
+    ]);
   });
 
   it('zeigt eine Zeile pro Position in der gelieferten Reihenfolge', () => {
@@ -196,40 +204,35 @@ describe('OpenPositionsTable', () => {
     const table = renderTable([suiLongPosition]);
     const row = rowFor(table, 'SUI');
 
-    expect(cellOf(row, 'Positionswert')).toHaveTextContent(/^505\.00\sUSDT$/);
-    expect(cellOf(row, 'Margin')).toHaveTextContent(/^60\.50\sUSDT$/);
+    expect(cellOf(row, 'Wert / Margin')).toHaveTextContent(/^505\.00\sUSDT\s?60\.50\sUSDT$/);
     expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^\+25\.00\s*\(\+52\.08\s?%\)$/);
     expect(cellOf(row, 'Real. PnL')).toHaveTextContent(/^[-−]0\.24$/);
-    expect(cellOf(row, 'Einstieg')).toHaveTextContent(/^0\.96$/);
-    expect(cellOf(row, 'TP / SL')).toHaveTextContent(/^TP\s1\.2\d*\s*SL\s0\.9\d*$/);
+    expect(cellOf(row, 'Einstieg / SL')).toHaveTextContent(/^0\.96\s*SL\s0\.9\d*$/);
   });
 
   it('formatiert die Werte einer SHORT-Position mit Tausendertrennung und Minus', () => {
     const table = renderTable([goldShortPosition]);
     const row = rowFor(table, 'NCCOGOLD2USD');
 
-    expect(cellOf(row, 'Positionswert')).toHaveTextContent(/^1['’]043\.75\sUSDT$/);
-    expect(cellOf(row, 'Margin')).toHaveTextContent(/^65\.00\sUSDT$/);
-    expect(cellOf(row, 'Einstieg')).toHaveTextContent(/^4['’]150$/);
+    expect(cellOf(row, 'Wert / Margin')).toHaveTextContent(/^1['’]043\.75\sUSDT\s?65\.00\sUSDT$/);
+    expect(cellOf(row, 'Einstieg / SL')).toHaveTextContent(/^4['’]150\s*SL\s4['’]200$/);
     expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^[-−]6\.25\s*\([-−]9\.04\s?%\)$/);
     expect(cellOf(row, 'Real. PnL')).toHaveTextContent(/^[-−]0\.52$/);
   });
 
-  it('zeigt TP und SL in zwei Zeilen', () => {
+  it('zeigt Einstieg und SL in zwei Zeilen', () => {
     const row = rowFor(renderTable([goldShortPosition]), 'NCCOGOLD2USD');
-    const cell = cellOf(row, 'TP / SL');
+    const cell = cellOf(row, 'Einstieg / SL');
 
-    expect(cell).toHaveTextContent(/TP\s4['’]100/);
+    expect(cell).toHaveTextContent(/^4['’]150/);
     expect(cell).toHaveTextContent(/SL\s4['’]200/);
-    expect(within(cell).getByText(/^TP/)).toBeInTheDocument();
     expect(within(cell).getByText(/^SL/)).toBeInTheDocument();
   });
 
-  it('zeigt – bei TP und SL null', () => {
+  it('zeigt – bei SL null', () => {
     const row = rowFor(renderTable([unknownOrdersPosition]), 'SUI');
-    const cell = cellOf(row, 'TP / SL');
+    const cell = cellOf(row, 'Einstieg / SL');
 
-    expect(cell).toHaveTextContent(/TP\s[–-]/);
     expect(cell).toHaveTextContent(/SL\s[–-]/);
   });
 
@@ -260,7 +263,7 @@ describe('OpenPositionsTable', () => {
 
     expect(cellOf(row, 'Unreal. PnL')).toHaveTextContent(/^\+1['’]234\.50\s*\(\+12\.35\s?%\)$/);
     expect(cellOf(row, 'Real. PnL')).toHaveTextContent(/^\+12\.35$/);
-    expect(cellOf(row, 'Einstieg')).toHaveTextContent(/^2['’]500\.5$/);
+    expect(cellOf(row, 'Einstieg / SL')).toHaveTextContent(/^2['’]500\.5/);
   });
 
   it('zeigt PnL-Werte, die gerundet 0 sind, ohne Vorzeichen', () => {
@@ -350,7 +353,7 @@ describe('OpenPositionsTable: Chart-Auswahl', () => {
 
 describe('OpenPositionsTable: SL, TP und Break-even', () => {
   it('zeigt in der SL-Zeile das Badge BE (role img, Break-even), wenn breakEven true ist', () => {
-    const cell = cellOf(rowFor(renderTable([breakEvenPosition]), 'SUI'), 'TP / SL');
+    const cell = cellOf(rowFor(renderTable([breakEvenPosition]), 'SUI'), 'Einstieg / SL');
 
     const badge = within(cell).getByRole('img', { name: 'Break-even' });
     expect(badge).toHaveAttribute('aria-label', 'Break-even');
@@ -359,27 +362,27 @@ describe('OpenPositionsTable: SL, TP und Break-even', () => {
   });
 
   it('zeigt kein BE-Badge bei breakEven false', () => {
-    const cell = cellOf(rowFor(renderTable([goldShortPosition]), 'NCCOGOLD2USD'), 'TP / SL');
+    const cell = cellOf(rowFor(renderTable([goldShortPosition]), 'NCCOGOLD2USD'), 'Einstieg / SL');
 
     expect(within(cell).queryByRole('img', { name: 'Break-even' })).not.toBeInTheDocument();
     expect(within(cell).queryByText('BE')).not.toBeInTheDocument();
   });
 
   it('zeigt den Hinweis "kein SL", wenn Orders bekannt sind und kein SL existiert', () => {
-    const cell = cellOf(rowFor(renderTable([noStopLossPosition]), 'SUI'), 'TP / SL');
+    const cell = cellOf(rowFor(renderTable([noStopLossPosition]), 'SUI'), 'Einstieg / SL');
 
     expect(within(cell).getByText('kein SL')).toBeInTheDocument();
     expect(within(cell).queryByRole('img', { name: 'Break-even' })).not.toBeInTheDocument();
   });
 
   it('zeigt bei vorhandenem SL keinen Hinweis "kein SL"', () => {
-    const cell = cellOf(rowFor(renderTable([goldShortPosition]), 'NCCOGOLD2USD'), 'TP / SL');
+    const cell = cellOf(rowFor(renderTable([goldShortPosition]), 'NCCOGOLD2USD'), 'Einstieg / SL');
 
     expect(within(cell).queryByText('kein SL')).not.toBeInTheDocument();
   });
 
   it('zeigt bei breakEven null (Orders unbekannt) weder Badge noch "kein SL"', () => {
-    const cell = cellOf(rowFor(renderTable([unknownOrdersPosition]), 'SUI'), 'TP / SL');
+    const cell = cellOf(rowFor(renderTable([unknownOrdersPosition]), 'SUI'), 'Einstieg / SL');
 
     expect(within(cell).queryByRole('img', { name: 'Break-even' })).not.toBeInTheDocument();
     expect(within(cell).queryByText('BE')).not.toBeInTheDocument();
@@ -388,12 +391,12 @@ describe('OpenPositionsTable: SL, TP und Break-even', () => {
 
   it('tönt fehlenden SL nicht negativ, vorhandenen SL schon', () => {
     const table = renderTable([unknownOrdersPosition, goldShortPosition]);
-    const missingLine = within(cellOf(bodyRows(table)[0] as HTMLElement, 'TP / SL')).getByText(
-      /^SL/,
-    ).parentElement as HTMLElement;
-    const presentLine = within(cellOf(bodyRows(table)[1] as HTMLElement, 'TP / SL')).getByText(
-      /^SL/,
-    ).parentElement as HTMLElement;
+    const missingLine = within(
+      cellOf(bodyRows(table)[0] as HTMLElement, 'Einstieg / SL'),
+    ).getByText(/^SL/).parentElement as HTMLElement;
+    const presentLine = within(
+      cellOf(bodyRows(table)[1] as HTMLElement, 'Einstieg / SL'),
+    ).getByText(/^SL/).parentElement as HTMLElement;
 
     // Ausnahme: Klassenwechsel, da getComputedStyle die CSS-Module-Tönung nicht sichtbar macht.
     expect(missingLine.className).not.toMatch(/slLine|negative/);

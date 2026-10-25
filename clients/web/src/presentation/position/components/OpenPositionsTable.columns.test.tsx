@@ -39,32 +39,32 @@ beforeEach(() => window.localStorage.clear());
 describe('OpenPositionsTable Spaltenreihenfolge', () => {
   it('Header tragen data-column-key; Standardreihenfolge', () => {
     const table = setup();
-    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'positionValue', 'margin']);
+    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'valueMargin', 'unrealizedProfit']);
   });
 
   it('Header außer Symbol sind draggable, Symbol nicht', () => {
     const table = setup();
-    expect(header(table, 'entry')).toHaveAttribute('draggable', 'true');
+    expect(header(table, 'entrySl')).toHaveAttribute('draggable', 'true');
     expect(header(table, 'symbol')).not.toHaveAttribute('draggable', 'true');
   });
 
   it('Drag & Drop ordnet Header und Zeilenzellen um und speichert', () => {
     const table = setup();
-    dragOnto(header(table, 'entry'), header(table, 'positionValue'));
-    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'entry', 'positionValue']);
+    dragOnto(header(table, 'entrySl'), header(table, 'valueMargin'));
+    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'entrySl', 'valueMargin']);
     const cells = Array.from(table.querySelectorAll('tbody tr:first-child > *'));
     expect(cells[0]).toHaveTextContent('SUI');
-    expect(cells[1]).toHaveAttribute('data-label', 'Einstieg');
-    expect(cells[2]).toHaveAttribute('data-label', 'Positionswert');
+    expect(cells[1]).toHaveAttribute('data-label', 'Einstieg / SL');
+    expect(cells[2]).toHaveAttribute('data-label', 'Wert / Margin');
     expect(JSON.parse(window.localStorage.getItem(COLUMN_ORDER_STORAGE_KEY) ?? 'null')[1]).toBe(
-      'entry',
+      'entrySl',
     );
   });
 
   it('Symbol-Spalte bleibt erste Spalte (th scope=row) und lässt sich nicht verschieben', () => {
     const table = setup();
-    dragOnto(header(table, 'symbol'), header(table, 'entry'));
-    dragOnto(header(table, 'entry'), header(table, 'symbol'));
+    dragOnto(header(table, 'symbol'), header(table, 'entrySl'));
+    dragOnto(header(table, 'entrySl'), header(table, 'symbol'));
     expect(headerTexts(table)[0]).toBe('symbol');
     expect(table.querySelector('tbody tr:first-child > :first-child')).toHaveAttribute(
       'scope',
@@ -73,31 +73,31 @@ describe('OpenPositionsTable Spaltenreihenfolge', () => {
   });
 
   it('gespeicierte Reihenfolge wird beim Rendern angewendet', () => {
-    window.localStorage.setItem(COLUMN_ORDER_STORAGE_KEY, JSON.stringify(['symbol', 'tpSl']));
+    window.localStorage.setItem(COLUMN_ORDER_STORAGE_KEY, JSON.stringify(['symbol', 'tp1']));
     const table = setup();
-    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'tpSl', 'positionValue']);
+    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'tp1', 'valueMargin']);
   });
 
   it('Tastatur: Alt+Pfeil rechts/links am Griff verschiebt die Spalte', async () => {
     const user = userEvent.setup();
     const table = setup();
-    const handle = screen.getByRole('button', { name: 'Spalte verschieben: Positionswert' });
+    const handle = screen.getByRole('button', { name: 'Spalte verschieben: Wert / Margin' });
     handle.focus();
     await user.keyboard('{Alt>}{ArrowRight}{/Alt}');
-    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'margin', 'positionValue']);
+    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'unrealizedProfit', 'valueMargin']);
     await user.keyboard('{Alt>}{ArrowLeft}{/Alt}');
-    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'positionValue', 'margin']);
+    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'valueMargin', 'unrealizedProfit']);
   });
 
   it('Tastatur: ArrowLeft ohne Alt verschiebt nichts; erste verschiebbare Spalte nicht vor Symbol', async () => {
     const user = userEvent.setup();
     const table = setup();
-    const handle = screen.getByRole('button', { name: 'Spalte verschieben: Positionswert' });
+    const handle = screen.getByRole('button', { name: 'Spalte verschieben: Wert / Margin' });
     handle.focus();
     await user.keyboard('{ArrowRight}');
     await user.keyboard('{Alt>}{ArrowLeft}{/Alt}');
     expect(headerTexts(table)[0]).toBe('symbol');
-    expect(headerTexts(table)[1]).toBe('positionValue');
+    expect(headerTexts(table)[1]).toBe('valueMargin');
   });
 
   it('Symbol hat keinen Verschiebe-Griff', () => {
@@ -109,19 +109,19 @@ describe('OpenPositionsTable Spaltenreihenfolge', () => {
     const user = userEvent.setup();
     const table = setup();
     expect(screen.queryByRole('button', { name: 'Spalten zurücksetzen' })).toBeNull();
-    dragOnto(header(table, 'entry'), header(table, 'positionValue'));
+    dragOnto(header(table, 'entrySl'), header(table, 'valueMargin'));
     await user.click(screen.getByRole('button', { name: 'Spalten zurücksetzen' }));
-    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'positionValue', 'margin']);
+    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'valueMargin', 'unrealizedProfit']);
     expect(window.localStorage.getItem(COLUMN_ORDER_STORAGE_KEY)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Spalten zurücksetzen' })).toBeNull();
   });
 
   it('Kartenansicht: jede Zelle behält data-label in neuer Reihenfolge', () => {
     const table = setup();
-    dragOnto(header(table, 'tpSl'), header(table, 'positionValue'));
+    dragOnto(header(table, 'tp1'), header(table, 'valueMargin'));
     const labels = Array.from(table.querySelectorAll('tbody tr:first-child > *')).map((cell) =>
       cell.getAttribute('data-label'),
     );
-    expect(labels.slice(0, 3)).toEqual(['Symbol', 'TP / SL', 'Positionswert']);
+    expect(labels.slice(0, 3)).toEqual(['Symbol', 'TP1 (3R)', 'Wert / Margin']);
   });
 });

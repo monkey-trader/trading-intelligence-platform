@@ -28,3 +28,6 @@ data/
 
 # Screenshots des designer-Agenten
 clients/web/screenshots/
+
+# TypeScript-Build-Cache
+clients/web/tsconfig.tsbuildinfo
