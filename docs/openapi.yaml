@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Trading Intelligence Platform API
-  version: 0.5.0
+  version: 0.6.0
   description: |-
     HTTP/JSON-API des Backends. Diese Spezifikation ist der Vertrag zwischen Backend
     und Clients: erst hier anpassen, dann implementieren. Jedes Backend (TypeScript, später Go)
@@ -621,8 +621,9 @@ components:
         levels:
           type: array
           description: >-
-            CRV-Level 1R/2R/3R als Preise (2R = Preis, an dem der SL auf Break-even gezogen wird, 3R = TP3).
+            CRV-Level 2R/3R als Preise (2R = Preis, an dem der SL auf Break-even gezogen wird, 3R = TP1).
             Fehlt, wenn das Risiko unbekannt ist.
+          maxItems: 2
           items:
             $ref: '#/components/schemas/RLevel'
     RLevel:
@@ -637,18 +638,26 @@ components:
         kind:
           type: string
           enum:
-            - ONE_R
             - TWO_R
             - THREE_R
-          description: TWO_R ist der Break-even-Trigger, THREE_R das CRV-Ziel (TP3).
+          description: TWO_R ist der Break-even-Trigger (SL auf BE), THREE_R das CRV-Ziel (TP1).
         rMultiple:
           type: integer
-          description: 1, 2 oder 3.
+          enum:
+            - 2
+            - 3
+          description: 2 oder 3.
         price:
           $ref: '#/components/schemas/Decimal'
         percent:
           $ref: '#/components/schemas/Decimal'
           description: Abstand des Levels zum Entry relativ zum Entry (0.03 = 3 %).
+        coincidesWithTakeProfit:
+          type: boolean
+          description: >-
+            Nur bei THREE_R im Chart (`PositionChart.levels`): true, wenn eine offene Take-Profit-Order höchstens
+            0.1 % des Entry-Preises von diesem Level entfernt liegt. Der Client zeichnet dann eine gemeinsame
+            Linie "TP = 3R". Fehlt bei TWO_R und in `OpenPosition.levels`.
     PositionChart:
       type: object
       additionalProperties: false
@@ -707,8 +716,9 @@ components:
         levels:
           type: array
           description: >-
-            CRV-Level 1R/2R/3R aus dem ursprünglichen Risiko (Entry bis initialStopLoss). Leer, wenn das
-            Risiko unbekannt ist.
+            CRV-Level 2R (BE) und 3R (TP1) aus dem ursprünglichen Risiko (Entry bis initialStopLoss). Leer,
+            wenn das Risiko unbekannt ist.
+          maxItems: 2
           items:
             $ref: '#/components/schemas/RLevel'
         fetchedAt:

@@ -1,10 +1,10 @@
 ---
 id: TASK-7
 title: 'Positionstabelle: Horizontal-Scroll bei 1280 px und Sortierung per Klick'
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-24T20:01:00Z'
-updated_date: '2026-10-24T20:42:00Z'
+updated_date: '2026-10-25T13:35:00Z'
 labels:
   - web
 dependencies:

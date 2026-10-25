@@ -174,13 +174,19 @@ function parseLevels(candidate: unknown): RLevel[] | undefined {
 
 function parseLevel(candidate: unknown): RLevel | undefined {
   if (!isRecord(candidate)) return undefined;
-  const { kind, rMultiple, price, percent } = candidate;
+  const { kind, rMultiple, price, percent, coincidesWithTakeProfit } = candidate;
   const multiple = typeof rMultiple === 'number' ? String(rMultiple) : rMultiple;
-  return (kind === 'ONE_R' || kind === 'TWO_R' || kind === 'THREE_R') &&
+  return (kind === 'TWO_R' || kind === 'THREE_R') &&
     isDecimal(multiple) &&
     isDecimal(price) &&
     isDecimal(percent)
-    ? { kind, rMultiple: multiple, price, percent }
+    ? {
+        kind,
+        rMultiple: multiple,
+        price,
+        percent,
+        ...(typeof coincidesWithTakeProfit === 'boolean' ? { coincidesWithTakeProfit } : {}),
+      }
     : undefined;
 }
 

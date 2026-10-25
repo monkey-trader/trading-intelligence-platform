@@ -1,18 +1,7 @@
-import type { PositionChart, RLevel } from '@/domain/position/PositionChart';
+import type { PositionChart } from '@/domain/position/PositionChart';
 import type { ChartPriceLine } from '@/presentation/position/chart/ChartRenderer';
 import { formatDecimal } from '@/presentation/position/format/formatDecimal';
 import { formatRatioAsPercent } from '@/presentation/position/format/formatRatioAsPercent';
-
-/** Liegt 3R höchstens so weit (relativ zum Entry) vom TP entfernt, wird eine Linie "TP = 3R" gezeichnet. */
-const MERGE_TOLERANCE_RATIO = 0.001;
-/** Rundungsfehler bei Gleitkomma-Vergleichen an der Grenze. */
-const FLOAT_SLACK = 1e-9;
-
-const R_LINE_KINDS: Readonly<Record<RLevel['kind'], 'r1' | 'r2' | 'r3'>> = {
-  ONE_R: 'r1',
-  TWO_R: 'r2',
-  THREE_R: 'r3',
-};
 
 /** Titel einer SL-/TP-Order, z.B. "SL 55.8 (+0.09 %)". */
 export function protectiveTitle(
@@ -37,7 +26,20 @@ export function buildPriceLines(chart: PositionChart): ChartPriceLine[] {
       title: protectiveTitle('SL', order.triggerPrice, order.distanceRatio),
     });
   }
+  const threeR = (chart.levels ?? []).find((level) => level.kind === 'THREE_R');
+  // Das Backend meldet nur, dass ein TP auf 3R liegt; das ist immer der dem 3R-Preis nächste.
+  let mergedOrder: PositionChart['takeProfit'][number] | undefined;
+  if (threeR?.coincidesWithTakeProfit === true) {
+    const threeRPrice = Number(threeR.price);
+    mergedOrder = [...chart.takeProfit].sort(
+      (left, right) =>
+        Math.abs(Number(left.triggerPrice) - threeRPrice) -
+        Math.abs(Number(right.triggerPrice) - threeRPrice),
+    )[0];
+    lines.push({ kind: 'target', price: threeRPrice, title: 'TP = 3R' });
+  }
   for (const order of chart.takeProfit) {
+    if (order === mergedOrder) continue;
     lines.push({
       kind: 'target',
       price: Number(order.triggerPrice),
@@ -45,32 +47,11 @@ export function buildPriceLines(chart: PositionChart): ChartPriceLine[] {
     });
   }
   for (const level of chart.levels ?? []) {
-    addRLevelLine(lines, level, entryPrice, chart.takeProfit.length > 0);
+    if (level.kind === 'TWO_R') {
+      lines.push({ kind: 'r2', price: Number(level.price), title: 'BE' });
+    } else if (level.coincidesWithTakeProfit !== true) {
+      lines.push({ kind: 'r3', price: Number(level.price), title: 'TP1' });
+    }
   }
   return lines;
-}
-
-function addRLevelLine(
-  lines: ChartPriceLine[],
-  level: RLevel,
-  entryPrice: number,
-  hasTakeProfit: boolean,
-): void {
-  const price = Number(level.price);
-  if (level.kind === 'THREE_R') {
-    const mergeTargetIndex = lines.findIndex(
-      (line) =>
-        line.kind === 'target' &&
-        Math.abs(line.price - price) <= entryPrice * MERGE_TOLERANCE_RATIO + FLOAT_SLACK,
-    );
-    const mergeTarget = lines[mergeTargetIndex];
-    if (mergeTarget) {
-      lines[mergeTargetIndex] = { kind: 'target', price: mergeTarget.price, title: 'TP = 3R' };
-      return;
-    }
-    lines.push({ kind: 'r3', price, title: hasTakeProfit ? '3R' : '3R TP3' });
-    return;
-  }
-  const kind = R_LINE_KINDS[level.kind];
-  lines.push({ kind, price, title: level.kind === 'TWO_R' ? 'BE' : '1R' });
 }

@@ -94,8 +94,14 @@ describe('createHttpPositionChartGateway', () => {
       const body = {
         ...xagLongChart,
         levels: [
-          { kind: 'ONE_R', rMultiple: 1, price: '56.75', percent: '0.0179' },
-          { kind: 'TWO_R', rMultiple: '2', price: '57.75', percent: '0.0359' },
+          { kind: 'TWO_R', rMultiple: 2, price: '57.75', percent: '0.0359' },
+          {
+            kind: 'THREE_R',
+            rMultiple: '3',
+            price: '58.75',
+            percent: '0.0538',
+            coincidesWithTakeProfit: true,
+          },
         ],
       };
       const gateway = createHttpPositionChartGateway(fakeFetchReturning(jsonResponse(body)));
@@ -104,9 +110,50 @@ describe('createHttpPositionChartGateway', () => {
 
       if (result.kind !== 'ok') throw new Error(`erwartet ok, erhalten ${result.kind}`);
       expect(result.chart.levels).toEqual([
-        { kind: 'ONE_R', rMultiple: '1', price: '56.75', percent: '0.0179' },
         { kind: 'TWO_R', rMultiple: '2', price: '57.75', percent: '0.0359' },
+        {
+          kind: 'THREE_R',
+          rMultiple: '3',
+          price: '58.75',
+          percent: '0.0538',
+          coincidesWithTakeProfit: true,
+        },
       ]);
+    });
+
+    it('übernimmt coincidesWithTakeProfit=false und lässt das Feld bei fehlendem Wert weg', async () => {
+      const body = {
+        ...xagLongChart,
+        levels: [
+          { kind: 'TWO_R', rMultiple: 2, price: '57.75', percent: '0.0359' },
+          {
+            kind: 'THREE_R',
+            rMultiple: 3,
+            price: '58.75',
+            percent: '0.0538',
+            coincidesWithTakeProfit: false,
+          },
+        ],
+      };
+      const gateway = createHttpPositionChartGateway(fakeFetchReturning(jsonResponse(body)));
+      const result = await gateway.fetchChart(CHART_POSITION_ID, '15m', 300, newSignal());
+      if (result.kind !== 'ok') throw new Error(`erwartet ok, erhalten ${result.kind}`);
+      expect(result.chart.levels?.[0]).not.toHaveProperty('coincidesWithTakeProfit');
+      expect(result.chart.levels?.[1]?.coincidesWithTakeProfit).toBe(false);
+    });
+
+    it('verwirft ONE_R als unbekanntes Level', async () => {
+      const body = {
+        ...xagLongChart,
+        levels: [
+          { kind: 'ONE_R', rMultiple: 1, price: '56.75', percent: '0.0179' },
+          { kind: 'TWO_R', rMultiple: 2, price: '57.75', percent: '0.0359' },
+        ],
+      };
+      const gateway = createHttpPositionChartGateway(fakeFetchReturning(jsonResponse(body)));
+      const result = await gateway.fetchChart(CHART_POSITION_ID, '15m', 300, newSignal());
+      if (result.kind !== 'ok') throw new Error(`erwartet ok, erhalten ${result.kind}`);
+      expect(result.chart.levels?.map((level) => level.kind)).toEqual(['TWO_R']);
     });
 
     it.each([

@@ -12,7 +12,7 @@ Alles läuft lokal auf deinem Mac: Deine Daten bleiben bei dir, es gibt keine Cl
 ## Was die App kann
 
 - Offene Positionen live von BingX, mit Kontostand sowie PnL für Heute, 7 Tage und 30 Tage
-- Stop-Loss, Take-Profit und Break-even je Position, dazu CRV-Ziele (1R, 2R, 3R)
+- Stop-Loss, Take-Profit und Break-even je Position, dazu Level 2R (Break-even-Trigger) und 3R (TP1)
 - Chart je Position mit Einstieg, Stop-Loss und R-Linien
 - Automatischer Import der geschlossenen Positionen alle 5 Minuten
 - Hell, dunkel oder wie das System

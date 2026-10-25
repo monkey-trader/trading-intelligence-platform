@@ -187,7 +187,7 @@ func TestGetOpenPositions_QuelleManualMitOverrideEntryUndLevels(t *testing.T) {
 	if entry.InitialStopLoss == nil || *entry.InitialStopLoss != "0.9000" || entry.RiskDistance == nil || *entry.RiskDistance != "0.1" {
 		t.Errorf("SL=%v Distanz=%v", entry.InitialStopLoss, entry.RiskDistance)
 	}
-	if len(entry.Levels) != 3 || entry.Levels[0].Price != "1.1" || entry.Levels[1].Price != "1.2" {
+	if len(entry.Levels) != 2 || entry.Levels[0].Price != "1.2" || entry.Levels[1].Price != "1.3" {
 		t.Errorf("Level müssen auf Override-Entry 1.0000 beruhen: %+v", entry.Levels)
 	}
 }

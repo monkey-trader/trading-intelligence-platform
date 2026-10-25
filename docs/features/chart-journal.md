@@ -96,13 +96,12 @@ eigenen Analyse). Das Journal zeigt ihn als Link, ohne ihn einzubetten oder abzu
 
 ## CRV-Level (umgesetzt 2026-10-20, offene Positionen)
 
-Aus dem ursprünglichen Risiko (Entry→SL) berechnet das Backend 1R, 2R (Break-even-Trigger) und 3R (CRV-Ziel 1:3).
-- Chart: `PositionChart.levels` als gepunktete (1R, 3R) bzw. gestrichelte (2R, „BE“) Linien; liegt 3R innerhalb von 0,1 % des Entry am TP, zeigt eine Linie „TP = 3R“.
-- Tabelle: Chip „▲ BE ziehen“, sobald 2R erreicht und der SL noch nicht auf Break-even ist. Eine eigene R-Spalte gibt es nicht mehr (ersetzt durch „TPs (je 33 %)“); `currentRMultiple` bleibt in der API.
+Aus dem ursprünglichen Risiko (Entry→SL) berechnet das Backend zwei Level (Strategie seit 2026-10-25, TASK-14): 2R = Break-even-Trigger (SL auf BE ziehen), 3R = TP1 (üblich 33 % der Position, selten die ganze; die 33 % sind nur ein Richtwert). 1R, TP2 und TP3 gibt es nicht mehr. Das SL-Risiko selbst (ca. 1 % vom Konto) ist eine Handelsregel, die API rechnet nur mit dem SL-Abstand.
+- Chart: `PositionChart.levels` als gestrichelte Linie „BE“ (2R) und gepunktete Linie „TP1“ (3R). Liegt 3R innerhalb von 0,1 % des Entry an einem offenen TP, setzt das Backend `coincidesWithTakeProfit`, und der Client zeichnet eine Linie „TP = 3R“.
+- Tabelle: Chip „▲ BE ziehen“, sobald 2R erreicht und der SL noch nicht auf Break-even ist. Spalten „BE (2R)“ und „TP1 (3R)“ mit reinen Preisen (Umbau in TASK-7); `currentRMultiple` bleibt in der API.
 - Das ursprüngliche SL wird beim ersten Sehen gespeichert (`position_risk`); ohne bekanntes Risiko gibt es keine Level.
 - Grenze: Die 2R-Prüfung nutzt die letzten 1000 gecachten 5-Minuten-Kerzen (ca. 3,5 Tage).
 - Das `rMultiple` bei Schließung (Stufe 3) ist davon getrennt.
-- Tabelle: Spalte „TPs (je 33 %)“ mit drei Preisen: TP1 = 1R, TP2 = 2R („TP2 … · BE“, dort den SL bei BingX auf Break-even setzen) und TP3 = 3R; je 33 % der Position. Ein (i)-Knopf erklärt die Spalte.
 - Stand die Position beim ersten Sehen schon auf Break-even, wird der ursprüngliche SL aus der Order-Historie (`allOrders`) rekonstruiert. Das klappt nur, wenn der SL dort als eigene Stop-Order steht; sonst bleibt das Risiko unbekannt („–“).
 
 ---

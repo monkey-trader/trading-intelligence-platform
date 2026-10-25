@@ -35,11 +35,13 @@ export type ChartMarker = Readonly<{
 
 /** CRV-Level aus dem ursprünglichen Risiko; TWO_R ist der Break-even-Trigger. */
 export type RLevel = Readonly<{
-  kind: 'ONE_R' | 'TWO_R' | 'THREE_R';
+  kind: 'TWO_R' | 'THREE_R';
   rMultiple: string;
   price: string;
   /** Abstand zum Entry relativ zum Entry. */
   percent: string;
+  /** Nur bei THREE_R: eine TP-Order liegt auf 3R. */
+  coincidesWithTakeProfit?: boolean;
 }>;
 
 export type PositionChart = Readonly<{

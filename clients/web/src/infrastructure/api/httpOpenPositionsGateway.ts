@@ -222,9 +222,10 @@ function parseLevels(value: unknown): RLevelDto[] | undefined {
   for (const entry of value) {
     if (!isRecord(entry)) return undefined;
     const { kind, rMultiple, price, percent } = entry;
+    if (kind === 'ONE_R') continue;
     if (
-      (kind !== 'ONE_R' && kind !== 'TWO_R' && kind !== 'THREE_R') ||
-      !isFiniteNumber(rMultiple) ||
+      (kind !== 'TWO_R' && kind !== 'THREE_R') ||
+      (rMultiple !== 2 && rMultiple !== 3) ||
       !isDecimal(price) ||
       !isDecimal(percent)
     )

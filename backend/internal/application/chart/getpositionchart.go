@@ -56,7 +56,7 @@ type PositionChart struct {
 	StopLoss   []ProtectiveOrderWithDistance
 	TakeProfit []ProtectiveOrderWithDistance
 	Markers    []Marker
-	Levels     []position.RLevel // 1R/2R/3R, leer bei unbekanntem Risiko
+	Levels     []position.RLevel // 2R/3R, leer bei unbekanntem Risiko
 	FetchedAt  int64
 }
 
@@ -158,7 +158,7 @@ func (useCase *GetPositionChartUseCase) Execute(ctx context.Context, query Query
 		StopLoss:   stopLoss,
 		TakeProfit: takeProfit,
 		Markers:    []Marker{{Time: openPosition.OpenTime, Kind: MarkerEntry, Price: openPosition.AvgOpenPrice}},
-		Levels:     useCase.levels(ctx, openPosition, stopLoss),
+		Levels:     useCase.levels(ctx, openPosition, stopLoss, takeProfit),
 		FetchedAt:  ordersSnapshot.FetchedAt,
 	}, nil
 }
@@ -209,8 +209,8 @@ func splitOrders(orders []chart.ProtectiveOrder, openPosition position.OpenPosit
 	return stopLoss, takeProfit, nil
 }
 
-// levels liefert 1R/2R/3R aus dem gespeicherten Risiko; nie nil, leer bei unbekanntem Risiko.
-func (useCase *GetPositionChartUseCase) levels(ctx context.Context, openPosition position.OpenPosition, stopLoss []ProtectiveOrderWithDistance) []position.RLevel {
+// levels liefert 2R/3R aus dem gespeicherten Risiko; nie nil, leer bei unbekanntem Risiko.
+func (useCase *GetPositionChartUseCase) levels(ctx context.Context, openPosition position.OpenPosition, stopLoss, takeProfit []ProtectiveOrderWithDistance) []position.RLevel {
 	if useCase.risks == nil {
 		return []position.RLevel{}
 	}
@@ -226,6 +226,21 @@ func (useCase *GetPositionChartUseCase) levels(ctx context.Context, openPosition
 	if err != nil {
 		useCase.logger.WarnContext(ctx, "R-Level nicht berechenbar", slog.String("positionId", openPosition.PositionID), slog.String("error", err.Error()))
 		return []position.RLevel{}
+	}
+	for index := range levels {
+		if levels[index].Multiple != 3 {
+			continue
+		}
+		takeProfitTriggers := make([]string, 0, len(takeProfit))
+		for _, order := range takeProfit {
+			takeProfitTriggers = append(takeProfitTriggers, order.TriggerPrice)
+		}
+		coincides, err := position.TakeProfitCoincides(risk.EntryPrice, levels[index].Price, takeProfitTriggers)
+		if err != nil {
+			useCase.logger.WarnContext(ctx, "TP-Abgleich nicht berechenbar", slog.String("positionId", openPosition.PositionID), slog.String("error", err.Error()))
+			continue
+		}
+		levels[index].CoincidesWithTakeProfit = &coincides
 	}
 	return levels
 }

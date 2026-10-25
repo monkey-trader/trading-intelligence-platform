@@ -10,7 +10,7 @@ import (
 
 // Erwartete Signaturen (Ergebnisse sind minimal formatierte Dezimal-Strings, ohne Nachkomma-Nullen):
 //   RiskDistance(side, entry, initialStopLoss string) (string, error)
-//   RLevels(side, entry, initialStopLoss string) ([]RLevel, error)  // RLevel{Multiple int; Price, Percent string}, 1R,2R,3R
+//   RLevels(side, entry, initialStopLoss string) ([]RLevel, error)  // RLevel{Multiple int; Price, Percent string}, nur 2R und 3R
 //   CurrentRMultiple(side, entry, risk, markPrice string) (string, error) // 4 Nachkommastellen, getrimmt
 //   ReachedAt(side, levelPrice string, openTime int64, candles []CandleRange) (*int64, error)
 // Fehler: *StopLossAtEntryError, *StopLossWrongSideError, *decimal.InvalidDecimalError, *decimal.DivisionByZeroError.
@@ -70,17 +70,14 @@ func TestRLevels(t *testing.T) {
 		want        []position.RLevel
 	}{
 		{"LONG", position.Long, "100", "98", []position.RLevel{
-			{Multiple: 1, Price: "102", Percent: "0.02"},
 			{Multiple: 2, Price: "104", Percent: "0.04"},
 			{Multiple: 3, Price: "106", Percent: "0.06"},
 		}},
 		{"SHORT", position.Short, "100", "102", []position.RLevel{
-			{Multiple: 1, Price: "98", Percent: "-0.02"},
 			{Multiple: 2, Price: "96", Percent: "-0.04"},
 			{Multiple: 3, Price: "94", Percent: "-0.06"},
 		}},
 		{"Nachkommastellen", position.Long, "0.9600", "0.9000", []position.RLevel{
-			{Multiple: 1, Price: "1.02", Percent: "0.0625"},
 			{Multiple: 2, Price: "1.08", Percent: "0.125"},
 			{Multiple: 3, Price: "1.14", Percent: "0.1875"},
 		}},
@@ -88,12 +85,12 @@ func TestRLevels(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got, err := position.RLevels(test.side, test.entry, test.stop)
-			if err != nil || len(got) != 3 {
+			if err != nil || len(got) != 2 {
 				t.Fatalf("got %+v err %v", got, err)
 			}
 			for index := range test.want {
 				if got[index] != test.want[index] {
-					t.Errorf("Level %d = %+v, want %+v", index+1, got[index], test.want[index])
+					t.Errorf("Level %d = %+v, want %+v", index, got[index], test.want[index])
 				}
 			}
 		})
@@ -194,4 +191,37 @@ func TestReachedAt(t *testing.T) {
 			t.Fatalf("Kerze: err = %v", err)
 		}
 	})
+}
+
+// Erwartet: LevelAt(levels []RLevel, multiple int) (RLevel, bool) - sucht per Multiple (nicht per Index);
+// false bei leerer/nil-Liste oder unbekanntem Vielfachen (z. B. 1 oder 4).
+func TestLevelAt(t *testing.T) {
+	for _, side := range []position.PositionSide{position.Long, position.Short} {
+		levels, err := position.RLevels(side, "100", map[position.PositionSide]string{position.Long: "98", position.Short: "102"}[side])
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, multiple := range []int{2, 3} {
+			got, found := position.LevelAt(levels, multiple)
+			if !found || got.Multiple != multiple {
+				t.Errorf("%s: LevelAt(%d) = %+v, %v", side, multiple, got, found)
+			}
+		}
+		for _, multiple := range []int{0, 1, 4} {
+			if _, found := position.LevelAt(levels, multiple); found {
+				t.Errorf("%s: LevelAt(%d) darf nichts finden", side, multiple)
+			}
+		}
+	}
+	if _, found := position.LevelAt(nil, 2); found {
+		t.Error("nil-Liste")
+	}
+	if _, found := position.LevelAt([]position.RLevel{}, 2); found {
+		t.Error("leere Liste")
+	}
+	// Reihenfolge egal: Suche per Multiple, nicht per Index.
+	got, found := position.LevelAt([]position.RLevel{{Multiple: 3, Price: "9"}, {Multiple: 2, Price: "5"}}, 2)
+	if !found || got.Price != "5" {
+		t.Errorf("umsortiert: %+v %v", got, found)
+	}
 }

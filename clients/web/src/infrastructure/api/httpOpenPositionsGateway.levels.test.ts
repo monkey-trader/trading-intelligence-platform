@@ -6,7 +6,6 @@ import { suiLongPosition } from '@/test/fixtures/openPositions';
 // fehlend, leer oder ungültig = undefined.
 
 const levelsBody = [
-  { kind: 'ONE_R', rMultiple: 1, price: '1.0200', percent: '6.25' },
   { kind: 'TWO_R', rMultiple: 2, price: '1.0800', percent: '12.5' },
   { kind: 'THREE_R', rMultiple: 3, price: '1.1400', percent: '18.75' },
 ];
@@ -40,7 +39,20 @@ async function fetchWith(levels: unknown) {
 }
 
 describe('httpOpenPositionsGateway levels', () => {
-  it('übernimmt die drei Level unverändert (Preise bleiben Strings)', async () => {
+  it('verwirft ONE_R und liefert nur die gültigen Level', async () => {
+    const position = await fetchWith([
+      { kind: 'ONE_R', rMultiple: 1, price: '1.0200', percent: '6.25' },
+      ...levelsBody,
+    ]);
+    expect(position?.levels).toEqual(levelsBody);
+  });
+
+  it('übernimmt coincidesWithTakeProfit nicht (nur im Chart-Vertrag)', async () => {
+    const position = await fetchWith([{ ...levelsBody[1], coincidesWithTakeProfit: true }]);
+    expect(position?.levels?.[0]).not.toHaveProperty('coincidesWithTakeProfit');
+  });
+
+  it('übernimmt beide Level unverändert (Preise bleiben Strings)', async () => {
     const position = await fetchWith(levelsBody);
     expect(position?.levels).toEqual(levelsBody);
   });

@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -242,5 +243,38 @@ func TestPositionChart_FremderHostIst403(t *testing.T) {
 	recorder := serve(NewHandler(chartSettings(&chartCall{}, sampleChart(), nil), discardLogger()), request)
 	if recorder.Code != http.StatusForbidden {
 		t.Errorf("Status = %d, erwartet 403", recorder.Code)
+	}
+}
+
+// Entscheidung: position.RLevel.CoincidesWithTakeProfit ist *bool, rLevelDto.CoincidesWithTakeProfit
+// ist *bool mit `json:"coincidesWithTakeProfit,omitempty"`. nil -> Feld fehlt (TWO_R, OpenPosition.levels);
+// Zeiger auf false -> "coincidesWithTakeProfit":false bleibt erhalten (omitempty greift nur bei nil-Zeiger).
+func TestToRLevelDtos_CoincidesWithTakeProfit(t *testing.T) {
+	yes, no := true, false
+	tests := []struct {
+		name    string
+		levels  []position.RLevel
+		want    string
+		notWant string
+	}{
+		{"3R true", []position.RLevel{{Multiple: 3, Price: "1.14", Percent: "0.1875", CoincidesWithTakeProfit: &yes}},
+			`{"kind":"THREE_R","rMultiple":3,"price":"1.14","percent":"0.1875","coincidesWithTakeProfit":true}`, ""},
+		{"3R false bleibt sichtbar", []position.RLevel{{Multiple: 3, Price: "1.14", Percent: "0.1875", CoincidesWithTakeProfit: &no}},
+			`{"kind":"THREE_R","rMultiple":3,"price":"1.14","percent":"0.1875","coincidesWithTakeProfit":false}`, ""},
+		{"2R ohne Feld", []position.RLevel{{Multiple: 2, Price: "1.08", Percent: "0.125"}},
+			`{"kind":"TWO_R","rMultiple":2,"price":"1.08","percent":"0.125"}`, "coincidesWithTakeProfit"},
+		{"3R ohne Angabe (OpenPosition) ohne Feld", []position.RLevel{{Multiple: 3, Price: "1.14", Percent: "0.1875"}},
+			`{"kind":"THREE_R","rMultiple":3,"price":"1.14","percent":"0.1875"}`, "coincidesWithTakeProfit"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			encoded, err := json.Marshal(toRLevelDtos(test.levels))
+			if err != nil || !strings.Contains(string(encoded), test.want) {
+				t.Errorf("JSON = %s (%v), erwartet %s", encoded, err, test.want)
+			}
+			if test.notWant != "" && strings.Contains(string(encoded), test.notWant) {
+				t.Errorf("JSON enthält unerwartet %s: %s", test.notWant, encoded)
+			}
+		})
 	}
 }
