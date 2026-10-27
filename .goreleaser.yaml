@@ -1,4 +1,4 @@
-# Release des Go-Backends (trading-intelligence) als Homebrew-Formula.
+# Release des Go-Backends (trading-intelligence) und des MCP-Servers (trading-intelligence-mcp) als Homebrew-Formula.
 # Ausgelöst von .github/workflows/release.yml, nachdem semantic-release Tag + Release angelegt hat.
 version: 2
 project_name: trading-intelligence
@@ -10,6 +10,17 @@ builds:
     binary: trading-intelligence
     env:
       - CGO_ENABLED=0 # SQLite via modernc: reines Go, Cross-Compile ohne macOS-Runner
+    goos: [darwin]
+    goarch: [arm64, amd64]
+    flags: [-trimpath]
+    ldflags: ["-s -w"]
+
+  - id: trading-intelligence-mcp
+    dir: clients/mcp
+    main: .
+    binary: trading-intelligence-mcp
+    env:
+      - CGO_ENABLED=0
     goos: [darwin]
     goarch: [arm64, amd64]
     flags: [-trimpath]
@@ -62,5 +73,8 @@ brews:
         printf 'BX_KEY=...\nBX_SECRET=...\n' > ~/.config/tip/env && chmod 600 ~/.config/tip/env
         brew services start trading-intelligence
       API: http://127.0.0.1:3000/health
+      MCP-Server (stdio, liest nur über die API) einbinden:
+        claude mcp add trading-intelligence -e TIP_API_URL=http://127.0.0.1:3000 -- #{opt_bin}/trading-intelligence-mcp
     test: |
       assert_predicate bin/"trading-intelligence", :exist?
+      assert_predicate bin/"trading-intelligence-mcp", :exist?

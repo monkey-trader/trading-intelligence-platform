@@ -7,7 +7,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    paths: ['.goreleaser.yaml', '.releaserc.json', '.github/workflows/release.yml', '.github/scripts/render-cask.sh', 'clients/desktop/**']
+    paths: ['.goreleaser.yaml', '.releaserc.json', '.github/workflows/release.yml', '.github/scripts/render-cask.sh', 'clients/desktop/**', 'clients/mcp/**']
   workflow_dispatch:
     inputs:
       tag:
