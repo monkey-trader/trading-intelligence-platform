@@ -89,7 +89,7 @@ Journal-Einträge des Nutzers. **Der Import schreibt hier nie**, und es gibt kei
 | `notes` | TEXT | Freitext |
 | `updated_at` | INTEGER | Letzte Änderung |
 
-Noch ohne API (kommt mit dem Notizen-Feature).
+Lesbar über `GET /positions/{positionId}/note` (nur lesen); Schreiben kommt mit dem Notizen-Feature.
 
 ## Tabelle `import_state`
 Import-Fortschritt, Schlüssel/Wert. `value` ist immer `INTEGER` (Epoch-ms).

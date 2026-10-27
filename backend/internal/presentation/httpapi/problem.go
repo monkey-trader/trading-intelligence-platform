@@ -39,7 +39,7 @@ var problemDefinitions = map[ProblemType]problemDefinition{
 	ProblemBadRequest:      {http.StatusBadRequest, "Die Anfrage ist ungültig."},
 	ProblemForbiddenHost:   {http.StatusForbidden, "Der Host-Header ist nicht erlaubt."},
 	ProblemNotFound:        {http.StatusNotFound, "Die angefragte Ressource gibt es nicht."},
-	ProblemNotConfigured:   {http.StatusServiceUnavailable, "BingX-Zugang ist nicht konfiguriert."},
+	ProblemNotConfigured:   {http.StatusServiceUnavailable, "Der Dienst ist nicht konfiguriert."},
 	ProblemRateLimited:     {http.StatusServiceUnavailable, "BingX ist ausgelastet, bitte später erneut versuchen."},
 	ProblemUnreachable:     {http.StatusGatewayTimeout, "BingX ist nicht erreichbar."},
 	ProblemUpstreamError:   {http.StatusBadGateway, "BingX hat mit einem Fehler geantwortet."},

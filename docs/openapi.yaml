@@ -170,6 +170,35 @@ paths:
           $ref: '#/components/responses/Problem'
         '504':
           $ref: '#/components/responses/Problem'
+  /positions/{positionId}/note:
+    get:
+      operationId: getPositionNote
+      summary: Journal-Notiz einer Position
+      description: >-
+        Liest aus der lokalen Datenbank, schreibt nichts. 404 `not-found`, wenn zur Position keine
+        Notiz existiert oder die Position unbekannt ist; ohne Datenbank 503 `not-configured`.
+        Nicht gesetzte Felder sind `null`.
+      tags:
+        - Journal
+      parameters:
+        - name: positionId
+          in: path
+          required: true
+          description: BingX-Positions-ID (19-stellig, immer String).
+          schema:
+            type: string
+            pattern: '^\d{1,20}$'
+      responses:
+        '200':
+          description: Die Notiz.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JournalNote'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
   /positions/{positionId}/chart:
     get:
       operationId: getPositionChart
@@ -372,6 +401,8 @@ tags:
     description: Betriebliche Endpunkte
   - name: Positionen
     description: Positionen des BingX-Futures-Kontos
+  - name: Journal
+    description: Notizen des Nutzers zu Positionen
   - name: Assets
     description: Zusatzdaten zu Assets (Icons)
 components:
@@ -546,6 +577,43 @@ components:
         fetchedAt:
           type: integer
           description: Zeitpunkt der Abfrage bei BingX in Epoch-Millisekunden.
+    JournalNote:
+      type: object
+      additionalProperties: false
+      required:
+        - positionId
+        - setup
+        - rating
+        - mistakes
+        - notes
+        - updatedAt
+      properties:
+        positionId:
+          type: string
+          description: BingX-Positions-ID (immer String).
+        setup:
+          type:
+            - string
+            - 'null'
+          description: Setup / Strategie.
+        rating:
+          type:
+            - integer
+            - 'null'
+          description: Bewertung des Nutzers; ein Wertebereich ist noch nicht festgelegt.
+        mistakes:
+          type:
+            - string
+            - 'null'
+        notes:
+          type:
+            - string
+            - 'null'
+          description: Freitext.
+        updatedAt:
+          type: integer
+          minimum: 0
+          description: Letzte Änderung in Epoch-Millisekunden; `0`, wenn kein Zeitpunkt gespeichert ist.
     ClosedPositionsResponse:
       type: object
       additionalProperties: false

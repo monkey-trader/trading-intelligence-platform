@@ -21,8 +21,10 @@ import (
 	appaccount "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/account"
 	appasset "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/asset"
 	appchart "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/chart"
+	appjournal "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/journal"
 	appposition "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/position"
 	chartinterfaces "github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/chart/interfaces"
+	domainjournal "github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/journal"
 	domainposition "github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/position"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/position/interfaces"
 	infraaccount "github.com/monkey-trader/trading-intelligence-platform/backend/internal/infrastructure/account"
@@ -137,7 +139,11 @@ func run(logger *slog.Logger) error {
 		getClosedPositions := appposition.NewGetClosedPositionsUseCase(
 			sqlite.NewPositionRepository(database, time.Now), sqlite.NewPositionRiskRepository(database))
 		settings.GetClosedPositions = getClosedPositions.Execute
+		settings.GetPositionNote = appjournal.NewGetPositionNoteUseCase(sqlite.NewNoteRepository(database)).Execute
 	} else {
+		settings.GetPositionNote = func(context.Context, string) (domainjournal.JournalNote, error) {
+			return domainjournal.JournalNote{}, &domainposition.OpenPositionsUnavailableError{Reason: domainposition.ReasonNotConfigured}
+		}
 		settings.GetClosedPositions = func(context.Context, domainposition.ClosedPositionQuery) ([]appposition.ClosedPositionView, error) {
 			return nil, &domainposition.OpenPositionsUnavailableError{Reason: domainposition.ReasonNotConfigured}
 		}

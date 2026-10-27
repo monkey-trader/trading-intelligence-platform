@@ -15,7 +15,7 @@ const (
 	badRequestBody    = `{"type":"bad-request","title":"Die Anfrage ist ungültig.","status":400}`
 	forbiddenHostBody = `{"type":"forbidden-host","title":"Der Host-Header ist nicht erlaubt.","status":403}`
 	notFoundBody      = `{"type":"not-found","title":"Die angefragte Ressource gibt es nicht.","status":404}`
-	notConfiguredBody = `{"type":"not-configured","title":"BingX-Zugang ist nicht konfiguriert.","status":503}`
+	notConfiguredBody = `{"type":"not-configured","title":"Der Dienst ist nicht konfiguriert.","status":503}`
 	internalBody      = `{"type":"internal","title":"Interner Fehler.","status":500}`
 )
 

@@ -84,6 +84,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/positions/{positionId}/note": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Journal-Notiz einer Position
+         * @description Liest aus der lokalen Datenbank, schreibt nichts. 404 `not-found`, wenn zur Position keine Notiz existiert oder die Position unbekannt ist; ohne Datenbank 503 `not-configured`. Nicht gesetzte Felder sind `null`.
+         */
+        get: operations["getPositionNote"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/positions/{positionId}/chart": {
         parameters: {
             query?: never;
@@ -215,6 +235,19 @@ export interface components {
             totalUnrealizedProfit: components["schemas"]["Decimal"];
             /** @description Zeitpunkt der Abfrage bei BingX in Epoch-Millisekunden. */
             fetchedAt: number;
+        };
+        JournalNote: {
+            /** @description BingX-Positions-ID (immer String). */
+            positionId: string;
+            /** @description Setup / Strategie. */
+            setup: string | null;
+            /** @description Bewertung des Nutzers; ein Wertebereich ist noch nicht festgelegt. */
+            rating: number | null;
+            mistakes: string | null;
+            /** @description Freitext. */
+            notes: string | null;
+            /** @description Letzte Änderung in Epoch-Millisekunden; `0`, wenn kein Zeitpunkt gespeichert ist. */
+            updatedAt: number;
         };
         ClosedPositionsResponse: {
             positions: components["schemas"]["ClosedPosition"][];
@@ -514,6 +547,31 @@ export interface operations {
             502: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
+        };
+    };
+    getPositionNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description BingX-Positions-ID (19-stellig, immer String). */
+                positionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Die Notiz. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JournalNote"];
+                };
+            };
+            404: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     getPositionChart: {
