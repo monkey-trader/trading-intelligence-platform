@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'vitest';
 import { expectDocumentedResponse, expectProblem } from '@/contract/assertions';
 import { createContractContext } from '@/contract/contractContext';
 import { OPERATION_TEST_NAMES } from '@/contract/coverage';
