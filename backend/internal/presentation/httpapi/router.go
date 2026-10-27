@@ -12,6 +12,7 @@ import (
 	appchart "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/chart"
 	appposition "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/position"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/asset"
+	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/journal"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/position"
 )
 
@@ -27,6 +28,8 @@ type Settings struct {
 	GetAssetIcons func(ctx context.Context, list asset.SymbolList) ([]asset.CoinIcon, error)
 	// GetAccountSummary liefert die Kontoübersicht (optional; nil = Route nicht registriert).
 	GetAccountSummary func(ctx context.Context) (appaccount.AccountSummary, error)
+	// GetPositionNote liefert die Journal-Notiz einer Position (optional; nil = Route nicht registriert).
+	GetPositionNote func(ctx context.Context, positionID string) (journal.JournalNote, error)
 	// GetClosedPositions liefert geschlossene Positionen (optional; nil = Route nicht registriert).
 	GetClosedPositions func(ctx context.Context, query position.ClosedPositionQuery) ([]appposition.ClosedPositionView, error)
 	// WebUI bedient alle Pfade, die die API nicht kennt (optional; nil = 404 not-found).
@@ -69,23 +72,30 @@ func newHandlerWithRoutes(settings Settings, logger *slog.Logger, extraRoutes ma
 	if settings.GetPositionChart != nil {
 		chartRoute = newPositionChartHandler(settings.GetPositionChart, logger)
 	}
+	var noteRoute http.HandlerFunc
+	if settings.GetPositionNote != nil {
+		noteRoute = newNoteHandler(settings.GetPositionNote, logger)
+	}
 	var stopRoute http.HandlerFunc
 	if settings.SetInitialStopLoss != nil && settings.ClearInitialStopLoss != nil && !settings.AllowRemote {
 		stopRoute = newInitialStopLossHandler(settings.SetInitialStopLoss, settings.ClearInitialStopLoss, settings.AllowedHosts, logger)
 	}
 	allowedHosts := append([]string(nil), settings.AllowedHosts...)
 
-	return withRecover(logger, withHostGuard(allowedHosts, withMalformedTarget(newRouter(routes, chartRoute, stopRoute, settings.WebUI))))
+	return withRecover(logger, withHostGuard(allowedHosts, withMalformedTarget(newRouter(routes, chartRoute, noteRoute, stopRoute, settings.WebUI))))
 }
 
 // newRouter sucht die Route exakt über "METHOD /pfad". Alles andere ergibt 404 not-found;
 // der Request-Body wird dabei nie gelesen.
 // chartRoute (optional) bedient GET /positions/{positionId}/chart per Pfad-Matching.
-func newRouter(routes map[string]http.HandlerFunc, chartRoute, stopRoute http.HandlerFunc, webUI http.Handler) http.Handler {
+func newRouter(routes map[string]http.HandlerFunc, chartRoute, noteRoute, stopRoute http.HandlerFunc, webUI http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		route, found := routes[r.Method+" "+r.URL.Path]
 		if _, isChartPath := chartPathSegment(r.URL.Path); !found && chartRoute != nil && r.Method == http.MethodGet && isChartPath {
 			route, found = chartRoute, true
+		}
+		if _, isNotePath := notePathSegment(r.URL.Path); !found && noteRoute != nil && r.Method == http.MethodGet && isNotePath {
+			route, found = noteRoute, true
 		}
 		if _, isStopPath := stopLossPathSegment(r.URL.Path); !found && stopRoute != nil && isStopPath &&
 			(r.Method == http.MethodPut || r.Method == http.MethodDelete) {
