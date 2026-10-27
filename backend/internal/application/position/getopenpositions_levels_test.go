@@ -47,7 +47,7 @@ func TestLevels_LeerBeiUnbekanntemRisiko(t *testing.T) {
 // Regression TASK-14: levels[1] war früher 2R, ist jetzt 3R. Die BE-Erkennung muss das 2R-Level
 // per position.LevelAt(levels, 2) suchen (Reached2RAt/BreakEvenTriggerReached).
 func shortCandle(openTime int64, low string) chart.Candle {
-	return chart.Candle{Symbol: "SUI-USDT", Interval: chart.Interval5m, OpenTime: openTime, Open: "1", High: "1", Low: low, Close: "1", Volume: "1"}
+	return chart.Candle{Symbol: "SUI-USDT", Interval: chart.Interval15m, OpenTime: openTime, Open: "1", High: "1", Low: low, Close: "1", Volume: "1"}
 }
 
 func TestBreakEven_NutztZweiRLevelNichtDreiR(t *testing.T) {
@@ -65,9 +65,9 @@ func TestBreakEven_ShortErkennung(t *testing.T) {
 	asShort := func(p *position.OpenPosition) { p.Side = position.Short }
 	run := func(low string) appposition.OpenPositionEntry {
 		risks := &fakeRiskRepo{stored: map[string]position.PositionRisk{riskPositionID: {PositionID: riskPositionID, EntryPrice: "0.9600", InitialStopLoss: "1.0200"}}}
-		candles := &fakeCandles{candles: []chart.Candle{shortCandle(1_791_600_000_000, low)}}
+		candles := &fakeCandles{candles: []chart.Candle{shortCandle(1_791_500_000_000, "0.95"), shortCandle(1_791_600_000_000, low)}}
 		useCase := appposition.NewGetOpenPositionsUseCaseWithProtection(sourceWith(openPosition(asShort)), &fakeOrders{}).
-			WithRisk(risks, candles, func() int64 { return 1_791_700_000_000 })
+			WithRisk(risks, candles, func() int64 { return riskNow })
 		overview, err := useCase.Execute(context.Background())
 		if err != nil || len(overview.Positions) != 1 {
 			t.Fatalf("err=%v", err)

@@ -114,7 +114,11 @@ func run(logger *slog.Logger) error {
 			return &domainposition.OpenPositionsUnavailableError{Reason: domainposition.ReasonNotConfigured}
 		}
 	}
-	getOpenPositions := newGetOpenPositions(openPositionSource, orderSource, database, riskResolver)
+	var candleSource chartinterfaces.CandleSource
+	if chartClient != nil {
+		candleSource = infrachart.NewBingXCandleSource(chartClient)
+	}
+	getOpenPositions := newGetOpenPositions(openPositionSource, orderSource, database, riskResolver, candleSource)
 	getPositionChart := newGetPositionChart(logger, chartClient, openPositionSource, orderSource, database, riskResolver)
 
 	iconClock := clock.SystemClock{}
@@ -417,7 +421,7 @@ func newWebUI() http.Handler {
 
 // newGetOpenPositions nutzt SL/TP/Break-even nur, wenn eine Orders-Source existiert (Keys gesetzt),
 // und die R-Werte nur mit Datenbank.
-func newGetOpenPositions(source interfaces.OpenPositionSource, orderSource chartinterfaces.ProtectiveOrderSource, database *sql.DB, riskResolver *appposition.RiskResolver) *appposition.GetOpenPositionsUseCase {
+func newGetOpenPositions(source interfaces.OpenPositionSource, orderSource chartinterfaces.ProtectiveOrderSource, database *sql.DB, riskResolver *appposition.RiskResolver, candleSource chartinterfaces.CandleSource) *appposition.GetOpenPositionsUseCase {
 	var useCase *appposition.GetOpenPositionsUseCase
 	if orderSource == nil {
 		useCase = appposition.NewGetOpenPositionsUseCase(source)
@@ -428,9 +432,14 @@ func newGetOpenPositions(source interfaces.OpenPositionSource, orderSource chart
 		return useCase
 	}
 	if riskResolver == nil {
-		return useCase.WithRisk(sqlite.NewPositionRiskRepository(database), sqlite.NewCandleRepository(database), time.Now().UnixMilli)
+		useCase.WithRisk(sqlite.NewPositionRiskRepository(database), sqlite.NewCandleRepository(database), time.Now().UnixMilli)
+	} else {
+		useCase.WithRiskResolver(riskResolver, sqlite.NewPositionRiskRepository(database), sqlite.NewCandleRepository(database), time.Now().UnixMilli)
 	}
-	return useCase.WithRiskResolver(riskResolver, sqlite.NewPositionRiskRepository(database), sqlite.NewCandleRepository(database), time.Now().UnixMilli)
+	if candleSource != nil {
+		useCase.WithCandleSource(candleSource)
+	}
+	return useCase
 }
 
 // newProtectiveOrderSource baut BingX-Orders-Source mit 5-s-Cache, der von Chart und Positionsliste geteilt wird.

@@ -14,7 +14,7 @@ import (
 // Erwartet: (*GetOpenPositionsUseCase).WithRisk(risks interfaces.PositionRiskRepository,
 // candles chartinterfaces.CandleRepository, now func() int64) *GetOpenPositionsUseCase
 // und neue Felder an OpenPositionEntry: InitialStopLoss, RiskDistance, CurrentRMultiple *string,
-// BreakEvenTriggerReached *bool, Reached2RAt *int64. Kerzen werden mit chart.Interval5m gelesen.
+// BreakEvenTriggerReached *bool, Reached2RAt *int64. Kerzen werden mit chart.Interval15m gelesen.
 
 type fakeRiskRepo struct {
 	stored   map[string]position.PositionRisk
@@ -65,13 +65,21 @@ func stopOrder(trigger string) chart.ProtectiveOrder {
 }
 
 func candle(openTime int64, high string) chart.Candle {
-	return chart.Candle{Symbol: "SUI-USDT", Interval: chart.Interval5m, OpenTime: openTime, Open: "1", High: high, Low: "0.9", Close: "1", Volume: "1"}
+	return chart.Candle{Symbol: "SUI-USDT", Interval: chart.Interval15m, OpenTime: openTime, Open: "1", High: high, Low: "0.9", Close: "1", Volume: "1"}
 }
+
+// riskNow liegt direkt hinter der letzten Fixture-Kerze (Beginn 1_791_600_000_000 + 15 Minuten).
+const riskNow int64 = 1_791_600_900_000
 
 func executeRisk(t *testing.T, risks *fakeRiskRepo, candles *fakeCandles, orders *fakeOrders) appposition.OpenPositionEntry {
 	t.Helper()
+	return executeRiskAt(t, riskNow, risks, candles, orders)
+}
+
+func executeRiskAt(t *testing.T, now int64, risks *fakeRiskRepo, candles *fakeCandles, orders *fakeOrders) appposition.OpenPositionEntry {
+	t.Helper()
 	useCase := appposition.NewGetOpenPositionsUseCaseWithProtection(sourceWith(openPosition(nil)), orders).
-		WithRisk(risks, candles, func() int64 { return 1_791_700_000_000 })
+		WithRisk(risks, candles, func() int64 { return now })
 	overview, err := useCase.Execute(context.Background())
 	if err != nil || len(overview.Positions) != 1 {
 		t.Fatalf("err=%v positions=%d", err, len(overview.Positions))
@@ -98,7 +106,7 @@ func TestRisk_GespeichertesRisikoBefuelltFelder(t *testing.T) {
 
 func TestRisk_2RNichtErreicht(t *testing.T) {
 	risks := &fakeRiskRepo{stored: map[string]position.PositionRisk{riskPositionID: {PositionID: riskPositionID, EntryPrice: "0.9600", InitialStopLoss: "0.9000"}}}
-	entry := executeRisk(t, risks, &fakeCandles{candles: []chart.Candle{candle(1_791_500_000_000, "1.0799")}}, &fakeOrders{})
+	entry := executeRisk(t, risks, &fakeCandles{candles: []chart.Candle{candle(1_791_500_000_000, "1.0799"), candle(1_791_600_000_000, "1.0799")}}, &fakeOrders{})
 	if entry.BreakEvenTriggerReached == nil || *entry.BreakEvenTriggerReached || entry.Reached2RAt != nil {
 		t.Errorf("2R: %v %v", entry.BreakEvenTriggerReached, entry.Reached2RAt)
 	}
@@ -108,7 +116,7 @@ func TestRisk_ErstesSehenSpeichertAktuellenSL(t *testing.T) {
 	risks := &fakeRiskRepo{}
 	entry := executeRisk(t, risks, &fakeCandles{}, &fakeOrders{orders: []chart.ProtectiveOrder{stopOrder("0.9000")}})
 	saved := risks.stored[riskPositionID]
-	if saved.InitialStopLoss != "0.9000" || saved.EntryPrice != "0.9600" || saved.FirstSeenAt != 1_791_700_000_000 {
+	if saved.InitialStopLoss != "0.9000" || saved.EntryPrice != "0.9600" || saved.FirstSeenAt != riskNow {
 		t.Errorf("gespeichert: %+v", saved)
 	}
 	if entry.RiskDistance == nil || *entry.RiskDistance != "0.06" {
@@ -165,4 +173,42 @@ func TestRisk_RepositoryOderKerzenfehlerLassenFelderLeerOhneFehler(t *testing.T)
 			t.Errorf("%+v", entry)
 		}
 	})
+}
+
+func TestRisk_VeralteteKerzenLassen2RUnbekannt(t *testing.T) {
+	// Letzte Kerze endet 16 Minuten vor "jetzt": Ein späteres 2R wäre nicht sichtbar, also unbekannt statt false.
+	risks := &fakeRiskRepo{stored: map[string]position.PositionRisk{riskPositionID: {PositionID: riskPositionID, EntryPrice: "0.9600", InitialStopLoss: "0.9000"}}}
+	candles := &fakeCandles{candles: []chart.Candle{candle(1_791_500_000_000, "1.0799"), candle(1_791_600_000_000, "1.0799")}}
+	entry := executeRiskAt(t, riskNow+16*60*1000, risks, candles, &fakeOrders{})
+	if entry.BreakEvenTriggerReached != nil || entry.Reached2RAt != nil {
+		t.Errorf("veraltete Kerzen: %v %v", entry.BreakEvenTriggerReached, entry.Reached2RAt)
+	}
+}
+
+func TestRisk_ErreichtesZweiRBleibtBeiVeralteterKerzenreiheErhalten(t *testing.T) {
+	risks := &fakeRiskRepo{stored: map[string]position.PositionRisk{riskPositionID: {PositionID: riskPositionID, EntryPrice: "0.9600", InitialStopLoss: "0.9000"}}}
+	candles := &fakeCandles{candles: []chart.Candle{candle(1_791_500_000_000, "1.08"), candle(1_791_600_000_000, "1.0799")}}
+	entry := executeRiskAt(t, riskNow+24*60*60*1000, risks, candles, &fakeOrders{})
+	if entry.BreakEvenTriggerReached == nil || !*entry.BreakEvenTriggerReached ||
+		entry.Reached2RAt == nil || *entry.Reached2RAt != 1_791_500_000_000 {
+		t.Errorf("2R war schon erreicht: %v %v", entry.BreakEvenTriggerReached, entry.Reached2RAt)
+	}
+}
+
+func TestRisk_KerzenBeginnenNachEroeffnungLassen2RUnbekannt(t *testing.T) {
+	// Position eröffnet bei 1_791_500_000_000, erste Kerze erst danach: die Zeit dazwischen ist unbekannt.
+	risks := &fakeRiskRepo{stored: map[string]position.PositionRisk{riskPositionID: {PositionID: riskPositionID, EntryPrice: "0.9600", InitialStopLoss: "0.9000"}}}
+	candles := &fakeCandles{candles: []chart.Candle{candle(1_791_500_000_001, "1.0799"), candle(1_791_600_000_000, "1.0799")}}
+	entry := executeRisk(t, risks, candles, &fakeOrders{})
+	if entry.BreakEvenTriggerReached != nil || entry.Reached2RAt != nil {
+		t.Errorf("Lücke am Anfang: %v %v", entry.BreakEvenTriggerReached, entry.Reached2RAt)
+	}
+}
+
+func TestRisk_LeereKerzenreiheLaesst2RUnbekannt(t *testing.T) {
+	risks := &fakeRiskRepo{stored: map[string]position.PositionRisk{riskPositionID: {PositionID: riskPositionID, EntryPrice: "0.9600", InitialStopLoss: "0.9000"}}}
+	entry := executeRisk(t, risks, &fakeCandles{}, &fakeOrders{})
+	if entry.BreakEvenTriggerReached != nil || entry.Reached2RAt != nil {
+		t.Errorf("keine Kerzen: %v %v", entry.BreakEvenTriggerReached, entry.Reached2RAt)
+	}
 }
