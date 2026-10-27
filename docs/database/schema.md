@@ -65,6 +65,7 @@ Indizes `income_symbol_time` auf `(symbol, time)` und `income_type_time` auf `(i
 ## Tabelle `candles`
 Zwischenspeicher für Kerzen des Charts (öffentlicher BingX-Klines-Endpunkt, Feature `docs/features/chart-journal.md`).
 Reiner Cache: kann gelöscht werden, wird beim nächsten Chart-Aufruf neu gefüllt.
+Auch `GET /positions/open` befüllt ihn (15-Minuten-Kerzen für `reached2RAt`).
 
 | Spalte | Typ | Bedeutung |
 |---|---|---|

@@ -32,8 +32,20 @@ type OpenPositionEntry struct {
 	InitialStopLossSource   *string                 // "MANUAL" | "AUTO", nil bei unbekanntem Risiko
 }
 
-// riskCandleLimit ist die Zahl der 5-Minuten-Kerzen, in denen nach 2R gesucht wird.
+// riskCandleLimit ist die Zahl der 15-Minuten-Kerzen, in denen ohne Kerzen-Source nach 2R gesucht wird.
 const riskCandleLimit = 1000
+
+// candleIntervalMs ist die Länge einer 15-Minuten-Kerze (Epoch-ms).
+const candleIntervalMs = 15 * 60 * 1000
+
+// candleStaleAfterMs ist die Frist, nach der das Ende der letzten Kerze als veraltet gilt: ein Intervall.
+const candleStaleAfterMs = candleIntervalMs
+
+// maxFetchCandles ist die BingX-Obergrenze je Kerzen-Request; candleFetchBuffer ein Puffer obendrauf.
+const (
+	maxFetchCandles   = 1440
+	candleFetchBuffer = 2
+)
 
 // OpenPositionsOverview ist das Ergebnis: sortierte Positionen (nie nil), exakte PnL-Summe, Abfragezeit.
 type OpenPositionsOverview struct {
@@ -49,6 +61,7 @@ type GetOpenPositionsUseCase struct {
 	risks    interfaces.PositionRiskRepository     // optional
 	resolver *RiskResolver
 	candles  chartinterfaces.CandleRepository // optional
+	fresh    chartinterfaces.CandleSource     // optional
 	now      func() int64
 }
 
@@ -222,7 +235,7 @@ func (useCase *GetOpenPositionsUseCase) applyRisk(ctx context.Context, entry *Op
 	entry.BreakEvenTriggerReached, entry.Reached2RAt = useCase.twoRStatus(ctx, entry, risk)
 }
 
-// twoRStatus prüft in den 5-Minuten-Kerzen seit Eröffnung, ob 2R berührt wurde; (nil, nil), wenn unbekannt.
+// twoRStatus prüft in den 15-Minuten-Kerzen seit Eröffnung, ob 2R berührt wurde; (nil, nil), wenn unbekannt.
 func (useCase *GetOpenPositionsUseCase) twoRStatus(ctx context.Context, entry *OpenPositionEntry, risk domainposition.PositionRisk) (*bool, *int64) {
 	if useCase.candles == nil {
 		return nil, nil
@@ -231,7 +244,14 @@ func (useCase *GetOpenPositionsUseCase) twoRStatus(ctx context.Context, entry *O
 	if err != nil {
 		return nil, nil
 	}
-	candles, err := useCase.candles.ListCandles(ctx, entry.Symbol, chart.Interval5m, riskCandleLimit)
+	limit := riskCandleLimit
+	if useCase.fresh != nil {
+		var ok bool
+		if limit, ok = useCase.refreshCandles(ctx, entry); !ok {
+			return nil, nil
+		}
+	}
+	candles, err := useCase.candles.ListCandles(ctx, entry.Symbol, chart.Interval15m, limit)
 	if err != nil {
 		slog.WarnContext(ctx, "Kerzen nicht lesbar, 2R bleibt unbekannt", slog.String("symbol", entry.Symbol), slog.String("error", err.Error()))
 		return nil, nil
@@ -250,5 +270,44 @@ func (useCase *GetOpenPositionsUseCase) twoRStatus(ctx context.Context, entry *O
 		return nil, nil
 	}
 	reached := reachedAt != nil
+	if !reached && !coversSinceOpen(entry, ranges, useCase.now()) {
+		slog.WarnContext(ctx, "Kerzen decken die Zeit seit Eröffnung nicht ab, 2R bleibt unbekannt", slog.String("positionId", entry.PositionID), slog.String("symbol", entry.Symbol))
+		return nil, nil
+	}
 	return &reached, reachedAt
+}
+
+// coversSinceOpen sagt, ob die Kerzen von der Eröffnung bis jetzt reichen. Nur dann heißt "nicht berührt" auch "nicht erreicht".
+func coversSinceOpen(entry *OpenPositionEntry, ranges []domainposition.CandleRange, now int64) bool {
+	if len(ranges) == 0 {
+		return false
+	}
+	startsAfterOpen := ranges[0].OpenTime > entry.OpenTime
+	endsBeforeNow := now-(ranges[len(ranges)-1].OpenTime+candleIntervalMs) > candleStaleAfterMs
+	return !startsAfterOpen && !endsBeforeNow
+}
+
+// refreshCandles holt frische Kerzen seit Eröffnung in den Cache und liefert das Lese-Limit.
+// ok ist false, wenn die Haltedauer die BingX-Obergrenze übersteigt (dann kein Abruf).
+func (useCase *GetOpenPositionsUseCase) refreshCandles(ctx context.Context, entry *OpenPositionEntry) (int, bool) {
+	held := max(useCase.now()-entry.OpenTime, 0)
+	intervals := int((held + candleIntervalMs - 1) / candleIntervalMs)
+	if intervals > maxFetchCandles {
+		slog.WarnContext(ctx, "Haltedauer übersteigt den Kerzen-Abruf, 2R bleibt unbekannt", slog.String("positionId", entry.PositionID))
+		return 0, false
+	}
+	limit := min(intervals+candleFetchBuffer, maxFetchCandles)
+	fetched, err := useCase.fresh.FetchCandles(ctx, entry.Symbol, chart.Interval15m, limit)
+	if err != nil {
+		slog.WarnContext(ctx, "Kerzen nicht abrufbar, Cache wird genutzt", slog.String("symbol", entry.Symbol), slog.String("error", err.Error()))
+	} else if err := useCase.candles.UpsertCandles(ctx, fetched); err != nil {
+		slog.WarnContext(ctx, "Kerzen nicht speicherbar, Cache wird genutzt", slog.String("symbol", entry.Symbol), slog.String("error", err.Error()))
+	}
+	return limit, true
+}
+
+// WithCandleSource holt vor dem Cache-Lesen frische 15-Minuten-Kerzen; nach WithRisk aufrufen.
+func (useCase *GetOpenPositionsUseCase) WithCandleSource(source chartinterfaces.CandleSource) *GetOpenPositionsUseCase {
+	useCase.fresh = source
+	return useCase
 }
