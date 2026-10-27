@@ -37,6 +37,8 @@ backend/                Go-Backend: cmd/trading-intelligence/, internal/{domain,
                         infrastructure,presentation}/<feature>/; Befehle: `go test -race ./...`,
                         `golangci-lint run ./...`, `gofmt -l .` (muss leer sein)
 docs/openapi.yaml       API-Vertrag (Quelle der Wahrheit, es gibt nur diese eine Spec)
+docs/domain.md          Fachwissen der App (R, BE-Level, TP1-Level, R-Ergebnis): einzige Quelle dafür;
+                        die Strategie des Nutzers liegt im Vault ai-os (`03 Areas/Trading/`)
 docs/database/schema.md SQLite-Schema und State-Keys
 contracts/         Vertragstest gegen eine laufende API (`CONTRACT_BASE_URL=… npm test`),
                         backend-unabhängig (läuft in der CI gegen das Go-Backend)

@@ -23,6 +23,7 @@ var schemaStatements = []string{
 		imported_at INTEGER NOT NULL
 	)`,
 	`CREATE INDEX IF NOT EXISTS positions_symbol_close_time ON positions (symbol, close_time)`,
+	`CREATE INDEX IF NOT EXISTS positions_close_time ON positions (close_time, position_id)`,
 	`CREATE TABLE IF NOT EXISTS notes (
 		position_id TEXT PRIMARY KEY REFERENCES positions (position_id),
 		setup TEXT,

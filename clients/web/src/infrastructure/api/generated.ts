@@ -44,6 +44,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/positions/closed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vollständig geschlossene Positionen
+         * @description Liest aus der lokalen Datenbank, schreibt nichts. Nur vollständig geschlossene Positionen, sortiert nach `closeTime`, neueste zuerst. `from` und `to` (Epoch-Millisekunden) sind inklusiv und beziehen sich auf `closeTime`. Leere Liste, wenn nichts passt; ohne Datenbank 503 `not-configured`. `rResult`, `breakEvenPrice` und `tp1Price` sind `null`, solange das ursprüngliche Risiko (Entry und Stop-Loss) nicht bekannt ist; sie werden nie geschätzt. Fachbegriffe: docs/domain.md.
+         */
+        get: operations["getClosedPositions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/account/summary": {
         parameters: {
             query?: never;
@@ -195,6 +215,35 @@ export interface components {
             totalUnrealizedProfit: components["schemas"]["Decimal"];
             /** @description Zeitpunkt der Abfrage bei BingX in Epoch-Millisekunden. */
             fetchedAt: number;
+        };
+        ClosedPositionsResponse: {
+            positions: components["schemas"]["ClosedPosition"][];
+        };
+        ClosedPosition: {
+            /** @description BingX-Positions-ID (19-stellig, immer String). */
+            positionId: string;
+            /** @example SUI-USDT */
+            symbol: string;
+            /** @enum {string} */
+            side: "LONG" | "SHORT";
+            /** @description Eröffnung in Epoch-Millisekunden. */
+            openTime: number;
+            /** @description Vollständiger Abschluss in Epoch-Millisekunden. */
+            closeTime: number;
+            avgOpenPrice: components["schemas"]["Decimal"];
+            avgClosePrice: components["schemas"]["Decimal"];
+            positionAmount: components["schemas"]["Decimal"];
+            leverage: number;
+            realisedProfit: components["schemas"]["Decimal"];
+            netProfit: components["schemas"]["Decimal"];
+            commission: components["schemas"]["Decimal"];
+            totalFunding: components["schemas"]["Decimal"];
+            /** @description R-Ergebnis in R (zum Beispiel `3` oder `-1`): netProfit ÷ (|Entry − SL| × positionAmount), im Backend berechnet; `null`, wenn das ursprüngliche Risiko unbekannt ist. */
+            rResult: components["schemas"]["Decimal"] | null;
+            /** @description BE-Level (2R-Preis, `TWO_R`), nicht der Entry; `null` ohne bekanntes Risiko. */
+            breakEvenPrice: components["schemas"]["Decimal"] | null;
+            /** @description TP1-Level (3R-Preis, `THREE_R`); `null` ohne bekanntes Risiko. */
+            tp1Price: components["schemas"]["Decimal"] | null;
         };
         OpenPosition: {
             /** @description BingX-Positions-ID (19-stellig, immer String). */
@@ -408,6 +457,38 @@ export interface operations {
             502: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
+        };
+    };
+    getClosedPositions: {
+        parameters: {
+            query?: {
+                /** @description Frühester Schließzeitpunkt in Epoch-Millisekunden (inklusiv). */
+                from?: number;
+                /** @description Spätester Schließzeitpunkt in Epoch-Millisekunden (inklusiv), nicht kleiner als `from`. */
+                to?: number;
+                symbol?: string;
+                /** @description Maximale Anzahl Positionen. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Geschlossene Positionen. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosedPositionsResponse"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            500: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     getAccountSummary: {

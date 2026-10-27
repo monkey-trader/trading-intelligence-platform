@@ -38,6 +38,7 @@ Geschlossene Positionen aus `positionHistory`. Eine Zeile pro BingX-Position.
 **Offene Positionen** (Go-Backend) stehen als Platzhalter-Zeile in derselben Tabelle: `close_time = 0`, `fully_closed = 0`, `avg_close_price`/`net_profit` etc. `'0'`, `raw` = JSON der offenen Position. Angelegt wird nur, was noch fehlt (`ON CONFLICT DO NOTHING`); der Closed-Import überschreibt die Zeile später per Upsert. Abfragen nach `close_time` müssen `close_time > 0` bzw. `fully_closed = 1` berücksichtigen.
 
 Index `positions_symbol_close_time` auf `(symbol, close_time)`.
+Index `positions_close_time` auf `(close_time, position_id)`: `GET /positions/closed` ohne Symbol liest nach `close_time DESC, position_id DESC` ohne Sortierschritt (EXPLAIN QUERY PLAN: `SEARCH … USING INDEX positions_close_time`).
 
 **Schreiben nur per Upsert** `INSERT … ON CONFLICT(position_id) DO UPDATE SET …`, alle Spalten außer
 `position_id`, in einer Transaktion pro Batch. Nie `INSERT OR REPLACE`: Das löscht die Zeile und

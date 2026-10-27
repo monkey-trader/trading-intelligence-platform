@@ -124,3 +124,39 @@ func (repo *PositionRepository) RecordOpenPositions(ctx context.Context, positio
 	}
 	return nil
 }
+
+const listClosedPositionsSQL = `SELECT position_id, symbol, side, isolated, open_time, close_time,
+	avg_open_price, avg_close_price, realised_profit, net_profit, position_amount, closed_amount,
+	commission, total_funding, leverage, fully_closed, raw
+FROM positions
+WHERE fully_closed = 1 AND close_time > 0 AND close_time >= ? AND close_time <= ? AND (? = '' OR symbol = ?)
+ORDER BY close_time DESC, position_id DESC
+LIMIT ?`
+
+// ListClosedPositions liest vollständig geschlossene Positionen, neueste Schließung zuerst.
+// Platzhalter offener Positionen (close_time 0, fully_closed 0) bleiben außen vor.
+func (repo *PositionRepository) ListClosedPositions(ctx context.Context, query position.ClosedPositionQuery) ([]position.ClosedPosition, error) {
+	rows, err := repo.db.QueryContext(ctx, listClosedPositionsSQL,
+		query.From(), query.To(), query.Symbol(), query.Symbol(), query.Limit())
+	if err != nil {
+		return nil, fmt.Errorf("geschlossene positionen lesen: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	listed := []position.ClosedPosition{}
+	for rows.Next() {
+		var item position.ClosedPosition
+		var side string
+		var isolated, fullyClosed int
+		if err := rows.Scan(&item.PositionID, &item.Symbol, &side, &isolated, &item.OpenTime, &item.CloseTime,
+			&item.AvgOpenPrice, &item.AvgClosePrice, &item.RealisedProfit, &item.NetProfit, &item.PositionAmount,
+			&item.ClosedAmount, &item.Commission, &item.TotalFunding, &item.Leverage, &fullyClosed, &item.Raw); err != nil {
+			return nil, fmt.Errorf("geschlossene position lesen: %w", err)
+		}
+		item.Side, item.Isolated, item.FullyClosed = position.PositionSide(side), isolated != 0, fullyClosed != 0
+		listed = append(listed, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("geschlossene positionen lesen: %w", err)
+	}
+	return listed, nil
+}

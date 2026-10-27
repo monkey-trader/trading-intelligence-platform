@@ -12,6 +12,7 @@ import (
 	appchart "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/chart"
 	appposition "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/position"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/asset"
+	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/position"
 )
 
 // Settings enthält die Einstellungen der HTTP-API.
@@ -26,6 +27,8 @@ type Settings struct {
 	GetAssetIcons func(ctx context.Context, list asset.SymbolList) ([]asset.CoinIcon, error)
 	// GetAccountSummary liefert die Kontoübersicht (optional; nil = Route nicht registriert).
 	GetAccountSummary func(ctx context.Context) (appaccount.AccountSummary, error)
+	// GetClosedPositions liefert geschlossene Positionen (optional; nil = Route nicht registriert).
+	GetClosedPositions func(ctx context.Context, query position.ClosedPositionQuery) ([]appposition.ClosedPositionView, error)
 	// WebUI bedient alle Pfade, die die API nicht kennt (optional; nil = 404 not-found).
 	WebUI http.Handler
 	// SetInitialStopLoss und ClearInitialStopLoss bedienen PUT/DELETE /positions/{positionId}/initial-stop-loss.
@@ -57,6 +60,9 @@ func newHandlerWithRoutes(settings Settings, logger *slog.Logger, extraRoutes ma
 	}
 	if settings.GetAccountSummary != nil {
 		routes["GET /account/summary"] = newAccountSummaryHandler(settings.GetAccountSummary, logger)
+	}
+	if settings.GetClosedPositions != nil {
+		routes["GET /positions/closed"] = newClosedPositionsHandler(settings.GetClosedPositions, logger)
 	}
 	maps.Copy(routes, extraRoutes)
 	var chartRoute http.HandlerFunc
