@@ -133,6 +133,15 @@ func run(logger *slog.Logger) error {
 		return err
 	}
 	settings.GetAccountSummary = getAccountSummary
+	if database != nil {
+		getClosedPositions := appposition.NewGetClosedPositionsUseCase(
+			sqlite.NewPositionRepository(database, time.Now), sqlite.NewPositionRiskRepository(database))
+		settings.GetClosedPositions = getClosedPositions.Execute
+	} else {
+		settings.GetClosedPositions = func(context.Context, domainposition.ClosedPositionQuery) ([]appposition.ClosedPositionView, error) {
+			return nil, &domainposition.OpenPositionsUnavailableError{Reason: domainposition.ReasonNotConfigured}
+		}
+	}
 	settings.WebUI = newWebUI()
 	handler := httpapi.NewHandler(settings, logger)
 	server := httpapi.NewServer(handler, logger)

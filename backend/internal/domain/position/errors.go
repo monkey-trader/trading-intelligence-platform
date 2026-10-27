@@ -110,3 +110,20 @@ func (err *PageLimitExceededError) Error() string {
 
 func (*QueryRangeTooLargeError) positionDomainError() {}
 func (*PageLimitExceededError) positionDomainError()  {}
+
+// InvalidLimitError meldet: Das Limit liegt nicht zwischen 1 und 500.
+type InvalidLimitError struct{ Value int }
+
+// InvalidTimeRangeError meldet: from liegt nach to.
+type InvalidTimeRangeError struct{ From, To int64 }
+
+func (err *InvalidLimitError) Error() string {
+	return fmt.Sprintf("Limit %d liegt nicht zwischen 1 und %d.", err.Value, maxClosedPositionLimit)
+}
+
+func (err *InvalidTimeRangeError) Error() string {
+	return fmt.Sprintf("from %d liegt nach to %d.", err.From, err.To)
+}
+
+func (*InvalidLimitError) positionDomainError()     {}
+func (*InvalidTimeRangeError) positionDomainError() {}

@@ -82,6 +82,63 @@ paths:
           $ref: '#/components/responses/Problem'
         '504':
           $ref: '#/components/responses/Problem'
+  /positions/closed:
+    get:
+      operationId: getClosedPositions
+      summary: Vollständig geschlossene Positionen
+      description: >-
+        Liest aus der lokalen Datenbank, schreibt nichts. Nur vollständig geschlossene Positionen,
+        sortiert nach `closeTime`, neueste zuerst. `from` und `to` (Epoch-Millisekunden) sind
+        inklusiv und beziehen sich auf `closeTime`. Leere Liste, wenn nichts passt; ohne Datenbank 503 `not-configured`. `rResult`,
+        `breakEvenPrice` und `tp1Price` sind `null`, solange das ursprüngliche Risiko (Entry und
+        Stop-Loss) nicht bekannt ist; sie werden nie geschätzt. Fachbegriffe: docs/domain.md.
+      tags:
+        - Positionen
+      parameters:
+        - name: from
+          in: query
+          required: false
+          description: Frühester Schließzeitpunkt in Epoch-Millisekunden (inklusiv).
+          schema:
+            type: integer
+            minimum: 0
+        - name: to
+          in: query
+          required: false
+          description: Spätester Schließzeitpunkt in Epoch-Millisekunden (inklusiv), nicht kleiner als `from`.
+          schema:
+            type: integer
+            minimum: 0
+        - name: symbol
+          in: query
+          required: false
+          schema:
+            type: string
+            example: SUI-USDT
+        - name: limit
+          in: query
+          required: false
+          description: Maximale Anzahl Positionen.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+      responses:
+        '200':
+          description: Geschlossene Positionen.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClosedPositionsResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
   /account/summary:
     get:
       operationId: getAccountSummary
@@ -489,6 +546,87 @@ components:
         fetchedAt:
           type: integer
           description: Zeitpunkt der Abfrage bei BingX in Epoch-Millisekunden.
+    ClosedPositionsResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - positions
+      properties:
+        positions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClosedPosition'
+    ClosedPosition:
+      type: object
+      additionalProperties: false
+      required:
+        - positionId
+        - symbol
+        - side
+        - openTime
+        - closeTime
+        - avgOpenPrice
+        - avgClosePrice
+        - positionAmount
+        - leverage
+        - realisedProfit
+        - netProfit
+        - commission
+        - totalFunding
+        - rResult
+        - breakEvenPrice
+        - tp1Price
+      properties:
+        positionId:
+          type: string
+          description: BingX-Positions-ID (19-stellig, immer String).
+        symbol:
+          type: string
+          example: SUI-USDT
+        side:
+          type: string
+          enum:
+            - LONG
+            - SHORT
+        openTime:
+          type: integer
+          description: Eröffnung in Epoch-Millisekunden.
+        closeTime:
+          type: integer
+          description: Vollständiger Abschluss in Epoch-Millisekunden.
+        avgOpenPrice:
+          $ref: '#/components/schemas/Decimal'
+        avgClosePrice:
+          $ref: '#/components/schemas/Decimal'
+        positionAmount:
+          $ref: '#/components/schemas/Decimal'
+        leverage:
+          type: number
+        realisedProfit:
+          $ref: '#/components/schemas/Decimal'
+        netProfit:
+          $ref: '#/components/schemas/Decimal'
+        commission:
+          $ref: '#/components/schemas/Decimal'
+        totalFunding:
+          $ref: '#/components/schemas/Decimal'
+        rResult:
+          description: >-
+            R-Ergebnis in R (zum Beispiel `3` oder `-1`): netProfit ÷ (|Entry − SL| × positionAmount),
+            im Backend berechnet; `null`, wenn das ursprüngliche Risiko unbekannt ist.
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        breakEvenPrice:
+          description: BE-Level (2R-Preis, `TWO_R`), nicht der Entry; `null` ohne bekanntes Risiko.
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        tp1Price:
+          description: TP1-Level (3R-Preis, `THREE_R`); `null` ohne bekanntes Risiko.
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
     OpenPosition:
       type: object
       additionalProperties: false
