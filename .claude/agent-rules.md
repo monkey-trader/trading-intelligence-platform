@@ -7,7 +7,8 @@ Diese Regeln haben Vorrang vor den allgemeinen.
 ## Alle
 - Stack: Go-Backend in `backend/` (Onion: `internal/{domain,application,infrastructure,presentation}/`,
   Verdrahtung nur in `cmd/`, HTTP-Paket heißt `httpapi`), Web-Client in `clients/web` (Vite, React,
-  TypeScript, gleiche Schichten unter `src/`), Desktop-App (Wails) in `clients/desktop`.
+  TypeScript, gleiche Schichten unter `src/`), Desktop-App (Wails) in `clients/desktop`,
+  MCP-Server (stdio, nur Standardbibliothek, spricht nur die HTTP-API) in `clients/mcp`; nur `internal/apiclient` importiert `net/http`.
 - API-Vertrag: `docs/openapi.yaml`, Vertragstests in `contracts/`. Nur abschnittsweise lesen
   (`rg -n "<pfad oder Schema>" docs/openapi.yaml`).
 - Sicherheit: Der BingX-Key hat nur Lese-Rechte, der BingX-Client macht nur signierte GET-Requests.
@@ -42,6 +43,8 @@ Diese Regeln haben Vorrang vor den allgemeinen.
 - Web: kein `any`, Imports über `@/`.
 - Einzelne Tests: `cd backend && go test ./internal/<paket>/...` bzw. `cd clients/web && npx vitest run <pfad>`.
 - Abschluss Go: `cd backend && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...`
+- Abschluss MCP (wenn `clients/mcp` geändert): `cd clients/mcp && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...`
+  Testschwerpunkt: Argument-Validierung vor dem Request, stdout nur Protokoll, keine internen Details in Tool-Fehlern.
 - Abschluss Web (wenn geändert), **1:1 wie die CI** (`ci.yml`, Job Web-Client):
   `cd clients/web && npm run generate:api && test -z "$(git status --porcelain -- src/infrastructure/api/)" && npm run lint && npm run typecheck && npm run format:check && npm test && npm run build`
   Schlägt `format:check` an: `npm run format`, dann alles erneut. Nach jeder Änderung **nach** dem Review (auch ein

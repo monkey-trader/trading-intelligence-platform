@@ -45,6 +45,8 @@ contracts/         Vertragstest gegen eine laufende API (`CONTRACT_BASE_URL=… 
 fixtures/bingx/         anonymisierte BingX-Antworten, sprachneutral (Go-Tests: Pfad relativ zum Repo-Root)
 clients/desktop/ Wails-App (macOS, Go-Modul): Fenster auf die lokale HTTP-API; bauen mit
                 `wails build -skipbindings -s`, Tests `go test ./...` in diesem Ordner
+clients/mcp/    MCP-Server (stdio, nur Standardbibliothek, Go-Modul): liest das Journal über die HTTP-API;
+                Tests `go test -race ./...` in diesem Ordner, Konfiguration `TIP_API_URL`
 clients/web/    Web-Client (Vite + React), spricht nur über die HTTP-API
                 API-Typen per `npm run generate:api` aus docs/openapi.yaml (openapi-typescript 7.13.0
                 verlangt TS ^5, läuft mit TS 6 über `overrides` in package.json, getestet)
@@ -181,5 +183,6 @@ Allgemeine Regeln (wann welcher Agent, Übergabe, Ergebnisse prüfen, Session kl
 `agent-orchestration` – vor dem ersten Subagent laden. Projektspezifisch:
 - **Vor jedem Commit (Pflicht):** `cd backend && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...`
   (`golangci-lint` läuft lokal, built with go1.27).
+  Bei Änderungen in `clients/mcp` zusätzlich: `cd clients/mcp && test -z "$(gofmt -l .)" && go vet ./... && golangci-lint run ./... && go test -race ./...`
 - **Status und offene Arbeit:** im Backlog (Backlog.md, Ordner `backlog/`, Regeln im Skill `backlog`). Task-Status und Notizen
   gehören in denselben Commit wie der Code. `docs/migration/go-wails.md` ist nur noch Verlauf. Nach jedem Commit `/clear` empfehlen.
