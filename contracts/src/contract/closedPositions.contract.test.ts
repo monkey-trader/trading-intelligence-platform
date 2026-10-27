@@ -12,7 +12,9 @@ function closedPositionsOf(body: unknown): unknown[] {
 
 function closeTimesOf(body: unknown): number[] {
   return closedPositionsOf(body).map((position) =>
-    isJsonObject(position) && typeof position['closeTime'] === 'number' ? position['closeTime'] : NaN,
+    isJsonObject(position) && typeof position['closeTime'] === 'number'
+      ? position['closeTime']
+      : NaN,
   );
 }
 
