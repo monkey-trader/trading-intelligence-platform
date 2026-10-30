@@ -20,6 +20,13 @@ Stand: 2026-10-27. „bestätigt“ heißt: vom Nutzer ausdrücklich so festgele
 Es gibt **keine** 1R-Stufe und kein TP2/TP3 (seit TASK-14). Die Aufteilung der Restmenge nach TP1 ist nicht modelliert
 (laut Strategie üblich 33 % bei TP1, nur ein Richtwert).
 
+## Live-Kurs
+| Begriff | Bedeutung | API / Code |
+|---|---|---|
+| **Kurs** (`price`) | Letzter Handelspreis (`lastPrice`) aus BingX `/quote/ticker`, alle ~2 s, nicht der Mark Price. **Bestätigt (2026-10-30).** | `GET /prices/stream` |
+| **24h-Änderung** (`change24hPercent`) | BingX `priceChangePercent`, rollendes 24-h-Fenster (nicht UTC-Tag), in Prozent. Aus REST, nicht aus dem WebSocket-Ticker. | `change24hPercent` |
+| **Kurs-Abstand zu BE / TP1** | `(Level − Kurs) ÷ Kurs` in Prozent, vorzeichenbehaftet: positiv heißt, das Level liegt in Gewinnrichtung noch vor dem Kurs, negativ, der Kurs ist darüber hinaus (LONG und SHORT gleich). `null` ohne bekanntes Risiko. **Bestätigt (2026-10-30).** | `distanceToBreakEvenPercent`, `distanceToTp1Percent` |
+
 ## Ergebnis einer geschlossenen Position
 | Begriff | Bedeutung | Stand |
 |---|---|---|

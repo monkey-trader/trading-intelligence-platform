@@ -11,6 +11,7 @@ import (
 	appaccount "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/account"
 	appchart "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/chart"
 	appposition "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/position"
+	appprice "github.com/monkey-trader/trading-intelligence-platform/backend/internal/application/price"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/asset"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/journal"
 	"github.com/monkey-trader/trading-intelligence-platform/backend/internal/domain/position"
@@ -32,6 +33,8 @@ type Settings struct {
 	GetPositionNote func(ctx context.Context, positionID string) (journal.JournalNote, error)
 	// GetClosedPositions liefert geschlossene Positionen (optional; nil = Route nicht registriert).
 	GetClosedPositions func(ctx context.Context, query position.ClosedPositionQuery) ([]appposition.ClosedPositionView, error)
+	// SubscribePrices abonniert die Kurs-Snapshots für GET /prices/stream (optional; nil = Route nicht registriert).
+	SubscribePrices func() (<-chan appprice.PriceSnapshot, func())
 	// WebUI bedient alle Pfade, die die API nicht kennt (optional; nil = 404 not-found).
 	WebUI http.Handler
 	// SetInitialStopLoss und ClearInitialStopLoss bedienen PUT/DELETE /positions/{positionId}/initial-stop-loss.
@@ -66,6 +69,9 @@ func newHandlerWithRoutes(settings Settings, logger *slog.Logger, extraRoutes ma
 	}
 	if settings.GetClosedPositions != nil {
 		routes["GET /positions/closed"] = newClosedPositionsHandler(settings.GetClosedPositions, logger)
+	}
+	if settings.SubscribePrices != nil {
+		routes["GET /prices/stream"] = newPriceStreamHandler(settings.SubscribePrices, priceHeartbeatInterval, logger)
 	}
 	maps.Copy(routes, extraRoutes)
 	var chartRoute http.HandlerFunc
@@ -115,7 +121,7 @@ func newRouter(routes map[string]http.HandlerFunc, chartRoute, noteRoute, stopRo
 
 // apiPathPrefixes sind Pfade, die nie vom Web-UI bedient werden (immer 404 not-found).
 // Nicht "/assets": Vite legt die gehashten Bundles unter /assets/ ab, nur /assets/icons gehört der API.
-var apiPathPrefixes = []string{"/health", "/positions", "/account", "/assets/icons", "/api"}
+var apiPathPrefixes = []string{"/health", "/positions", "/account", "/prices", "/assets/icons", "/api"}
 
 // wantsWebUI: Das UI bedient nur GET/HEAD, nie API-Pfade, und nur "/", Dateien (mit Endung) und
 // Browser-Navigationen (Accept: text/html). Alles andere bleibt 404 not-found im API-Vertrag.

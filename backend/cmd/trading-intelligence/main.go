@@ -152,6 +152,11 @@ func run(logger *slog.Logger) error {
 			return nil, &domainposition.OpenPositionsUnavailableError{Reason: domainposition.ReasonNotConfigured}
 		}
 	}
+	subscribePrices, runPriceStream, err := newPriceStream(os.Getenv, getOpenPositions.Execute)
+	if err != nil {
+		return err
+	}
+	settings.SubscribePrices = subscribePrices
 	settings.WebUI = newWebUI()
 	handler := httpapi.NewHandler(settings, logger)
 	server := httpapi.NewServer(handler, logger)
@@ -164,6 +169,13 @@ func run(logger *slog.Logger) error {
 		return err
 	}
 	defer waitForImport()
+
+	if runPriceStream != nil {
+		priceContext, cancelPrices := context.WithCancel(signalContext)
+		priceDone := make(chan struct{})
+		go func() { defer close(priceDone); runPriceStream(priceContext) }()
+		defer func() { cancelPrices(); <-priceDone }()
+	}
 
 	serveResult := make(chan error, 1)
 	go func() { serveResult <- httpapi.Serve(server, listener) }()

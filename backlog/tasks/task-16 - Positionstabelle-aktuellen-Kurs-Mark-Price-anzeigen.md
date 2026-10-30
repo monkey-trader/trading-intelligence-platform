@@ -4,10 +4,13 @@ title: 'Positionstabelle: aktuellen Kurs (Mark Price) anzeigen'
 status: In Progress
 assignee: []
 created_date: '2026-10-25T15:08:00Z'
-updated_date: '2026-10-25T15:33:00Z'
+updated_date: '2026-10-30T20:24:00Z'
 labels:
   - web
 dependencies: []
+references:
+  - docs/design/TASK-16-kurs-spalte/prototype.html
+  - docs/design/TASK-16-kurs-spalte/flow.png
 priority: medium
 type: enhancement
 ordinal: 16000
@@ -57,4 +60,24 @@ Entscheidung 2026-10-25 (Nutzer): Quelle Variante 1, REST-Polling alle ~2 s, ein
 
 <!-- SECTION:NOTES:BEGIN -->
 2026-10-25: Quelle entschieden (Variante 1). Noch nichts umgesetzt; Start mit architect-Schnitt und openapi.yaml.
+
+2026-10-30 architect: Anforderungs-Check ohne Widerspruch. /quote/ticker liefert lastPrice, kein markPrice; Vorschlag Spalte = lastPrice (Feld price), kein 2. Request. Schnitt: domain/price (Quote, Port PriceSource), application/price (StreamPricesUseCase + Broker), infrastructure/bingx TickerSource, presentation GET /prices/stream (SSE, Heartbeat 15 s; WriteTimeout prüfen). AC5: Reihenfolge beim Klick einfrieren. Offen: Nutzer bestätigt Kurs-Quelle und Abstand-Definition für domain.md.
+
+2026-10-30 Nutzer entscheidet: Kurs = lastPrice (Feld price); Abstand = (Level − Kurs)/Kurs in %, vorzeichenbehaftet; AC5 Reihenfolge beim Klick einfrieren.
+
+2026-10-30 Lead: docs/openapi.yaml (GET /prices/stream, PriceSnapshot, PositionPrice, Tag Kurse) und docs/domain.md (Abschnitt Live-Kurs) zuerst angepasst; Spec lädt, generate:api ok. contracts: nur coverage-Tests rot (kein Vertragstest für streamPrices) – Aufgabe des test-author.
+
+2026-10-30 test-author Runde 1: contract prices.contract.test.ts, pricedistance_test.go + Stub, broker_test.go + Stub (rot, erwartet). Nutzer entscheidet Vorzeichen: Gewinnrichtung (positiv = Level liegt in Gewinnrichtung vor dem Kurs, LONG/SHORT gleich); Funktion braucht side, bei SHORT Vorzeichen drehen. pricedistance_test.go ist anzupassen.
+
+2026-10-30 programmer Runde 1: DistanceToLevelPercent(side,…) und generischer Broker[T] grün (go test -race, golangci-lint 0 Befunde, vom Lead nachgeprüft). Lead: ungenutzten Parameter in broker_test.go (revive) zu _ geändert. Prüfreihenfolge: side, Kurs, dann level nil. Offen: Runde 2 (Ticker-Adapter, Use Case/Poller, SSE-Handler) läuft beim test-author.
+
+2026-10-30 test-author Runde 2: Tests für TickerSource, StreamPricesUseCase (Poll/Run, Backoff 1..30 s + Jitter, stale), SSE-Handler (Header, Event prices, Heartbeat 15 s, Disconnect, WriteTimeout-Aufhebung) rot aus richtigem Grund (vom Lead geprüft). Fixture fixtures/bingx/ticker.json: Feldformat entspricht der echten Antwort (am 2026-10-30 gegen /quote/ticker geprüft), Werte erfunden, DEAD-USDT und XYZ-USDT sind synthetische Grenzfälle; im Abschlussbericht ausweisen. Offen: Web-Variante (lead-designer Flow läuft).
+
+2026-10-30 lead-designer Stufe Flow: docs/design/TASK-16-kurs-spalte/flow.excalidraw + flow.png (PNG per Pillow, der Skill-Renderer lief in einen Timeout; kleine Textabschnitte in B und im Flow-Knoten 'Klick Kopf'). Nutzer wählt Variante A (Kurs-Spalte nach Symbol, 24h-% darunter, Abstand als 2. Zeile in BE-/TP1-Zellen) und für Stream-Ausfall: gedämpft + Text 'veraltet' pro Zelle. Abstand nicht einzeln sortierbar. Nächster Schritt: Prototyp (prototype.html).
+
+2026-10-30 lead-designer Stufe Prototyp: docs/design/TASK-16-kurs-spalte/prototype.html fertig, wartet auf Freigabe durch den Nutzer. Playwright: Konsole ohne Fehler, kein horizontales Scrollen bei 1280/390 px, Kontrast alle >= 4.5:1. Nicht geprüft: Drag mit der Maus. Offen: 'veraltet' je Zelle zusätzlich zum Banner; Abstand in Prozent (nicht R).
+
+2026-10-30 programmer Runde 2 + Lead-Nachzieher: TickerSource, StreamPricesUseCase, SSE-Handler GET /prices/stream, Verdrahtung in cmd/ (Route nur mit BingX-Keys). Lead-Korrekturen: TestPriceStreamSurvivesServerWriteTimeout hatte einen Testfehler (Leseschleife brach am ersten Event ab; reproduziert), Schleife korrigiert; Lint in Testdateien behoben (errcheck, Builtin real, ungenutzte Funktion text); BackoffMin/Max unexportiert und kommentiert; PriceSnapshot mit nolint:revive (Name laut Vertrag). Gate grün: gofmt, go vet, golangci-lint 0, go test -race ./... Offen: Contract-Test gegen laufenden Server nicht gelaufen (Route braucht BX_KEY); Heartbeat-Zeile nicht gegen die Spec geprüft. Web wartet auf Freigabe des Prototyps.
+
+2026-10-30 Nutzer gibt Prototyp (Variante A) frei. Entscheidungen im Prototyp: 'veraltet' je Zelle (gedämpft) plus Banner, Abstand in Prozent. Web-Umsetzung: test-author → programmer → designer → reviewer.
 <!-- SECTION:NOTES:END -->

@@ -11,6 +11,7 @@ export const OPERATION_TEST_NAMES = {
   getAccountSummary: 'GET /account/summary (getAccountSummary)',
   getPositionChart: 'GET /positions/{positionId}/chart (getPositionChart)',
   getAssetIcons: 'GET /assets/icons (getAssetIcons)',
+  streamPrices: 'GET /prices/stream (streamPrices)',
   setInitialStopLoss: 'PUT /positions/{positionId}/initial-stop-loss (setInitialStopLoss)',
   clearInitialStopLoss: 'DELETE /positions/{positionId}/initial-stop-loss (clearInitialStopLoss)',
 } as const satisfies Readonly<Record<string, string>>;

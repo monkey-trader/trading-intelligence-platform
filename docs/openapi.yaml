@@ -349,6 +349,29 @@ paths:
           $ref: '#/components/responses/Problem'
         '503':
           $ref: '#/components/responses/Problem'
+  /prices/stream:
+    get:
+      operationId: streamPrices
+      summary: Live-Kurse der offenen Positionen (Server-Sent Events)
+      description: >-
+        Das Backend fragt BingX alle ~2 s mit einem einzigen Request (`/quote/ticker`, alle Symbole) ab
+        und sendet jedem Abonnenten ein Event `prices` mit dem Kurs je offener Position. Direkt nach dem
+        Verbinden kommt der letzte bekannte Stand. Alle 15 s folgt ein Kommentar als Heartbeat.
+        Fällt die Kursquelle aus, kommt weiter ein Event mit `stale: true` und den letzten Kursen; das
+        Backend verbindet mit Backoff neu. Der Browser spricht nie selbst mit BingX.
+        Der Kurs ist der letzte Handelspreis (`lastPrice`), nicht der Mark Price.
+      tags:
+        - Kurse
+      responses:
+        '200':
+          description: >-
+            Dauerhafter Stream (`text/event-stream`); jedes Event `prices` trägt `PriceSnapshot` als JSON.
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/PriceSnapshot'
+        '403':
+          $ref: '#/components/responses/Problem'
   /assets/icons:
     get:
       operationId: getAssetIcons
@@ -405,6 +428,8 @@ tags:
     description: Notizen des Nutzers zu Positionen
   - name: Assets
     description: Zusatzdaten zu Assets (Icons)
+  - name: Kurse
+    description: Live-Kurse der offenen Positionen
 components:
   responses:
     Problem:
@@ -692,6 +717,59 @@ components:
             - type: 'null'
         tp1Price:
           description: TP1-Level (3R-Preis, `THREE_R`); `null` ohne bekanntes Risiko.
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+    PriceSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+        - prices
+        - fetchedAt
+        - stale
+      properties:
+        prices:
+          type: array
+          description: Ein Eintrag je offener Position, Reihenfolge wie `/positions/open`.
+          items:
+            $ref: '#/components/schemas/PositionPrice'
+        fetchedAt:
+          type: integer
+          description: Zeitpunkt des Kursabrufs bei BingX in Epoch-Millisekunden.
+        stale:
+          type: boolean
+          description: '`true`, wenn der letzte Abruf fehlschlug und die Kurse veraltet sind.'
+    PositionPrice:
+      type: object
+      additionalProperties: false
+      required:
+        - positionId
+        - symbol
+        - price
+        - change24hPercent
+        - distanceToBreakEvenPercent
+        - distanceToTp1Percent
+      properties:
+        positionId:
+          type: string
+        symbol:
+          type: string
+          example: SUI-USDT
+        price:
+          $ref: '#/components/schemas/Decimal'
+          description: Letzter Handelspreis (`lastPrice` aus BingX `/quote/ticker`).
+        change24hPercent:
+          $ref: '#/components/schemas/Decimal'
+          description: Änderung im rollenden 24-h-Fenster in Prozent (BingX `priceChangePercent`, 1.3 = +1,3 %).
+        distanceToBreakEvenPercent:
+          description: >-
+            (BE-Level − Kurs) ÷ Kurs in Prozent, vorzeichenbehaftet; positiv heißt, das Level liegt in
+            Gewinnrichtung noch vor dem Kurs (LONG und SHORT gleich). `null` ohne bekanntes Risiko.
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        distanceToTp1Percent:
+          description: Wie `distanceToBreakEvenPercent`, aber zum TP1-Level (3R). `null` ohne bekanntes Risiko.
           oneOf:
             - $ref: '#/components/schemas/Decimal'
             - type: 'null'

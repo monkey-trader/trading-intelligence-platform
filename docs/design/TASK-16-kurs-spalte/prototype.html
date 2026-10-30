@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TASK-16 Prototyp: Spalte Kurs (Variante A)</title>
+<!--
+  TASK-16 · Spalte "Kurs" in der Positionstabelle · Variante A · Datum 2026-10-30
+  Freigegeben vom Nutzer am 2026-10-30. Stand der Freigabe, nicht der App. Wegwerf-Prototyp, wird nach der Freigabe nicht nachgepflegt.
+  Nicht im Prototyp: echter Stream/Backend, Spalten Einstieg-Bearbeitung, SL-Eingabe, Chart, Filter, Paging.
+-->
+<link rel="stylesheet" href="../../../clients/web/src/styles/design-tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--color-background); color: var(--color-text); font-family: var(--font-family-base); font-size: var(--font-size-base); line-height: var(--line-height-base); }
+  .bar { position: sticky; top: 0; z-index: 5; background: var(--color-surface-raised); border-bottom: 1px solid var(--color-border); padding: var(--space-2) var(--space-4); font-size: var(--font-size-small); }
+  .bar .head { color: var(--color-text-muted); margin-bottom: var(--space-2); }
+  .bar .ctl { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; }
+  .grp { display: flex; gap: var(--space-1); align-items: center; }
+  .grp > span { color: var(--color-text-muted); margin-right: var(--space-1); }
+  button, .btn { font: inherit; font-size: var(--font-size-small); color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-control-border); border-radius: var(--radius-small); padding: var(--space-1) var(--space-2); cursor: pointer; min-height: var(--size-control-compact); }
+  button[aria-pressed="true"] { background: var(--color-accent); color: var(--color-on-accent); border-color: var(--color-accent); }
+  :focus-visible { outline: var(--border-width-emphasis) solid var(--color-accent); outline-offset: 2px; }
+  main { padding: var(--space-4); }
+  .stage { margin: 0 auto; max-width: var(--layout-max-width); container-type: inline-size; }
+  .stage.mobile { max-width: 390px; }
+  h1 { font-size: var(--font-size-large); margin: 0 0 var(--space-3); }
+  .banner { padding: var(--space-2) var(--space-3); border-radius: var(--radius-small); margin-bottom: var(--space-3); font-size: var(--font-size-small); }
+  .banner.stale { background: var(--color-warning-surface); color: var(--color-warning); border: 1px solid var(--color-warning); }
+  .banner[hidden] { display: none; }
+  table { width: 100%; border-collapse: collapse; background: var(--color-surface); border-radius: var(--panel-radius); table-layout: fixed; }
+  th { text-align: left; font-size: var(--font-size-x-small); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); font-weight: var(--font-weight-strong); padding: var(--space-2) var(--table-cell-padding-inline); border-bottom: 1px solid var(--color-border); line-height: var(--line-height-tight); vertical-align: bottom; }
+  th button { all: unset; cursor: pointer; display: inline-flex; gap: var(--space-1); align-items: center; text-transform: inherit; letter-spacing: inherit; color: var(--color-text); }
+  th button:focus-visible { outline: var(--border-width-emphasis) solid var(--color-accent); outline-offset: 2px; }
+  th.drop { box-shadow: inset var(--border-width-emphasis) 0 0 var(--color-accent); }
+  th[draggable="true"] { cursor: grab; }
+  td { padding: var(--table-row-padding-block) var(--table-cell-padding-inline); border-bottom: 1px solid var(--color-border); vertical-align: top; overflow-wrap: anywhere; }
+  tr:last-child td { border-bottom: 0; }
+  tbody tr { box-shadow: inset var(--size-side-bar) 0 0 var(--bar, transparent); }
+  tbody tr.long { --bar: var(--color-positive); } tbody tr.short { --bar: var(--color-negative); }
+  td:first-child { padding-left: var(--space-3); }
+  .num { font-variant-numeric: tabular-nums; font-family: var(--font-family-numeric); }
+  .sym { font-weight: var(--font-weight-strong); }
+  .chip { display: inline-block; font-size: var(--font-size-x-small); background: var(--color-chip-surface); color: var(--color-chip-text); border-radius: var(--radius-chip); padding: 0 var(--space-1); margin-top: var(--space-1); }
+  .sub { display: block; font-size: var(--font-size-small); color: var(--color-text-muted); }
+  .pos { color: var(--color-positive); } .neg { color: var(--color-negative); }
+  .change { display: block; font-size: var(--font-size-small); font-weight: var(--font-weight-strong); }
+  .stale-cell .price, .stale-cell .change, .stale-cell .dist { color: var(--color-text-muted); }
+  .stale-cell .change, .stale-cell .dist { font-weight: var(--font-weight-regular); }
+  .tag { font-size: var(--font-size-x-small); color: var(--color-warning); font-weight: var(--font-weight-strong); text-transform: uppercase; }
+  .state { padding: var(--space-5); text-align: center; color: var(--color-text-muted); background: var(--color-surface); border-radius: var(--panel-radius); }
+  .skel { display: block; height: 1em; width: 70%; background: var(--color-surface-raised); border-radius: var(--radius-small); margin: var(--space-1) 0; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .notin { margin-top: var(--space-4); font-size: var(--font-size-small); color: var(--color-text-muted); border: 1px dashed var(--color-border); padding: var(--space-2) var(--space-3); border-radius: var(--radius-small); }
+  /* Mobil: Karte (Container-Breite statt Media Query, damit der Umschalter wirkt) */
+  @container (max-width: 768px) { /* --breakpoint-table */
+    table, tbody, tr, td { display: block; width: 100%; }
+    thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    tbody tr { background: var(--color-surface); border-radius: var(--panel-radius); margin-bottom: var(--space-3); padding: var(--space-2) 0; }
+    td { border: 0; padding: var(--space-1) var(--space-3) var(--space-1) 7.5rem; position: relative; }
+    td::before { position: absolute; left: var(--space-3); content: attr(data-label); color: var(--color-text-muted); font-size: var(--font-size-small); }
+    td.c-symbol { padding-left: var(--space-3); } td.c-symbol::before { content: none; }
+    .mobsort { display: flex !important; }
+  }
+  .mobsort { display: none; gap: var(--space-2); align-items: center; margin-bottom: var(--space-2); font-size: var(--font-size-small); }
+</style>
+</head>
+<body>
+<div class="bar" role="region" aria-label="Prototyp-Leiste">
+  <div class="head"><strong>TASK-16 · Variante A · 2026-10-30 · freigegeben 2026-10-30</strong> · Stand der Freigabe, nicht der App · Prototyp mit Fake-Daten</div>
+  <div class="ctl">
+    <div class="grp" data-group="state"><span>Zustand</span>
+      <button data-v="data" aria-pressed="true">mit Daten</button><button data-v="empty" aria-pressed="false">leer</button><button data-v="loading" aria-pressed="false">lädt</button><button data-v="unknown" aria-pressed="false">Kurs unbekannt</button><button data-v="stale" aria-pressed="false">veraltet</button></div>
+    <div class="grp" data-group="theme"><span>Theme</span><button data-v="light" aria-pressed="true">hell</button><button data-v="dark" aria-pressed="false">dunkel</button></div>
+    <div class="grp" data-group="width"><span>Breite</span><button data-v="desktop" aria-pressed="true">Desktop</button><button data-v="mobile" aria-pressed="false">Mobil 390 px</button></div>
+    <div class="grp"><span>Fake-Ticks (2 s)</span><button id="ticks" aria-pressed="true">an</button></div>
+  </div>
+</div>
+<main>
+<div class="stage" id="stage">
+  <h1>Offene Positionen</h1>
+  <div class="banner stale" id="staleBanner" hidden>Kursstream unterbrochen: letzte bekannte Werte, Verbindung wird neu aufgebaut.</div>
+  <div class="mobsort"><button id="mobSort" aria-label="Nach Kurs sortieren">Kurs sortieren: API-Reihenfolge</button></div>
+  <div id="view"></div>
+  <p class="sr" id="live" role="status" aria-live="polite"></p>
+  <p class="notin">Nicht im Prototyp: echter Stream und Backend, Bearbeiten des SL, Chart, Filter, Sortierung anderer Spalten (nur Kurs), Spalten-Verschieben per Touch. Der Abstand zu BE/TP1 ist bewusst nicht einzeln sortierbar. Bedienung: Klick auf „Kurs“ im Kopf = auf / ab / API-Reihenfolge; Alt+Pfeil links/rechts auf dem Kopf-Button oder Drag verschiebt die Spalte (Symbol bleibt links).</p>
+</div>
+</main>
+<script>
+// Fake-Daten. Preise als Strings (Dezimalstellen bleiben erhalten). risk=false: Risiko unbekannt, Abstände null.
+const ROWS = [
+  {id:1, sym:'BTC-USDT', side:'long', lev:10, price:'67250.5', chg:1.8, entry:'66900', sl:'66200', be:'67000', tp1:'68000', pnl:'+34.2', risk:true},
+  {id:2, sym:'ONDO-USDT', side:'short', lev:5, price:'0.9421', chg:-2.3, entry:'0.9600', sl:null, be:null, tp1:null, pnl:'−12.8', risk:false},
+  {id:3, sym:'Gold', side:'long', lev:20, price:'2655.4', chg:0.4, entry:'2655.0', sl:'2640', be:'2660', tp1:'2700', pnl:'+5.0', risk:true},
+  {id:4, sym:'1000SATS-USDT', side:'short', lev:3, price:'0.0000123', chg:-6.4, entry:'0.0000131', sl:'0.0000140', be:'0.0000128', tp1:'0.0000110', pnl:'+8.6', risk:true},
+  {id:5, sym:'NCCOGOLD2USD-PERPETUAL-EXTENDED', side:'long', lev:100, price:'123456.75', chg:-0.6, entry:'122900.50', sl:'121000', be:'123000', tp1:'125000', pnl:'−3.1', risk:true},
+  {id:6, sym:'ETH-USDT', side:'long', lev:7, price:'3412.25', chg:2.15, entry:'3300', sl:'3250', be:'3350', tp1:'3500', pnl:'+41.7', risk:true},
+];
+const COLS = {
+  symbol:{label:'Symbol', fixed:true}, price:{label:'Kurs', sortable:true}, entry:{label:'Einstieg / SL'},
+  be:{label:'BE'}, tp1:{label:'TP1'}, pnl:{label:'PnL'}
+};
+let order = ['symbol','price','entry','be','tp1','pnl'];
+let state='data', sortMode='api', frozen=null, ticks=true, lastLive='';
+const $ = s=>document.querySelector(s);
+
+function group(s){ const [i,f]=s.split('.'); return i.replace(/\B(?=(\d{3})+(?!\d))/g,"'")+(f?'.'+f:''); }
+function dec(s){ return (s.split('.')[1]||'').length; }
+function fmt(n,d){ const neg=n<0; const t=Math.abs(n).toFixed(d); return (neg?'−':'')+group(t); }
+function sign(n){ return n>0?'+':n<0?'−':'±'; }
+function pct(n){ return sign(n)+Math.abs(n).toFixed(1)+'%'; }
+
+function dist(r, lvl){
+  if(!r.risk || !lvl || r.price==null) return null;
+  const p=parseFloat(r.price), l=parseFloat(lvl);
+  let d=(l-p)/p*100; if(r.side==='short') d=-d;   // positiv = Level liegt noch vor dem Kurs
+  return d;
+}
+function distHtml(r,lvl,unknownText){
+  if(!r.risk) return '<span class="sub">'+unknownText+'</span>';
+  const d=dist(r,lvl);
+  const st = state==='stale'?'<span class="tag"> veraltet</span>':'';
+  if(d==null) return '<span class="sub dist num">–</span>';
+  const txt=d<=0?'erreicht':'offen';
+  return '<span class="sub dist num">'+pct(d)+' '+txt+st+'</span>';
+}
+function levelHtml(r,lvl,key){
+  if(!r.risk||!lvl) return '<span class="num">–</span>'+distHtml(r,lvl,key==='be'?'BE: unbekannt':'TP1: unbekannt');
+  return '<span class="num">'+group(lvl)+'</span>'+distHtml(r,lvl);
+}
+function priceHtml(r){
+  if(r.price==null||state==='unknown') return '<span class="num price">–</span><span class="sub">kein Kurs</span>';
+  const c=r.chg, cls=c>0?'pos':c<0?'neg':'';
+  const stale = state==='stale' ? '<span class="tag">veraltet</span>' : '';
+  return '<span class="num price">'+group(r.price)+'</span><span class="change num '+cls+'">'+pct(c)+'</span>'+stale;
+}
+const CELL = {
+  symbol:r=>'<span class="sym">'+r.sym+'</span><br><span class="sub">'+(r.side==='long'?'Long':'Short')+' '+r.lev+'x</span>',
+  price:priceHtml,
+  entry:r=>'<span class="num">'+group(r.entry)+'</span><span class="sub num">'+(r.sl?'SL '+group(r.sl):'kein SL')+'</span>',
+  be:r=>levelHtml(r,r.be,'be'), tp1:r=>levelHtml(r,r.tp1,'tp1'),
+  pnl:r=>{const neg=r.pnl.startsWith('−'); return '<span class="num '+(neg?'neg':'pos')+'">'+r.pnl+'</span>';}
+};
+
+function sortedRows(){
+  if(sortMode==='api') return ROWS;
+  if(!frozen) return ROWS;
+  return frozen.map(id=>ROWS.find(r=>r.id===id));
+}
+function freeze(){
+  if(sortMode==='api'){ frozen=null; return; }
+  const val=r=>state==='unknown'||r.price==null?null:parseFloat(r.price);
+  const arr=[...ROWS].sort((a,b)=>{ const x=val(a),y=val(b);
+    if(x==null&&y==null) return a.id-b.id; if(x==null) return 1; if(y==null) return -1; // unbekannt immer zuletzt
+    return sortMode==='asc'?x-y:y-x; });
+  frozen=arr.map(r=>r.id);
+}
+
+function render(){
+  const v=$('#view'); $('#staleBanner').hidden = state!=='stale';
+  announce();
+  if(state==='empty'){ v.innerHTML='<div class="state">Keine offenen Positionen</div>'; return; }
+  if(state==='loading'){ v.innerHTML='<div class="state" aria-busy="true">'+[1,2,3].map(()=>'<span class="skel"></span>').join('')+'Positionen werden geladen …</div>'; return; }
+  const aria = sortMode==='asc'?'ascending':sortMode==='desc'?'descending':'none';
+  const arrow = sortMode==='asc'?'▲':sortMode==='desc'?'▼':'↕';
+  const head = order.map(k=>{
+    const c=COLS[k];
+    if(k==='price') return '<th scope="col" data-col="price" draggable="true" aria-sort="'+aria+'"><button id="sortBtn" aria-label="Kurs, sortieren: '+(sortMode==='api'?'API-Reihenfolge':sortMode==='asc'?'aufsteigend':'absteigend')+'. Alt+Pfeil verschiebt die Spalte">Kurs <span aria-hidden="true">'+arrow+'</span></button></th>';
+    return '<th scope="col" data-col="'+k+'"'+(c.fixed?'':' draggable="false"')+'>'+c.label+'</th>';
+  }).join('');
+  const body = sortedRows().map(r=>'<tr class="'+r.side+(state==='stale'?' stale-cell':'')+'" data-id="'+r.id+'">'+order.map(k=>'<td class="c-'+k+'" data-col="'+k+'" data-label="'+(k==='price'?'Kurs':COLS[k].label)+'">'+CELL[k](r)+'</td>').join('')+'</tr>').join('');
+  v.innerHTML='<table><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table>';
+  $('#mobSort').textContent='Kurs sortieren: '+(sortMode==='api'?'API-Reihenfolge':sortMode==='asc'?'aufsteigend':'absteigend');
+  bindHead();
+}
+function updateCells(){ // Tick: nur Zellen, Reihenfolge bleibt eingefroren
+  if(state!=='data') return;
+  document.querySelectorAll('tbody tr').forEach(tr=>{
+    const r=ROWS.find(x=>x.id==tr.dataset.id);
+    tr.querySelector('td[data-col=price]').innerHTML=priceHtml(r);
+    tr.querySelector('td[data-col=be]').innerHTML=levelHtml(r,r.be,'be');
+    tr.querySelector('td[data-col=tp1]').innerHTML=levelHtml(r,r.tp1,'tp1');
+  });
+}
+function announce(){ // nur beim Wechsel Daten/veraltet, nie pro Tick
+  const t = state==='stale'?'Kurse veraltet':state==='data'?'Kurse aktuell':state==='unknown'?'Kurs unbekannt':'';
+  if(t && t!==lastLive){ $('#live').textContent=t; lastLive=t; }
+}
+function cycle(){ sortMode = sortMode==='api'?'asc':sortMode==='asc'?'desc':'api'; freeze(); render(); const b=$('#sortBtn'); if(b) b.focus(); }
+function move(dir){
+  const i=order.indexOf('price'), j=i+dir; if(j<1||j>=order.length) return; // Index 0 = Symbol bleibt links
+  [order[i],order[j]]=[order[j],order[i]]; render(); $('#sortBtn').focus();
+  $('#live').textContent='Spalte Kurs an Position '+(order.indexOf('price')+1); lastLive='';
+}
+function bindHead(){
+  const b=$('#sortBtn'); if(!b) return;
+  b.onclick=cycle;
+  b.onkeydown=e=>{ if(e.altKey&&e.key==='ArrowLeft'){e.preventDefault();move(-1);} if(e.altKey&&e.key==='ArrowRight'){e.preventDefault();move(1);} };
+  const ths=[...document.querySelectorAll('th')];
+  const priceTh=document.querySelector('th[data-col=price]');
+  priceTh.ondragstart=e=>{ e.dataTransfer.setData('text/plain','price'); };
+  ths.forEach((th,idx)=>{
+    if(idx===0) return; // nichts vor Symbol ablegen
+    th.ondragover=e=>{ e.preventDefault(); th.classList.add('drop'); };
+    th.ondragleave=()=>th.classList.remove('drop');
+    th.ondrop=e=>{ e.preventDefault(); th.classList.remove('drop');
+      const target=th.dataset.col; if(target==='price') return;
+      order=order.filter(k=>k!=='price'); order.splice(order.indexOf(target)+1>order.length?order.length:order.indexOf(target),0,'price'); render(); };
+  });
+}
+$('#mobSort').onclick=cycle;
+
+document.querySelectorAll('.grp[data-group] button').forEach(btn=>btn.onclick=()=>{
+  const g=btn.parentElement; g.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===btn));
+  const v=btn.dataset.v, kind=g.dataset.group;
+  if(kind==='theme') document.documentElement.dataset.theme=v;
+  if(kind==='width') $('#stage').classList.toggle('mobile',v==='mobile');
+  if(kind==='state'){ state=v; if(v==='unknown') freeze(); render(); }
+});
+$('#ticks').onclick=e=>{ ticks=!ticks; e.target.setAttribute('aria-pressed',ticks); e.target.textContent=ticks?'an':'aus'; };
+function tick(){
+  if(!ticks||state!=='data') return;
+  ROWS.forEach(r=>{ if(r.price==null) return; const d=dec(r.price), p=parseFloat(r.price);
+    const np=p*(1+(Math.random()-.5)*0.008); r.price=np.toFixed(d);
+    r.chg=Math.max(-9,Math.min(9,r.chg+(Math.random()-.5)*0.2)); });
+  updateCells();
+}
+setInterval(tick,2000);
+render();
+</script>
+</body>
+</html>
