@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "futures-fear-greed": {
+      "type": "http",
+      "url": "https://futuresfeargreed.com/mcp"
+    }
+  }
+}
