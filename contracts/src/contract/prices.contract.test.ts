@@ -39,13 +39,21 @@ function readFirstEvent(): Promise<FirstEvent> {
           for (const block of buffer.split('\n\n').slice(0, -1)) {
             const lines = block.split('\n').filter((line) => !line.startsWith(':'));
             if (lines.length === 0) continue;
-            const eventName = lines.find((line) => line.startsWith('event:'))?.slice(6).trim();
+            const eventName = lines
+              .find((line) => line.startsWith('event:'))
+              ?.slice(6)
+              .trim();
             const data = lines
               .filter((line) => line.startsWith('data:'))
               .map((line) => line.slice(5).trim())
               .join('\n');
             clientRequest.destroy();
-            resolve({ status: incoming.statusCode ?? 0, headers: incoming.headers, eventName, data });
+            resolve({
+              status: incoming.statusCode ?? 0,
+              headers: incoming.headers,
+              eventName,
+              data,
+            });
             return;
           }
         });
