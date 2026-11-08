@@ -1,12 +1,13 @@
 import { request as httpRequest, type IncomingHttpHeaders } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 import { describe, expect, it } from 'vitest';
+import { expectDocumentedResponse, expectProblem } from '@/contract/assertions';
 import { createContractContext } from '@/contract/contractContext';
 import { OPERATION_TEST_NAMES } from '@/contract/coverage';
 import { singleHeader } from '@/httpClient';
 import { mediaTypeOf } from '@/validator';
 
-const { config, validator } = createContractContext();
+const { config, validator, send } = createContractContext();
 
 const FIRST_EVENT_TIMEOUT_MS = 8_000;
 
@@ -70,19 +71,28 @@ function readFirstEvent(): Promise<FirstEvent> {
 }
 
 describe(OPERATION_TEST_NAMES.streamPrices, () => {
-  it('antwortet mit 200 und text/event-stream', async () => {
-    const first = await readFirstEvent();
+  if (config.expectConfigured) {
+    it('antwortet mit 200 und text/event-stream', async () => {
+      const first = await readFirstEvent();
 
-    expect(first.status).toBe(200);
-    expect(mediaTypeOf(singleHeader(first.headers, 'content-type'))).toBe('text/event-stream');
-  });
+      expect(first.status).toBe(200);
+      expect(mediaTypeOf(singleHeader(first.headers, 'content-type'))).toBe('text/event-stream');
+    });
 
-  it('sendet als erstes Event "prices" mit einem Body laut PriceSnapshot', async () => {
-    const first = await readFirstEvent();
+    it('sendet als erstes Event "prices" mit einem Body laut PriceSnapshot', async () => {
+      const first = await readFirstEvent();
 
-    expect(first.eventName).toBe('prices');
-    const result = validator.validateSchema('PriceSnapshot', JSON.parse(first.data) as unknown);
-    expect(result.errors).toEqual([]);
-    expect(result.valid).toBe(true);
-  });
+      expect(first.eventName).toBe('prices');
+      const result = validator.validateSchema('PriceSnapshot', JSON.parse(first.data) as unknown);
+      expect(result.errors).toEqual([]);
+      expect(result.valid).toBe(true);
+    });
+  } else {
+    it('liefert ohne Keys 503 not-configured', async () => {
+      const response = await send({ method: 'GET', path: '/prices/stream' });
+
+      expectDocumentedResponse(validator, 'streamPrices', response);
+      expectProblem(validator, response, 503, 'not-configured');
+    });
+  }
 });

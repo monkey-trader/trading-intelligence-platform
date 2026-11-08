@@ -168,10 +168,10 @@ func TestPriceStreamEndsWhenSubscriptionChannelCloses(t *testing.T) {
 	}
 }
 
-func TestRouterRegistersPriceStreamOnlyWithSubscription(t *testing.T) {
+func TestRouterAnswersPriceStreamNotConfiguredWithoutSubscription(t *testing.T) {
 	without := serve(NewHandler(testSettings, discardLogger()), newTestRequest(http.MethodGet, "/prices/stream", allowedTestHost))
-	if without.Code != http.StatusNotFound {
-		t.Errorf("ohne SubscribePrices: Status = %d, erwartet 404", without.Code)
+	if without.Code != http.StatusServiceUnavailable {
+		t.Errorf("ohne SubscribePrices: Status = %d, erwartet 503", without.Code)
 	}
 
 	channel := make(chan appprice.PriceSnapshot, 1)

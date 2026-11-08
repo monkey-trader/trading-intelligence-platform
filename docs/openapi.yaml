@@ -360,6 +360,7 @@ paths:
         Fällt die Kursquelle aus, kommt weiter ein Event mit `stale: true` und den letzten Kursen; das
         Backend verbindet mit Backoff neu. Der Browser spricht nie selbst mit BingX.
         Der Kurs ist der letzte Handelspreis (`lastPrice`), nicht der Mark Price.
+        Ohne BingX-Keys antwortet die Route mit 503 `not-configured`.
       tags:
         - Kurse
       responses:
@@ -371,6 +372,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/PriceSnapshot'
         '403':
+          $ref: '#/components/responses/Problem'
+        '503':
           $ref: '#/components/responses/Problem'
   /positions/{positionId}/swing-long:
     put:

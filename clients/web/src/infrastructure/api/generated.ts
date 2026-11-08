@@ -157,7 +157,7 @@ export interface paths {
         };
         /**
          * Live-Kurse der offenen Positionen (Server-Sent Events)
-         * @description Das Backend fragt BingX alle ~2 s mit einem einzigen Request (`/quote/ticker`, alle Symbole) ab und sendet jedem Abonnenten ein Event `prices` mit dem Kurs je offener Position. Direkt nach dem Verbinden kommt der letzte bekannte Stand. Alle 15 s folgt ein Kommentar als Heartbeat. Fällt die Kursquelle aus, kommt weiter ein Event mit `stale: true` und den letzten Kursen; das Backend verbindet mit Backoff neu. Der Browser spricht nie selbst mit BingX. Der Kurs ist der letzte Handelspreis (`lastPrice`), nicht der Mark Price.
+         * @description Das Backend fragt BingX alle ~2 s mit einem einzigen Request (`/quote/ticker`, alle Symbole) ab und sendet jedem Abonnenten ein Event `prices` mit dem Kurs je offener Position. Direkt nach dem Verbinden kommt der letzte bekannte Stand. Alle 15 s folgt ein Kommentar als Heartbeat. Fällt die Kursquelle aus, kommt weiter ein Event mit `stale: true` und den letzten Kursen; das Backend verbindet mit Backoff neu. Der Browser spricht nie selbst mit BingX. Der Kurs ist der letzte Handelspreis (`lastPrice`), nicht der Mark Price. Ohne BingX-Keys antwortet die Route mit 503 `not-configured`.
          */
         get: operations["streamPrices"];
         put?: never;
@@ -766,6 +766,7 @@ export interface operations {
                 };
             };
             403: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     setSwingLong: {

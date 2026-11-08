@@ -33,7 +33,7 @@ type Settings struct {
 	GetPositionNote func(ctx context.Context, positionID string) (journal.JournalNote, error)
 	// GetClosedPositions liefert geschlossene Positionen (optional; nil = Route nicht registriert).
 	GetClosedPositions func(ctx context.Context, query position.ClosedPositionQuery) ([]appposition.ClosedPositionView, error)
-	// SubscribePrices abonniert die Kurs-Snapshots für GET /prices/stream (optional; nil = Route nicht registriert).
+	// SubscribePrices abonniert die Kurs-Snapshots für GET /prices/stream (optional; nil = Route antwortet 503 not-configured).
 	SubscribePrices func() (<-chan appprice.PriceSnapshot, func())
 	// WebUI bedient alle Pfade, die die API nicht kennt (optional; nil = 404 not-found).
 	WebUI http.Handler
@@ -75,6 +75,9 @@ func newHandlerWithRoutes(settings Settings, logger *slog.Logger, extraRoutes ma
 	}
 	if settings.SubscribePrices != nil {
 		routes["GET /prices/stream"] = newPriceStreamHandler(settings.SubscribePrices, priceHeartbeatInterval, logger)
+	} else {
+		// Ohne Kursquelle (keine BingX-Keys) wie die anderen Routen: 503 not-configured.
+		routes["GET /prices/stream"] = func(w http.ResponseWriter, _ *http.Request) { writeProblem(w, ProblemNotConfigured) }
 	}
 	maps.Copy(routes, extraRoutes)
 	var chartRoute http.HandlerFunc
