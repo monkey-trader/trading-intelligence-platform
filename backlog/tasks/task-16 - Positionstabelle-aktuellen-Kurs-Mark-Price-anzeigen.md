@@ -81,3 +81,5 @@ Entscheidung 2026-10-25 (Nutzer): Quelle Variante 1, REST-Polling alle ~2 s, ein
 
 2026-10-30 Nutzer gibt Prototyp (Variante A) frei. Entscheidungen im Prototyp: 'veraltet' je Zelle (gedämpft) plus Banner, Abstand in Prozent. Web-Umsetzung: test-author → programmer → designer → reviewer.
 <!-- SECTION:NOTES:END -->
+
+2026-11-08 Lead (Web): httpPriceStreamGateway, useLivePrices, formatPrice, Kurs-Spalte (nach Symbol), Abstand in BE-/TP1-Zellen, Sortierung mit eingefrorenem Kursstand, Banner und 'veraltet' je Zelle, Verdrahtung in main.tsx (priceStreamGateway). Bestehende Tests an die 8. Spalte angepasst (Spaltenreihenfolge/-indizes); Prozentwerte mit geschütztem Leerzeichen vor '%'. Web grün: tsc, eslint, vitest 577/577, vite build. Reconnect übernimmt EventSource selbst (Browser-Standard-Retry), keine eigene Backoff-Logik im Client. Nicht geprüft: Sicht im Browser gegen laufendes Backend (braucht BX-Key, bewusst nicht ausgeführt), designer-Check, reviewer. AC-Häkchen daher noch offen.

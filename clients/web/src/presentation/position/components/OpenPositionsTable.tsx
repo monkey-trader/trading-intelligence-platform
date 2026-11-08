@@ -6,6 +6,12 @@ import {
 } from '@/presentation/position/format/formatRatioAsPercent';
 import type { AssetIcon } from '@/domain/asset/AssetIcon';
 import { CoinIcon } from '@/presentation/position/components/CoinIcon';
+import type { PositionPrice } from '@/domain/price/PriceStream';
+import {
+  formatChange24h,
+  formatDistance,
+  formatPrice,
+} from '@/presentation/position/format/formatPrice';
 import { pnlTone } from '@/presentation/position/format/pnlTone';
 import {
   Fragment,
@@ -29,6 +35,7 @@ import styles from '@/presentation/position/components/OpenPositionsTable.module
 
 const COLUMN_LABELS = {
   symbol: 'Symbol',
+  price: 'Kurs',
   valueMargin: 'Wert / Margin',
   unrealizedProfit: 'Unreal. PnL',
   realisedProfit: 'Real. PnL',
@@ -39,6 +46,7 @@ const COLUMN_LABELS = {
 
 const SORT_LABELS: Readonly<Record<SortKey, string>> = {
   symbol: 'Symbol',
+  price: 'Kurs',
   value: 'Wert',
   margin: 'Margin',
   unrealizedProfit: 'Unreal. PnL',
@@ -52,6 +60,7 @@ const SORT_LABELS: Readonly<Record<SortKey, string>> = {
 /** Sortierbare Werte je Spalte; gestapelte Spalten haben zwei. */
 const COLUMN_SORT_KEYS: Readonly<Record<ColumnKey, readonly SortKey[]>> = {
   symbol: ['symbol'],
+  price: ['price'],
   valueMargin: ['value', 'margin'],
   unrealizedProfit: ['unrealizedProfit'],
   realisedProfit: ['realisedProfit'],
@@ -62,6 +71,7 @@ const COLUMN_SORT_KEYS: Readonly<Record<ColumnKey, readonly SortKey[]>> = {
 
 const SORT_KEY_ORDER: readonly SortKey[] = [
   'symbol',
+  'price',
   'value',
   'margin',
   'unrealizedProfit',
@@ -92,6 +102,12 @@ type OpenPositionsTableProps = Readonly<{
   onInitialStopLossChanged?: (() => void) | undefined;
   /** Lädt gerade: Sortieren gesperrt, Platzhalterzeilen statt leerer Tabelle. */
   isLoading?: boolean | undefined;
+  /** Live-Kurse je positionId (TASK-16); ohne Eintrag zeigt die Zelle "–". */
+  prices?: Readonly<Record<string, PositionPrice>> | undefined;
+  /** Stream ausgefallen oder Kurse veraltet: Banner und "veraltet" je Zelle. */
+  pricesStale?: boolean | undefined;
+  /** Text der aria-live-Region "Kursstatus"; ändert sich nur beim Wechsel Daten/veraltet. */
+  pricesAnnouncement?: string | undefined;
 }>;
 
 /** Beträge in USDT: 2 Nachkommastellen. */
@@ -113,6 +129,9 @@ export function OpenPositionsTable({
   initialStopLossGateway,
   onInitialStopLossChanged,
   isLoading = false,
+  prices,
+  pricesStale = false,
+  pricesAnnouncement,
 }: OpenPositionsTableProps) {
   const { order, move, reset, isDefault } = useColumnOrder();
   const { sort, cycle, select, toggleDirection } = useTableSort();
@@ -120,7 +139,12 @@ export function OpenPositionsTable({
   const focusHandleKey = useRef<ColumnKey | null>(null);
   const focusButtonIndex = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const sortedPositions = useMemo(() => sortPositions(positions, sort), [positions, sort]);
+  // Kursstand beim Sortieren einfrieren, damit die Zeilen bei Live-Ticks nicht springen.
+  const [frozenPrices, setFrozenPrices] = useState<Readonly<Record<string, PositionPrice>>>({});
+  const sortedPositions = useMemo(
+    () => sortPositions(positions, sort, frozenPrices),
+    [positions, sort, frozenPrices],
+  );
   const isSortDisabled = isLoading || positions.length === 0;
 
   // Nach dem Verschieben bleibt der Fokus am Griff, auch wenn React die Kopfzelle umhängt.
@@ -140,6 +164,7 @@ export function OpenPositionsTable({
 
   const handleCycle = (key: SortKey) => {
     cycle(key);
+    setFrozenPrices(prices ?? {});
     const direction = sort?.key === key ? (sort.direction === 'asc' ? 'desc' : null) : 'asc';
     setAnnouncement(describeSort(key, direction));
   };
@@ -202,6 +227,7 @@ export function OpenPositionsTable({
             onChange={(event) => {
               const key = SORT_KEY_ORDER.find((candidate) => candidate === event.target.value);
               select(key ?? null);
+              setFrozenPrices(prices ?? {});
               setAnnouncement(describeSort(key ?? 'symbol', key === undefined ? null : 'asc'));
             }}
           >
@@ -219,6 +245,7 @@ export function OpenPositionsTable({
             disabled={isSortDisabled || sort === null}
             onClick={() => {
               toggleDirection();
+              setFrozenPrices(prices ?? {});
               if (sort !== null) {
                 setAnnouncement(describeSort(sort.key, sort.direction === 'asc' ? 'desc' : 'asc'));
               }
@@ -242,6 +269,17 @@ export function OpenPositionsTable({
       <p role="status" className={styles.visuallyHidden}>
         {announcement}
       </p>
+      {pricesAnnouncement !== undefined && (
+        <p role="status" aria-label="Kursstatus" className={styles.visuallyHidden}>
+          {pricesAnnouncement}
+        </p>
+      )}
+      {pricesStale && (
+        <p className={styles.staleBanner}>
+          Kurse veraltet: Kursstream unterbrochen, letzte bekannte Werte, Verbindung wird neu
+          aufgebaut.
+        </p>
+      )}
       {/* Ab 768 px passt die Tabelle in die Breite (auch bei 1280 px); der Container fängt nur
           Ausnahmen (sehr breite Werte) ab. tabIndex, damit man dann per Tastatur scrollen kann. */}
       <div
@@ -379,6 +417,8 @@ export function OpenPositionsTable({
                 isSelected={position.positionId === selectedPositionId}
                 onSelectPosition={onSelectPosition}
                 assetIcon={iconsBySymbol?.get(position.symbol)}
+                livePrice={prices?.[position.positionId]}
+                isPriceStale={pricesStale}
                 initialStopLossGateway={initialStopLossGateway}
                 onInitialStopLossChanged={onInitialStopLossChanged}
               />
@@ -405,7 +445,11 @@ function OpenPositionRow({
   assetIcon,
   initialStopLossGateway,
   onInitialStopLossChanged,
+  livePrice,
+  isPriceStale,
 }: Readonly<{
+  livePrice?: PositionPrice | undefined;
+  isPriceStale: boolean;
   initialStopLossGateway?: InitialStopLossGateway | undefined;
   onInitialStopLossChanged?: (() => void) | undefined;
   assetIcon?: AssetIcon | undefined;
@@ -422,6 +466,25 @@ function OpenPositionRow({
 
   const secondLevel = position.levels?.find((level) => level.kind === 'TWO_R');
   const thirdLevel = position.levels?.find((level) => level.kind === 'THREE_R');
+  const change = formatChange24h(livePrice?.change24hPercent ?? null);
+  const beDistance = formatDistance(livePrice?.distanceToBreakEvenPercent ?? null);
+  const tp1Distance = formatDistance(livePrice?.distanceToTp1Percent ?? null);
+  const renderLevel = (level: typeof secondLevel, distance: typeof beDistance): ReactNode => {
+    const levelText = level ? (
+      formatDecimal(level.price)
+    ) : (
+      <span aria-label="Risiko unbekannt">{MISSING_VALUE}</span>
+    );
+    if (distance.label === null) return levelText;
+    return (
+      <div className={styles.twoLine}>
+        <span>{levelText}</span>
+        <span className={`${styles.lineSub} ${styles.numeric} ${styles.distance}`}>
+          {distance.text} {distance.label}
+        </span>
+      </div>
+    );
+  };
   const cells: Record<ColumnKey, ReactNode> = {
     symbol: (
       <th
@@ -459,6 +522,25 @@ function OpenPositionRow({
           </div>
         </div>
       </th>
+    ),
+    price: (
+      <td data-label={COLUMN_LABELS.price} className={styles.cell}>
+        <div className={styles.twoLine}>
+          <span className={`${styles.numeric} ${styles.priceValue}`}>
+            {formatPrice(livePrice?.price ?? null)}
+          </span>
+          {livePrice ? (
+            <span
+              className={`${styles.lineSub} ${styles.numeric} ${styles.change} ${styles[change.tone]}`}
+            >
+              {change.text}
+            </span>
+          ) : (
+            <span className={`${styles.lineSub} ${styles.lineMuted}`}>kein Kurs</span>
+          )}
+          {isPriceStale && <span className={styles.staleTag}>veraltet</span>}
+        </div>
+      </td>
     ),
     valueMargin: (
       <td data-label={COLUMN_LABELS.valueMargin} className={styles.cell}>
@@ -522,26 +604,18 @@ function OpenPositionRow({
     ),
     be: (
       <td data-label={COLUMN_LABELS.be} className={styles.cell}>
-        {secondLevel ? (
-          formatDecimal(secondLevel.price)
-        ) : (
-          <span aria-label="Risiko unbekannt">{MISSING_VALUE}</span>
-        )}
+        {renderLevel(secondLevel, beDistance)}
       </td>
     ),
     tp1: (
       <td data-label={COLUMN_LABELS.tp1} className={styles.cell}>
-        {thirdLevel ? (
-          formatDecimal(thirdLevel.price)
-        ) : (
-          <span aria-label="Risiko unbekannt">{MISSING_VALUE}</span>
-        )}
+        {renderLevel(thirdLevel, tp1Distance)}
       </td>
     ),
   };
 
   return (
-    <tr className={styles.row}>
+    <tr className={`${styles.row}${isPriceStale ? ` ${styles.rowStale}` : ''}`}>
       {order.map((columnKey) => (
         <Fragment key={columnKey}>{cells[columnKey]}</Fragment>
       ))}

@@ -1,7 +1,9 @@
 import type { OpenPosition } from '@/domain/position/OpenPosition';
+import type { PositionPrice } from '@/domain/price/PriceStream';
 
 export type SortKey =
   | 'symbol'
+  | 'price'
   | 'value'
   | 'margin'
   | 'unrealizedProfit'
@@ -20,6 +22,7 @@ export function nextSortState(current: SortState, key: SortKey): SortState {
 }
 
 type SortValue = string | number | null;
+type PricesByPositionId = Readonly<Record<string, PositionPrice>>;
 
 function numberOrNull(value: string | undefined): number | null {
   if (value === undefined) return null;
@@ -32,10 +35,12 @@ function levelPrice(position: OpenPosition, kind: 'TWO_R' | 'THREE_R'): number |
 }
 
 /** null = kein Wert; solche Zeilen stehen immer am Ende. */
-function sortValue(position: OpenPosition, key: SortKey): SortValue {
+function sortValue(position: OpenPosition, key: SortKey, prices: PricesByPositionId): SortValue {
   switch (key) {
     case 'symbol':
       return position.symbol;
+    case 'price':
+      return numberOrNull(prices[position.positionId]?.price);
     case 'value':
       return numberOrNull(position.positionValue);
     case 'margin':
@@ -61,8 +66,9 @@ function compareValues(left: string | number, right: string | number): number {
 }
 
 /** 0 = hat Wert, 1 = Wert fehlt, 2 = Ursprungs-SL unbekannt; höhere Ränge stehen weiter hinten. */
-function rankOf(position: OpenPosition, value: SortValue): number {
-  if (position.initialStopLoss === null) return 2;
+function rankOf(position: OpenPosition, key: SortKey, value: SortValue): number {
+  // Der Kurs hängt nicht am Ursprungs-SL.
+  if (key !== 'price' && position.initialStopLoss === null) return 2;
   return value === null ? 1 : 0;
 }
 
@@ -70,12 +76,13 @@ function rankOf(position: OpenPosition, value: SortValue): number {
 export function sortPositions(
   positions: readonly OpenPosition[],
   state: SortState,
+  prices: PricesByPositionId = {},
 ): OpenPosition[] {
   if (state === null) return [...positions];
   const factor = state.direction === 'asc' ? 1 : -1;
   const entries = positions.map((position) => {
-    const value = sortValue(position, state.key);
-    return { position, value, rank: rankOf(position, value) };
+    const value = sortValue(position, state.key, prices);
+    return { position, value, rank: rankOf(position, state.key, value) };
   });
   entries.sort((left, right) => {
     if (left.rank !== right.rank) return left.rank - right.rank;

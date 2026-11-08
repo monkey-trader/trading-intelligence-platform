@@ -7,6 +7,7 @@ import { AppHeader } from '@/presentation/shared/components/AppHeader';
 import { markWailsApp } from '@/presentation/shared/platform/wailsApp';
 import { createHttpInitialStopLossGateway } from '@/infrastructure/api/httpInitialStopLossGateway';
 import { createHttpOpenPositionsGateway } from '@/infrastructure/api/httpOpenPositionsGateway';
+import { createHttpPriceStreamGateway } from '@/infrastructure/api/httpPriceStreamGateway';
 import { createHttpPositionChartGateway } from '@/infrastructure/api/httpPositionChartGateway';
 import { createLightweightChartRenderer } from '@/infrastructure/chart/lightweightChartRenderer';
 import { OpenPositionsPage } from '@/presentation/position/components/OpenPositionsPage';
@@ -29,6 +30,7 @@ const openPositionsGateway = createHttpOpenPositionsGateway(
 const apiBase = import.meta.env.VITE_API_BASE ?? '/api';
 const positionChartGateway = createHttpPositionChartGateway(fetch, apiBase);
 const assetIconsGateway = createHttpAssetIconsGateway(fetch, apiBase);
+const priceStreamGateway = createHttpPriceStreamGateway(undefined, apiBase);
 
 createRoot(rootElement).render(
   <StrictMode>
@@ -39,6 +41,7 @@ createRoot(rootElement).render(
       gateway={openPositionsGateway}
       initialStopLossGateway={createHttpInitialStopLossGateway()}
       chartGateway={positionChartGateway}
+      priceStreamGateway={priceStreamGateway}
       createChartRenderer={createLightweightChartRenderer}
     />
   </StrictMode>,

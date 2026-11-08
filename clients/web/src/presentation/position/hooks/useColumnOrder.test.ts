@@ -52,7 +52,12 @@ describe('useColumnOrder', () => {
     const storage = fakeStorage();
     const { result } = renderHook(() => useColumnOrder(storage));
     act(() => result.current.move('unrealizedProfit', 'valueMargin'));
-    expect(result.current.order.slice(0, 3)).toEqual(['symbol', 'unrealizedProfit', 'valueMargin']);
+    expect(result.current.order.slice(0, 4)).toEqual([
+      'symbol',
+      'price',
+      'unrealizedProfit',
+      'valueMargin',
+    ]);
     const saved: unknown = JSON.parse(storage.data.get(COLUMN_ORDER_STORAGE_KEY) ?? 'null');
     expect(saved).toEqual(result.current.order);
   });
@@ -63,7 +68,7 @@ describe('useColumnOrder', () => {
     });
     const { result } = renderHook(() => useColumnOrder(storage));
     act(() => result.current.move('unrealizedProfit', 'valueMargin'));
-    expect(result.current.order[1]).toBe('unrealizedProfit');
+    expect(result.current.order[2]).toBe('unrealizedProfit');
   });
   it('reset stellt Standard her und löscht den Eintrag', () => {
     const storage = fakeStorage();

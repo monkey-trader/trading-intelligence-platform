@@ -39,7 +39,7 @@ beforeEach(() => window.localStorage.clear());
 describe('OpenPositionsTable Spaltenreihenfolge', () => {
   it('Header tragen data-column-key; Standardreihenfolge', () => {
     const table = setup();
-    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'valueMargin', 'unrealizedProfit']);
+    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'price', 'valueMargin']);
   });
 
   it('Header außer Symbol sind draggable, Symbol nicht', () => {
@@ -51,12 +51,13 @@ describe('OpenPositionsTable Spaltenreihenfolge', () => {
   it('Drag & Drop ordnet Header und Zeilenzellen um und speichert', () => {
     const table = setup();
     dragOnto(header(table, 'entrySl'), header(table, 'valueMargin'));
-    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'entrySl', 'valueMargin']);
+    expect(headerTexts(table).slice(0, 4)).toEqual(['symbol', 'price', 'entrySl', 'valueMargin']);
     const cells = Array.from(table.querySelectorAll('tbody tr:first-child > *'));
     expect(cells[0]).toHaveTextContent('SUI');
-    expect(cells[1]).toHaveAttribute('data-label', 'Einstieg / SL');
-    expect(cells[2]).toHaveAttribute('data-label', 'Wert / Margin');
-    expect(JSON.parse(window.localStorage.getItem(COLUMN_ORDER_STORAGE_KEY) ?? 'null')[1]).toBe(
+    expect(cells[1]).toHaveAttribute('data-label', 'Kurs');
+    expect(cells[2]).toHaveAttribute('data-label', 'Einstieg / SL');
+    expect(cells[3]).toHaveAttribute('data-label', 'Wert / Margin');
+    expect(JSON.parse(window.localStorage.getItem(COLUMN_ORDER_STORAGE_KEY) ?? 'null')[2]).toBe(
       'entrySl',
     );
   });
@@ -75,7 +76,7 @@ describe('OpenPositionsTable Spaltenreihenfolge', () => {
   it('gespeicierte Reihenfolge wird beim Rendern angewendet', () => {
     window.localStorage.setItem(COLUMN_ORDER_STORAGE_KEY, JSON.stringify(['symbol', 'tp1']));
     const table = setup();
-    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'tp1', 'valueMargin']);
+    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'tp1', 'price']);
   });
 
   it('Tastatur: Alt+Pfeil rechts/links am Griff verschiebt die Spalte', async () => {
@@ -84,20 +85,30 @@ describe('OpenPositionsTable Spaltenreihenfolge', () => {
     const handle = screen.getByRole('button', { name: 'Spalte verschieben: Wert / Margin' });
     handle.focus();
     await user.keyboard('{Alt>}{ArrowRight}{/Alt}');
-    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'unrealizedProfit', 'valueMargin']);
+    expect(headerTexts(table).slice(0, 4)).toEqual([
+      'symbol',
+      'price',
+      'unrealizedProfit',
+      'valueMargin',
+    ]);
     await user.keyboard('{Alt>}{ArrowLeft}{/Alt}');
-    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'valueMargin', 'unrealizedProfit']);
+    expect(headerTexts(table).slice(0, 4)).toEqual([
+      'symbol',
+      'price',
+      'valueMargin',
+      'unrealizedProfit',
+    ]);
   });
 
   it('Tastatur: ArrowLeft ohne Alt verschiebt nichts; erste verschiebbare Spalte nicht vor Symbol', async () => {
     const user = userEvent.setup();
     const table = setup();
-    const handle = screen.getByRole('button', { name: 'Spalte verschieben: Wert / Margin' });
+    const handle = screen.getByRole('button', { name: 'Spalte verschieben: Kurs' });
     handle.focus();
     await user.keyboard('{ArrowRight}');
     await user.keyboard('{Alt>}{ArrowLeft}{/Alt}');
     expect(headerTexts(table)[0]).toBe('symbol');
-    expect(headerTexts(table)[1]).toBe('valueMargin');
+    expect(headerTexts(table)[1]).toBe('price');
   });
 
   it('Symbol hat keinen Verschiebe-Griff', () => {
@@ -111,7 +122,7 @@ describe('OpenPositionsTable Spaltenreihenfolge', () => {
     expect(screen.queryByRole('button', { name: 'Spalten zurücksetzen' })).toBeNull();
     dragOnto(header(table, 'entrySl'), header(table, 'valueMargin'));
     await user.click(screen.getByRole('button', { name: 'Spalten zurücksetzen' }));
-    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'valueMargin', 'unrealizedProfit']);
+    expect(headerTexts(table).slice(0, 3)).toEqual(['symbol', 'price', 'valueMargin']);
     expect(window.localStorage.getItem(COLUMN_ORDER_STORAGE_KEY)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Spalten zurücksetzen' })).toBeNull();
   });
@@ -122,6 +133,6 @@ describe('OpenPositionsTable Spaltenreihenfolge', () => {
     const labels = Array.from(table.querySelectorAll('tbody tr:first-child > *')).map((cell) =>
       cell.getAttribute('data-label'),
     );
-    expect(labels.slice(0, 3)).toEqual(['Symbol', 'TP1 (3R)', 'Wert / Margin']);
+    expect(labels.slice(0, 4)).toEqual(['Symbol', 'Kurs', 'TP1 (3R)', 'Wert / Margin']);
   });
 });

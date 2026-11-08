@@ -2,6 +2,7 @@ export const COLUMN_ORDER_STORAGE_KEY = 'tip_open_positions_column_order_v2';
 
 export const DEFAULT_COLUMN_ORDER = [
   'symbol',
+  'price',
   'valueMargin',
   'unrealizedProfit',
   'realisedProfit',

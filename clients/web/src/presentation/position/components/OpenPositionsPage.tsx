@@ -10,6 +10,8 @@ import type { OpenPositionsGateway } from '@/domain/position/OpenPositionsGatewa
 import { OpenPositionsHeader } from '@/presentation/position/components/OpenPositionsHeader';
 import { OpenPositionsTable } from '@/presentation/position/components/OpenPositionsTable';
 import { useOpenPositionsViewModel } from '@/presentation/position/hooks/useOpenPositionsViewModel';
+import type { PriceStreamGateway } from '@/domain/price/PriceStream';
+import { useLivePrices } from '@/presentation/position/hooks/useLivePrices';
 import type { InitialStopLossGateway } from '@/domain/position/InitialStopLossGateway';
 import styles from '@/presentation/position/components/OpenPositionsPage.module.css';
 
@@ -24,7 +26,11 @@ type OpenPositionsPageProps = Readonly<{
   initialStopLossGateway?: InitialStopLossGateway;
   /** Ohne Gateway zeigt der Kopf keinen Kontostand. */
   accountSummaryGateway?: AccountSummaryGateway;
+  /** Ohne Gateway zeigt die Tabelle keine Live-Kurse. */
+  priceStreamGateway?: PriceStreamGateway;
 }>;
+
+const NO_PRICE_STREAM: PriceStreamGateway = { subscribe: () => () => undefined };
 
 /** Seite "Offene Positionen": lädt über das injizierte Gateway und pollt. */
 export function OpenPositionsPage({
@@ -34,9 +40,18 @@ export function OpenPositionsPage({
   assetIconsGateway,
   initialStopLossGateway,
   accountSummaryGateway,
+  priceStreamGateway,
 }: OpenPositionsPageProps) {
   const { status, snapshot, errorMessage, isStale, refresh } = useOpenPositionsViewModel(gateway);
   const account = useAccountSummary(accountSummaryGateway);
+  const livePrices = useLivePrices(priceStreamGateway ?? NO_PRICE_STREAM);
+  const priceProps = priceStreamGateway
+    ? {
+        prices: livePrices.prices,
+        pricesStale: livePrices.stale,
+        pricesAnnouncement: livePrices.announcement,
+      }
+    : {};
   const symbols = useMemo(
     () => snapshot?.positions.map((position) => position.symbol) ?? [],
     [snapshot],
@@ -101,6 +116,7 @@ export function OpenPositionsPage({
               onInitialStopLossChanged={refresh}
               selectedPositionId={chartPositionId}
               onSelectPosition={chartGateway && createChartRenderer ? toggleChart : undefined}
+              {...priceProps}
             />
           ) : (
             <p className={styles.message}>Keine offenen Positionen.</p>

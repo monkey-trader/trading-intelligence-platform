@@ -66,13 +66,14 @@ const sortButton = (name: RegExp) => screen.getByRole('button', { name });
 beforeEach(() => window.localStorage.clear());
 
 describe('OpenPositionsTable Spalten (AC2)', () => {
-  it('zeigt Symbol, Wert / Margin, Unreal. PnL, Real. PnL, Einstieg / SL, BE (2R), TP1 (3R)', () => {
+  it('zeigt Symbol, Kurs, Wert / Margin, Unreal. PnL, Real. PnL, Einstieg / SL, BE (2R), TP1 (3R)', () => {
     const table = renderTable([rows[0] as OpenPosition]);
     const keys = within(table)
       .getAllByRole('columnheader')
       .map((header) => header.getAttribute('data-column-key'));
     expect(keys).toEqual([
       'symbol',
+      'price',
       'valueMargin',
       'unrealizedProfit',
       'realisedProfit',
@@ -85,6 +86,7 @@ describe('OpenPositionsTable Spalten (AC2)', () => {
     );
     expect(labels).toEqual([
       'Symbol',
+      'Kurs',
       'Wert / Margin',
       'Unreal. PnL',
       'Real. PnL',
@@ -301,6 +303,7 @@ describe('OpenPositionsTable mobile Sortierung (AC8)', () => {
     expect(labels).toEqual([
       'Reihenfolge der API',
       'Symbol',
+      'Kurs',
       'Wert',
       'Margin',
       'Unreal. PnL',
