@@ -43,7 +43,11 @@ Endpunkt: `POST /mcp`, jede Antwort ist ein einzelnes `application/json`. Der Se
 (keine Sessions, kein SSE): `GET` und `DELETE` antworten mit 405, Notifications mit 202.
 Ohne gültigen `Authorization: Bearer …` antwortet jede Anfrage mit 401 und leerem Body (der Token wird
 in konstanter Zeit verglichen). Anfragen mit `Origin`-Header (Browser) lehnt der Server mit 403 ab,
-`MCP-Protocol-Version` muss `2025-06-18` oder `2025-03-26` sein (sonst 400).
+Die Protokollversion wird bei `initialize` im Body ausgehandelt (unterstützt: `2025-06-18`,
+`2025-03-26`; bei anderen Anfragen antwortet der Server mit `2025-06-18`). Der Header `MCP-Protocol-Version`
+wird erst bei den folgenden Anfragen geprüft und muss dort eine unterstützte Version sein (sonst 400);
+bei `initialize` selbst wird er ignoriert, weil Clients wie Hermes dort schon ihre eigene, neuere Version
+senden.
 
 Beispielaufruf (Platzhalter statt Token):
 
