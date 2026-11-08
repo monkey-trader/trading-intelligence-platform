@@ -364,6 +364,7 @@ describe('useOpenPositionsViewModel', () => {
       const newerSnapshot: OpenPositionsSnapshot = {
         positions: [suiLongPosition],
         totalUnrealizedProfit: '25.0000',
+        swingLongUnrealizedProfit: '0',
         fetchedAt: sampleSnapshot.fetchedAt + 30_000,
       };
       await completeRequest(requests, 2, ok(newerSnapshot));

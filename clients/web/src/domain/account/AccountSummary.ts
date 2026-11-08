@@ -20,7 +20,11 @@ export type AccountSummary = Readonly<{
   monthlyPnlPercent: string | undefined;
   /** Heute, 7T, 30T in dieser Reihenfolge. */
   periods: readonly PeriodPnl[];
+  /** Unrealisierter PnL ohne Swing Long. */
   unrealizedPnl: string;
+  swingLongUnrealizedPnl: string;
+  /** Realisierter Netto-PnL des Monats, der zu Swing Long gehört (nicht in monthlyRealizedPnl). */
+  swingLongRealizedPnl: string;
   /** Unrealisierter PnL in Prozent der Equity; undefined, wenn nicht berechenbar. */
   unrealizedPnlPercent: string | undefined;
 }>;

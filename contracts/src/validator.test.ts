@@ -408,6 +408,7 @@ describe('docs/openapi.yaml', () => {
       stopLoss: null,
       takeProfit: null,
       breakEven: null,
+      swingLong: false,
     };
 
     expect(validator.validateSchema('OpenPosition', position).valid).toBe(true);

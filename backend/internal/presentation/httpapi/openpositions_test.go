@@ -25,7 +25,7 @@ const openPositionsFetchedAt int64 = 1791800000000
 var openPositionSchemaFields = []string{
 	"positionId", "symbol", "side", "isolated", "positionAmount", "avgOpenPrice", "markPrice",
 	"leverage", "initialMargin", "margin", "positionValue", "unrealizedProfit", "realisedProfit",
-	"pnlRatio", "stopLoss", "takeProfit", "breakEven", "openTime", "updateTime",
+	"pnlRatio", "stopLoss", "takeProfit", "breakEven", "openTime", "updateTime", "swingLong",
 }
 
 func ratio(value string) *string { return &value }
@@ -55,13 +55,13 @@ const goldJSON = `{"positionId":"9100000000000000002","symbol":"NCCOGOLD2USD-USD
 	`"positionAmount":"0.25","avgOpenPrice":"4150.00","markPrice":"4175.00","leverage":15,` +
 	`"initialMargin":"69.1667","margin":"65.0000","positionValue":"1043.75","unrealizedProfit":"-6.2500",` +
 	`"realisedProfit":"-0.5187","pnlRatio":"-0.0904",` +
-	`"stopLoss":null,"takeProfit":null,"breakEven":null,"openTime":1791700000000,"updateTime":1791710000000}`
+	`"stopLoss":null,"takeProfit":null,"breakEven":null,"openTime":1791700000000,"updateTime":1791710000000,"swingLong":false}`
 
 const crossJSON = `{"positionId":"9100000000000000001","symbol":"SUI-USDT","side":"LONG","isolated":false,` +
 	`"positionAmount":"500","avgOpenPrice":"0.9600","markPrice":"1.0100","leverage":2.5,` +
 	`"initialMargin":"48.0000","margin":"60.5000","positionValue":"505","unrealizedProfit":"25.0000",` +
 	`"realisedProfit":"-0.2400","pnlRatio":"0.5208",` +
-	`"stopLoss":null,"takeProfit":null,"breakEven":null,"openTime":1791500000000,"updateTime":1791600000000}`
+	`"stopLoss":null,"takeProfit":null,"breakEven":null,"openTime":1791500000000,"updateTime":1791600000000,"swingLong":false}`
 
 func settingsWith(getOpenPositions func(context.Context) (appposition.OpenPositionsOverview, error)) Settings {
 	return Settings{AllowedHosts: testSettings.AllowedHosts, GetOpenPositions: getOpenPositions}
@@ -94,19 +94,19 @@ func TestOpenPositions_Erfolg(t *testing.T) {
 		{
 			name:         "Hülle exakt laut Spec, Reihenfolge wie geliefert, Abstand String und null",
 			getPositions: overviewOf("18.75", goldEntry, crossEntry),
-			expectedBody: `{"positions":[` + goldJSON + `,` + crossJSON + `],"totalUnrealizedProfit":"18.75","fetchedAt":1791800000000}`,
+			expectedBody: `{"positions":[` + goldJSON + `,` + crossJSON + `],"totalUnrealizedProfit":"18.75","swingLongUnrealizedProfit":"","fetchedAt":1791800000000}`,
 		},
 		{
 			name:         "leere Liste als []",
 			getPositions: overviewOf("0", []appposition.OpenPositionEntry{}...),
-			expectedBody: `{"positions":[],"totalUnrealizedProfit":"0","fetchedAt":1791800000000}`,
+			expectedBody: `{"positions":[],"totalUnrealizedProfit":"0","swingLongUnrealizedProfit":"","fetchedAt":1791800000000}`,
 		},
 		{
 			name: "Positions nil ergibt trotzdem []",
 			getPositions: func(context.Context) (appposition.OpenPositionsOverview, error) {
 				return appposition.OpenPositionsOverview{Positions: nil, TotalUnrealizedProfit: "0", FetchedAt: openPositionsFetchedAt}, nil
 			},
-			expectedBody: `{"positions":[],"totalUnrealizedProfit":"0","fetchedAt":1791800000000}`,
+			expectedBody: `{"positions":[],"totalUnrealizedProfit":"0","swingLongUnrealizedProfit":"","fetchedAt":1791800000000}`,
 		},
 	}
 
@@ -138,7 +138,7 @@ func TestOpenPositions_FeldnamenExaktWieSpec(t *testing.T) {
 		t.Fatalf("kein JSON: %q (%v)", body, err)
 	}
 	envelopeKeys := sortedKeys(envelope)
-	if !slices.Equal(envelopeKeys, []string{"fetchedAt", "positions", "totalUnrealizedProfit"}) {
+	if !slices.Equal(envelopeKeys, []string{"fetchedAt", "positions", "swingLongUnrealizedProfit", "totalUnrealizedProfit"}) {
 		t.Errorf("Hüllen-Felder = %v", envelopeKeys)
 	}
 	var entries []map[string]json.RawMessage

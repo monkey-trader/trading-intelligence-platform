@@ -26,6 +26,8 @@ import {
 import type { ColumnKey } from '@/presentation/position/columnOrder';
 import { useColumnOrder } from '@/presentation/position/hooks/useColumnOrder';
 import type { InitialStopLossGateway } from '@/domain/position/InitialStopLossGateway';
+import type { SwingLongGateway } from '@/domain/position/SwingLongGateway';
+import { SwingLongToggle } from '@/presentation/position/components/SwingLongToggle';
 import { InitialStopLossControl } from '@/presentation/position/components/InitialStopLossControl';
 import { BreakEvenTargetInfo } from '@/presentation/position/components/BreakEvenTargetInfo';
 import { useTableSort } from '@/presentation/position/hooks/useTableSort';
@@ -100,6 +102,10 @@ type OpenPositionsTableProps = Readonly<{
   initialStopLossGateway?: InitialStopLossGateway | undefined;
   /** Wird nach erfolgreichem Speichern/Zurücksetzen aufgerufen (Liste neu laden). */
   onInitialStopLossChanged?: (() => void) | undefined;
+  /** Ohne Gateway gibt es keinen Swing-Long-Schalter. */
+  swingLongGateway?: SwingLongGateway | undefined;
+  /** Wird nach erfolgreichem Setzen/Entfernen des Swing-Long-Flags aufgerufen. */
+  onSwingLongChanged?: (() => void) | undefined;
   /** Lädt gerade: Sortieren gesperrt, Platzhalterzeilen statt leerer Tabelle. */
   isLoading?: boolean | undefined;
   /** Live-Kurse je positionId (TASK-16); ohne Eintrag zeigt die Zelle "–". */
@@ -128,6 +134,8 @@ export function OpenPositionsTable({
   iconsBySymbol,
   initialStopLossGateway,
   onInitialStopLossChanged,
+  swingLongGateway,
+  onSwingLongChanged,
   isLoading = false,
   prices,
   pricesStale = false,
@@ -421,6 +429,8 @@ export function OpenPositionsTable({
                 isPriceStale={pricesStale}
                 initialStopLossGateway={initialStopLossGateway}
                 onInitialStopLossChanged={onInitialStopLossChanged}
+                swingLongGateway={swingLongGateway}
+                onSwingLongChanged={onSwingLongChanged}
               />
             ))}
           </tbody>
@@ -445,11 +455,15 @@ function OpenPositionRow({
   assetIcon,
   initialStopLossGateway,
   onInitialStopLossChanged,
+  swingLongGateway,
+  onSwingLongChanged,
   livePrice,
   isPriceStale,
 }: Readonly<{
   livePrice?: PositionPrice | undefined;
   isPriceStale: boolean;
+  swingLongGateway?: SwingLongGateway | undefined;
+  onSwingLongChanged?: (() => void) | undefined;
   initialStopLossGateway?: InitialStopLossGateway | undefined;
   onInitialStopLossChanged?: (() => void) | undefined;
   assetIcon?: AssetIcon | undefined;
@@ -520,6 +534,13 @@ function OpenPositionRow({
               <span className={`${styles.chip} ${styles.chipAction}`}>BE ziehen</span>
             )}
           </div>
+          {swingLongGateway && (
+            <SwingLongToggle
+              position={position}
+              gateway={swingLongGateway}
+              onChanged={onSwingLongChanged}
+            />
+          )}
         </div>
       </th>
     ),

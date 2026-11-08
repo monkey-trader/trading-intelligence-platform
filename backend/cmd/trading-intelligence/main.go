@@ -114,6 +114,16 @@ func run(logger *slog.Logger) error {
 			return &domainposition.OpenPositionsUnavailableError{Reason: domainposition.ReasonNotConfigured}
 		}
 	}
+	if database != nil {
+		swingFlags := sqlite.NewSwingLongRepository(database)
+		settings.SetSwingLong = appposition.NewSetSwingLongUseCase(swingFlags, time.Now().UnixMilli).Execute
+		settings.ClearSwingLong = appposition.NewUnsetSwingLongUseCase(swingFlags).Execute
+	} else {
+		// Ohne Datenbank bleiben die Routen registriert (Anfrageprüfung greift) und liefern 503 not-configured.
+		notConfigured := &domainposition.OpenPositionsUnavailableError{Reason: domainposition.ReasonNotConfigured}
+		settings.SetSwingLong = func(context.Context, string) error { return notConfigured }
+		settings.ClearSwingLong = func(context.Context, string) error { return notConfigured }
+	}
 	var candleSource chartinterfaces.CandleSource
 	if chartClient != nil {
 		candleSource = infrachart.NewBingXCandleSource(chartClient)
@@ -134,14 +144,15 @@ func run(logger *slog.Logger) error {
 	settings.GetOpenPositions = getOpenPositions.Execute
 	settings.GetPositionChart = getPositionChart
 	settings.GetAssetIcons = getAssetIcons.Execute
-	getAccountSummary, err := newGetAccountSummary(chartClient, database)
+	getAccountSummary, err := newGetAccountSummary(chartClient, database, openPositionSource)
 	if err != nil {
 		return err
 	}
 	settings.GetAccountSummary = getAccountSummary
 	if database != nil {
 		getClosedPositions := appposition.NewGetClosedPositionsUseCase(
-			sqlite.NewPositionRepository(database, time.Now), sqlite.NewPositionRiskRepository(database))
+			sqlite.NewPositionRepository(database, time.Now), sqlite.NewPositionRiskRepository(database)).
+			WithSwingLong(sqlite.NewSwingLongRepository(database))
 		settings.GetClosedPositions = getClosedPositions.Execute
 		settings.GetPositionNote = appjournal.NewGetPositionNoteUseCase(sqlite.NewNoteRepository(database)).Execute
 	} else {
@@ -451,6 +462,7 @@ func newGetOpenPositions(source interfaces.OpenPositionSource, orderSource chart
 	if candleSource != nil {
 		useCase.WithCandleSource(candleSource)
 	}
+	useCase.WithSwingLong(sqlite.NewSwingLongRepository(database))
 	return useCase
 }
 
@@ -483,7 +495,7 @@ const accountBalanceTTL = openPositionsTTL
 
 // newGetAccountSummary verdrahtet GET /account/summary. Ohne Client (keine Keys oder keine DB)
 // antwortet die Funktion immer not-configured (503).
-func newGetAccountSummary(client *bingx.Client, database *sql.DB) (func(context.Context) (appaccount.AccountSummary, error), error) {
+func newGetAccountSummary(client *bingx.Client, database *sql.DB, openSource interfaces.OpenPositionSource) (func(context.Context) (appaccount.AccountSummary, error), error) {
 	if client == nil {
 		return func(context.Context) (appaccount.AccountSummary, error) {
 			return appaccount.AccountSummary{}, &domainposition.OpenPositionsUnavailableError{Reason: domainposition.ReasonNotConfigured}
@@ -496,6 +508,7 @@ func newGetAccountSummary(client *bingx.Client, database *sql.DB) (func(context.
 	source := infraaccount.NewBingXBalanceSource(client)
 	useCase := appaccount.NewGetAccountSummaryUseCase(
 		infraaccount.NewCachingBalanceSource(source, time.Now, accountBalanceTTL),
-		sqlite.NewIncomeRepository(database, time.Now), func() int64 { return time.Now().UnixMilli() }, location)
+		sqlite.NewIncomeRepository(database, time.Now), func() int64 { return time.Now().UnixMilli() }, location).
+		WithSwingLong(sqlite.NewSwingLongSpanSource(database, openSource))
 	return useCase.Execute, nil
 }

@@ -41,6 +41,9 @@ type Settings struct {
 	// Beide sind nötig, sonst (und bei AllowRemote) ist die Route nicht registriert.
 	SetInitialStopLoss   func(ctx context.Context, positionID, rawStopLoss string) (appposition.SetInitialStopLossResult, error)
 	ClearInitialStopLoss func(ctx context.Context, positionID string) error
+	// SetSwingLong und ClearSwingLong bedienen PUT/DELETE /positions/{positionId}/swing-long (beide nötig, nicht bei AllowRemote).
+	SetSwingLong   func(ctx context.Context, positionID string) error
+	ClearSwingLong func(ctx context.Context, positionID string) error
 	// AllowRemote: true = schreibende Routen werden nie registriert.
 	AllowRemote bool
 }
@@ -86,15 +89,19 @@ func newHandlerWithRoutes(settings Settings, logger *slog.Logger, extraRoutes ma
 	if settings.SetInitialStopLoss != nil && settings.ClearInitialStopLoss != nil && !settings.AllowRemote {
 		stopRoute = newInitialStopLossHandler(settings.SetInitialStopLoss, settings.ClearInitialStopLoss, settings.AllowedHosts, logger)
 	}
+	var swingRoute http.HandlerFunc
+	if settings.SetSwingLong != nil && settings.ClearSwingLong != nil && !settings.AllowRemote {
+		swingRoute = newSwingLongHandler(settings.SetSwingLong, settings.ClearSwingLong, settings.AllowedHosts, logger)
+	}
 	allowedHosts := append([]string(nil), settings.AllowedHosts...)
 
-	return withRecover(logger, withHostGuard(allowedHosts, withMalformedTarget(newRouter(routes, chartRoute, noteRoute, stopRoute, settings.WebUI))))
+	return withRecover(logger, withHostGuard(allowedHosts, withMalformedTarget(newRouter(routes, chartRoute, noteRoute, stopRoute, swingRoute, settings.WebUI))))
 }
 
 // newRouter sucht die Route exakt über "METHOD /pfad". Alles andere ergibt 404 not-found;
 // der Request-Body wird dabei nie gelesen.
 // chartRoute (optional) bedient GET /positions/{positionId}/chart per Pfad-Matching.
-func newRouter(routes map[string]http.HandlerFunc, chartRoute, noteRoute, stopRoute http.HandlerFunc, webUI http.Handler) http.Handler {
+func newRouter(routes map[string]http.HandlerFunc, chartRoute, noteRoute, stopRoute, swingRoute http.HandlerFunc, webUI http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		route, found := routes[r.Method+" "+r.URL.Path]
 		if _, isChartPath := chartPathSegment(r.URL.Path); !found && chartRoute != nil && r.Method == http.MethodGet && isChartPath {
@@ -106,6 +113,10 @@ func newRouter(routes map[string]http.HandlerFunc, chartRoute, noteRoute, stopRo
 		if _, isStopPath := stopLossPathSegment(r.URL.Path); !found && stopRoute != nil && isStopPath &&
 			(r.Method == http.MethodPut || r.Method == http.MethodDelete) {
 			route, found = stopRoute, true
+		}
+		if _, isSwingPath := swingLongPathSegment(r.URL.Path); !found && swingRoute != nil && isSwingPath &&
+			(r.Method == http.MethodPut || r.Method == http.MethodDelete) {
+			route, found = swingRoute, true
 		}
 		if !found {
 			if webUI != nil && wantsWebUI(r) {

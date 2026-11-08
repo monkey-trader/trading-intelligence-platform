@@ -9,6 +9,7 @@ type ProblemBody = components['schemas']['Problem'];
 const snapshotBody: SnapshotBody = {
   positions: [
     {
+      swingLong: false,
       positionId: '9100000000000000002',
       symbol: 'NCCOGOLD2USD-USDT',
       side: 'SHORT',
@@ -30,6 +31,7 @@ const snapshotBody: SnapshotBody = {
       updateTime: 1791710000000,
     },
     {
+      swingLong: false,
       positionId: '9100000000000000001',
       symbol: 'SUI-USDT',
       side: 'LONG',
@@ -52,6 +54,7 @@ const snapshotBody: SnapshotBody = {
     },
   ],
   totalUnrealizedProfit: '18.75',
+  swingLongUnrealizedProfit: '0',
   fetchedAt: 1792154096000,
 };
 
@@ -176,6 +179,7 @@ describe('createHttpOpenPositionsGateway', () => {
       const emptyBody: SnapshotBody = {
         positions: [],
         totalUnrealizedProfit: '0',
+        swingLongUnrealizedProfit: '0',
         fetchedAt: 1792154096000,
       };
       const gateway = createHttpOpenPositionsGateway(fakeFetchReturning(jsonResponse(emptyBody)));

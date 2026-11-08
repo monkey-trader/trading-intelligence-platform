@@ -116,8 +116,13 @@ function parseProblemType(body: unknown): BackendProblemType | undefined {
 
 function parseSnapshotDto(body: unknown): OpenPositionsSnapshotDto | undefined {
   if (!isRecord(body)) return undefined;
-  const { positions, totalUnrealizedProfit, fetchedAt } = body;
-  if (!Array.isArray(positions) || !isDecimal(totalUnrealizedProfit) || !isFiniteNumber(fetchedAt))
+  const { positions, totalUnrealizedProfit, swingLongUnrealizedProfit, fetchedAt } = body;
+  if (
+    !Array.isArray(positions) ||
+    !isDecimal(totalUnrealizedProfit) ||
+    !isDecimal(swingLongUnrealizedProfit) ||
+    !isFiniteNumber(fetchedAt)
+  )
     return undefined;
   const positionDtos: OpenPositionDto[] = [];
   for (const candidate of positions) {
@@ -125,7 +130,7 @@ function parseSnapshotDto(body: unknown): OpenPositionsSnapshotDto | undefined {
     if (!positionDto) return undefined;
     positionDtos.push(positionDto);
   }
-  return { positions: positionDtos, totalUnrealizedProfit, fetchedAt };
+  return { positions: positionDtos, totalUnrealizedProfit, swingLongUnrealizedProfit, fetchedAt };
 }
 
 function parseOpenPositionDto(candidate: unknown): OpenPositionDto | undefined {
@@ -153,7 +158,9 @@ function parseOpenPositionDto(candidate: unknown): OpenPositionDto | undefined {
   } = candidate;
   const { initialStopLoss, riskDistance, currentRMultiple, breakEvenTriggerReached, reached2RAt } =
     candidate;
+  const swingLong = candidate['swingLong'];
   const matchesContract =
+    typeof swingLong === 'boolean' &&
     typeof positionId === 'string' &&
     positionId !== '' &&
     typeof symbol === 'string' &&
@@ -177,6 +184,7 @@ function parseOpenPositionDto(candidate: unknown): OpenPositionDto | undefined {
   if (!matchesContract) return undefined;
 
   return {
+    swingLong,
     positionId,
     symbol,
     side,
@@ -239,12 +247,14 @@ function toSnapshot(snapshotDto: OpenPositionsSnapshotDto): OpenPositionsSnapsho
   return {
     positions: snapshotDto.positions.map(toOpenPosition),
     totalUnrealizedProfit: snapshotDto.totalUnrealizedProfit,
+    swingLongUnrealizedProfit: snapshotDto.swingLongUnrealizedProfit,
     fetchedAt: snapshotDto.fetchedAt,
   };
 }
 
 function toOpenPosition(positionDto: OpenPositionDto): OpenPosition {
   return {
+    swingLong: positionDto.swingLong,
     positionId: positionDto.positionId,
     symbol: positionDto.symbol,
     side: positionDto.side,

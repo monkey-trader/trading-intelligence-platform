@@ -7,7 +7,11 @@ import styles from '@/presentation/position/components/OpenPositionsHeader.modul
 
 type OpenPositionsHeaderProps = Readonly<{
   totalUnrealizedProfit: string;
+  /** Unrealisierter PnL der Swing-Long-Positionen, getrennt von der Handels-Summe. */
+  swingLongUnrealizedProfit?: string | undefined;
   positionCount: number;
+  /** Ansicht des aktiven Reiters; im Swing-Long-Reiter ist der Swing-Long-PnL der Hauptwert. */
+  view?: 'trades' | 'swing-long' | undefined;
   fetchedAt: number;
   onRefresh: () => void;
   /** Kontostand und Monats-%; ohne Angabe (Kontostand nicht verfügbar) bleibt der Bereich weg. */
@@ -26,12 +30,16 @@ const PERIOD_LABELS: Readonly<Record<PeriodKey, string>> = {
 /** Kopf mit PnL-Summe, Kontostand, Monats-%, Anzahl Positionen, Zeitpunkt der Daten und Aktualisieren-Knopf. */
 export function OpenPositionsHeader({
   totalUnrealizedProfit,
+  swingLongUnrealizedProfit,
   positionCount,
+  view = 'trades',
   fetchedAt,
   onRefresh,
   account,
 }: OpenPositionsHeaderProps) {
-  const formattedTotal = formatDecimal(totalUnrealizedProfit, {
+  const isSwingView = view === 'swing-long' && swingLongUnrealizedProfit !== undefined;
+  const mainTotal = isSwingView ? swingLongUnrealizedProfit : totalUnrealizedProfit;
+  const formattedTotal = formatDecimal(mainTotal, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
     signDisplay: 'exceptZero',
@@ -43,10 +51,12 @@ export function OpenPositionsHeader({
   return (
     <section className={styles.header} aria-label="Zusammenfassung">
       <div className={styles.summary}>
-        <span className={styles.label}>Unrealisierter PnL</span>
-        <span className={`${styles.total} ${styles[pnlTone(totalUnrealizedProfit, 2)]}`}>
+        <span className={styles.label}>
+          {isSwingView ? 'Unrealisierter PnL Swing Long' : 'Unrealisierter PnL'}
+        </span>
+        <span className={`${styles.total} ${styles[pnlTone(mainTotal, 2)]}`}>
           {formattedTotal}
-          {account?.unrealizedPnlPercent !== undefined && (
+          {!isSwingView && account?.unrealizedPnlPercent !== undefined && (
             <span className={styles.percent}>
               {` (${formatDecimal(account.unrealizedPnlPercent, SIGNED_MONEY_FORMAT)} %)`}
             </span>
@@ -91,6 +101,31 @@ export function OpenPositionsHeader({
             )}
           </div>
         </dl>
+      )}
+      {swingLongUnrealizedProfit !== undefined && (
+        <div role="group" aria-label="Swing Long" className={styles.swingLong}>
+          <span className={styles.swingLongTitle}>Swing Long</span>
+          {!isSwingView && (
+            <div className={styles.accountItem}>
+              <span className={styles.label}>Unrealisiert</span>
+              <span
+                className={`${styles.accountValue} ${styles[pnlTone(swingLongUnrealizedProfit, 2)]}`}
+              >
+                {formatDecimal(swingLongUnrealizedProfit, SIGNED_MONEY_FORMAT)}
+              </span>
+            </div>
+          )}
+          {account && (
+            <div className={styles.accountItem}>
+              <span className={styles.label}>Realisiert (Monat)</span>
+              <span
+                className={`${styles.accountValue} ${styles[pnlTone(account.swingLongRealizedPnl, 2)]}`}
+              >
+                {formatDecimal(account.swingLongRealizedPnl, SIGNED_MONEY_FORMAT)}
+              </span>
+            </div>
+          )}
+        </div>
       )}
       <button type="button" className={styles.refreshButton} onClick={onRefresh}>
         Aktualisieren

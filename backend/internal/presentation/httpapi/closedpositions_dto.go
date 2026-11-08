@@ -20,6 +20,7 @@ type closedPositionDto struct {
 	RResult        *string `json:"rResult"`
 	BreakEvenPrice *string `json:"breakEvenPrice"`
 	TP1Price       *string `json:"tp1Price"`
+	SwingLong      bool    `json:"swingLong"`
 }
 
 type closedPositionsDto struct {
@@ -36,7 +37,7 @@ func toClosedPositionsDto(views []appposition.ClosedPositionView) closedPosition
 			PositionAmount: view.PositionAmount, Leverage: view.Leverage,
 			RealisedProfit: view.RealisedProfit, NetProfit: view.NetProfit,
 			Commission: view.Commission, TotalFunding: view.TotalFunding,
-			RResult: view.RResult, BreakEvenPrice: view.BreakEvenPrice, TP1Price: view.TP1Price,
+			RResult: view.RResult, BreakEvenPrice: view.BreakEvenPrice, TP1Price: view.TP1Price, SwingLong: view.SwingLong,
 		})
 	}
 	return closedPositionsDto{Positions: positions}

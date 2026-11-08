@@ -372,6 +372,60 @@ paths:
                 $ref: '#/components/schemas/PriceSnapshot'
         '403':
           $ref: '#/components/responses/Problem'
+  /positions/{positionId}/swing-long:
+    put:
+      operationId: setSwingLong
+      summary: Position als Swing Long markieren
+      description: >-
+        Setzt das Swing-Long-Flag (leerer Body). Idempotent. Das Flag bleibt nach dem Schließen
+        erhalten. Positionen mit Flag fließen nicht in die Handels-Summen ein (siehe `docs/domain.md`).
+        Nur auf Loopback registriert. Schreibt nur in die eigene Datenbank, nie zu BingX.
+      tags:
+        - Positionen
+      parameters:
+        - name: positionId
+          in: path
+          required: true
+          description: BingX-Positions-ID (19-stellig, immer String).
+          schema:
+            type: string
+            pattern: '^\d{1,20}$'
+      responses:
+        '204':
+          description: Das Flag ist gesetzt (oder war schon gesetzt).
+        '400':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: clearSwingLong
+      summary: Swing-Long-Flag entfernen
+      description: Immer 204 (idempotent), auch ohne vorhandenes Flag.
+      tags:
+        - Positionen
+      parameters:
+        - name: positionId
+          in: path
+          required: true
+          description: BingX-Positions-ID (19-stellig, immer String).
+          schema:
+            type: string
+            pattern: '^\d{1,20}$'
+      responses:
+        '204':
+          description: Das Flag ist entfernt (oder war nicht vorhanden).
+        '400':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+        '503':
+          $ref: '#/components/responses/Problem'
   /assets/icons:
     get:
       operationId: getAssetIcons
@@ -534,7 +588,7 @@ components:
           description: Zeitpunkt der Eingabe in Epoch-Millisekunden.
     AccountSummary:
       type: object
-      required: [balance, equity, availableMargin, month, monthlyRealizedPnl, monthlyPnlPercent, periods, unrealizedPnl, unrealizedPnlPercent]
+      required: [balance, equity, availableMargin, month, monthlyRealizedPnl, monthlyPnlPercent, periods, unrealizedPnl, unrealizedPnlPercent, swingLongUnrealizedPnl, swingLongRealizedPnl]
       properties:
         balance:
           $ref: '#/components/schemas/Decimal'
@@ -558,10 +612,19 @@ components:
           type: array
           description: >-
             Netto-PnL (REALIZED_PNL + TRADING_FEE + FUNDING_FEE) für Heute, 7T und 30T in dieser Reihenfolge.
-            `today` beginnt um 00:00 Europe/Zurich, `7d`/`30d` sind gleitende Fenster bis jetzt.
+            `today` beginnt um 00:00 Europe/Zurich, `7d`/`30d` sind gleitende Fenster bis jetzt. Ohne Swing Long (Näherung, siehe `docs/domain.md`).
           items:
             $ref: '#/components/schemas/PeriodPnl'
         unrealizedPnl:
+          description: Unrealisierter PnL des Kontos **ohne** Swing Long.
+          $ref: '#/components/schemas/Decimal'
+        swingLongUnrealizedPnl:
+          description: Unrealisierter PnL der offenen Swing-Long-Positionen.
+          $ref: '#/components/schemas/Decimal'
+        swingLongRealizedPnl:
+          description: >-
+            Realisierter Netto-PnL des Monats, der laut Näherung (Symbol + Zeitraum, `docs/domain.md`)
+            zu Swing Long gehört. `monthlyRealizedPnl` und `periods` enthalten ihn nicht.
           $ref: '#/components/schemas/Decimal'
         unrealizedPnlPercent:
           description: Unrealisierter PnL des Kontos in Prozent der `equity`; `null` bei Equity <= 0 oder unbekanntem Wert.
@@ -590,6 +653,7 @@ components:
       required:
         - positions
         - totalUnrealizedProfit
+        - swingLongUnrealizedProfit
         - fetchedAt
       properties:
         positions:
@@ -598,7 +662,10 @@ components:
             $ref: '#/components/schemas/OpenPosition'
         totalUnrealizedProfit:
           $ref: '#/components/schemas/Decimal'
-          description: Summe des unrealisierten PnL aller offenen Positionen (exakt, "0" wenn keine).
+          description: Summe des unrealisierten PnL aller offenen Positionen **ohne** Swing Long (exakt, "0" wenn keine).
+        swingLongUnrealizedProfit:
+          $ref: '#/components/schemas/Decimal'
+          description: Summe des unrealisierten PnL der offenen Swing-Long-Positionen ("0" wenn keine).
         fetchedAt:
           type: integer
           description: Zeitpunkt der Abfrage bei BingX in Epoch-Millisekunden.
@@ -653,6 +720,7 @@ components:
       type: object
       additionalProperties: false
       required:
+        - swingLong
         - positionId
         - symbol
         - side
@@ -670,6 +738,9 @@ components:
         - breakEvenPrice
         - tp1Price
       properties:
+        swingLong:
+          type: boolean
+          description: Manuelles Swing-Long-Flag (siehe `docs/domain.md`).
         positionId:
           type: string
           description: BingX-Positions-ID (19-stellig, immer String).
@@ -777,6 +848,7 @@ components:
       type: object
       additionalProperties: false
       required:
+        - swingLong
         - positionId
         - symbol
         - side
@@ -797,6 +869,9 @@ components:
         - takeProfit
         - breakEven
       properties:
+        swingLong:
+          type: boolean
+          description: Manuelles Swing-Long-Flag (siehe `docs/domain.md`).
         positionId:
           type: string
           description: BingX-Positions-ID (19-stellig, immer String).
