@@ -285,3 +285,91 @@ func TestHTTPAlleWerkzeugeSindNurLesend(t *testing.T) {
 		}
 	}
 }
+
+const initializeNewer = `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"hermes","version":"1"}}}`
+
+// Regression (Hermes, mcp-SDK 1.26): Der Client setzt MCP-Protocol-Version = 2025-11-25 schon auf den
+// initialize-Request. Die Version wird dort im Body ausgehandelt, der Header gilt erst danach.
+func TestHTTPInitializeMitNeuererVersionImHeaderWirdAusgehandeltStatt400(t *testing.T) {
+	handler := newHTTPHandler(t, "http://127.0.0.1:1")
+	headers := bearer()
+	headers["MCP-Protocol-Version"] = "2025-11-25"
+	got := post(t, handler, initializeNewer, headers)
+	if got.status != http.StatusOK || !strings.Contains(got.body, `"protocolVersion":"2025-06-18"`) {
+		t.Fatalf("status=%d body=%s", got.status, got.body)
+	}
+}
+
+func TestHTTPInitializeMitUnsinnigemVersionHeaderIstKein400(t *testing.T) {
+	handler := newHTTPHandler(t, "http://127.0.0.1:1")
+	headers := bearer()
+	headers["MCP-Protocol-Version"] = "kein-datum"
+	if got := post(t, handler, initializeNewer, headers); got.status != http.StatusOK {
+		t.Fatalf("status = %d", got.status)
+	}
+}
+
+// Ablauf des Hermes-Clients: initialize (Header neuer als wir), danach mit ausgehandelter Version.
+func TestHTTPHermesAblaufInitializeInitializedToolsList(t *testing.T) {
+	handler := newHTTPHandler(t, "http://127.0.0.1:1")
+	first := bearer()
+	first["MCP-Protocol-Version"] = "2025-11-25"
+	if got := post(t, handler, initializeNewer, first); got.status != http.StatusOK {
+		t.Fatalf("initialize: status = %d", got.status)
+	}
+	next := bearer()
+	next["MCP-Protocol-Version"] = "2025-06-18"
+	if got := post(t, handler, `{"jsonrpc":"2.0","method":"notifications/initialized"}`, next); got.status != http.StatusAccepted {
+		t.Fatalf("initialized: status = %d", got.status)
+	}
+	got := post(t, handler, `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`, next)
+	if got.status != http.StatusOK || !strings.Contains(got.body, "get_open_positions") {
+		t.Fatalf("tools/list: status=%d body=%s", got.status, got.body)
+	}
+}
+
+// Nach initialize bleibt eine nicht unterstützte Version ein 400 (Spezifikation: MUST).
+func TestHTTPNachInitializeIstUnbekannteVersionWeiterhin400(t *testing.T) {
+	handler := newHTTPHandler(t, "http://127.0.0.1:1")
+	headers := bearer()
+	headers["MCP-Protocol-Version"] = "2025-11-25"
+	for _, body := range []string{
+		`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`,
+		`{"jsonrpc":"2.0","method":"notifications/initialized"}`,
+	} {
+		if got := post(t, handler, body, headers); got.status != http.StatusBadRequest {
+			t.Errorf("%s: status = %d", body, got.status)
+		}
+	}
+}
+
+// Die Ausnahme für initialize schwächt Token- und Origin-Prüfung nicht.
+func TestHTTPInitializeAusnahmeUmgehtWederTokenNochOrigin(t *testing.T) {
+	handler := newHTTPHandler(t, "http://127.0.0.1:1")
+	if got := post(t, handler, initializeNewer, map[string]string{"MCP-Protocol-Version": "2025-11-25"}); got.status != http.StatusUnauthorized {
+		t.Errorf("ohne Token: status = %d", got.status)
+	}
+	headers := bearer()
+	headers["Origin"] = "https://boese.example"
+	if got := post(t, handler, initializeNewer, headers); got.status != http.StatusForbidden {
+		t.Errorf("mit Origin: status = %d", got.status)
+	}
+}
+
+// Aushandlung (Lifecycle): Unterstützte Version wird zurückgegeben, sonst die neueste eigene.
+func TestHTTPInitializeHandeltVersionAus(t *testing.T) {
+	handler := newHTTPHandler(t, "http://127.0.0.1:1")
+	cases := map[string]string{
+		"2025-06-18": "2025-06-18",
+		"2025-03-26": "2025-03-26",
+		"2024-11-05": "2025-06-18",
+		"2025-11-25": "2025-06-18",
+	}
+	for requested, want := range cases {
+		body := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"` + requested + `"}}`
+		got := post(t, handler, body, bearer())
+		if !strings.Contains(got.body, `"protocolVersion":"`+want+`"`) {
+			t.Errorf("angefragt %s: %s", requested, got.body)
+		}
+	}
+}

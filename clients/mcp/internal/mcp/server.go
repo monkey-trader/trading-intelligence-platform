@@ -15,7 +15,19 @@ import (
 	"github.com/monkey-trader/trading-intelligence-platform/clients/mcp/internal/tools"
 )
 
+// protocolVersion ist die neueste unterstützte Version; supportedProtocolVersions alle angebotenen.
 const protocolVersion = "2025-06-18"
+
+var supportedProtocolVersions = map[string]bool{protocolVersion: true, "2025-03-26": true}
+
+// negotiateVersion folgt dem Lifecycle der Spezifikation: Unterstützt der Server die angefragte Version,
+// antwortet er mit genau dieser, sonst mit seiner neuesten.
+func negotiateVersion(requested string) string {
+	if supportedProtocolVersions[requested] {
+		return requested
+	}
+	return protocolVersion
+}
 
 const (
 	codeParseError     = -32700
@@ -135,7 +147,7 @@ func (s *Server) handle(ctx context.Context, line []byte) *response {
 			return fail(req.ID, codeInvalidParams, "Ungültige Parameter")
 		}
 		return ok(req.ID, map[string]any{
-			"protocolVersion": protocolVersion,
+			"protocolVersion": negotiateVersion(params.ProtocolVersion),
 			"capabilities":    map[string]any{"tools": map[string]any{}},
 			"serverInfo":      map[string]any{"name": s.name, "version": s.version},
 		})

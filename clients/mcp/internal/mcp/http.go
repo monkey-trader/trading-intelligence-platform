@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -14,9 +15,6 @@ import (
 const HTTPPath = "/mcp"
 
 const maxBodyBytes = 1 << 20
-
-// Ohne Header gilt laut Spezifikation 2025-03-26.
-var supportedVersions = map[string]bool{protocolVersion: true, "2025-03-26": true}
 
 // HTTPHandler bietet den Server per Streamable HTTP an: zustandslos (keine Sessions), jede Antwort
 // ein einzelnes application/json, kein SSE-Stream.
@@ -55,13 +53,16 @@ func (h *HTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	if version := r.Header.Get("MCP-Protocol-Version"); version != "" && !supportedVersions[version] {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxBodyBytes))
 	if err != nil || len(bytes.TrimSpace(body)) == 0 || bytes.HasPrefix(bytes.TrimSpace(body), []byte("[")) {
 		// Batches gibt es seit 2025-06-18 nicht mehr.
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	// Der Header gilt laut Spezifikation für alle Anfragen nach der Aushandlung. Bei initialize steht die
+	// Version im Body, und Clients (z.B. Hermes mit dem mcp-SDK) senden dort schon ihre eigene, neuere
+	// Version im Header. Danach gilt: nicht unterstützte Version = 400.
+	if version := r.Header.Get("MCP-Protocol-Version"); version != "" && !supportedProtocolVersions[version] && !isInitialize(body) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -86,4 +87,12 @@ func (h *HTTPHandler) authorized(r *http.Request) bool {
 	}
 	got := sha256.Sum256([]byte(token))
 	return subtle.ConstantTimeCompare(got[:], h.tokenHash[:]) == 1
+}
+
+// isInitialize erkennt die initialize-Anfrage, ohne den Body weiter auszuwerten.
+func isInitialize(body []byte) bool {
+	var message struct {
+		Method string `json:"method"`
+	}
+	return json.Unmarshal(body, &message) == nil && message.Method == "initialize"
 }
