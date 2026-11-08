@@ -23,6 +23,7 @@ async function fetchWith(levels: unknown) {
   const body = {
     positions: [levels === undefined ? base : { ...base, levels }],
     totalUnrealizedProfit: '25',
+    swingLongUnrealizedProfit: '0',
     fetchedAt: 1792154096000,
   };
   const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(

@@ -86,7 +86,7 @@ func backups(t *testing.T, path string) []string {
 	return matches
 }
 
-func TestOpenWithClock_HebtTSDatenbankOhneDatenverlustAufVersion1(t *testing.T) {
+func TestOpenWithClock_HebtTSDatenbankOhneDatenverlustAufAktuelleVersion(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "journal.db")
 	createLegacyDB(t, path)
 
@@ -96,8 +96,8 @@ func TestOpenWithClock_HebtTSDatenbankOhneDatenverlustAufVersion1(t *testing.T) 
 	}
 	defer func() { _ = db.Close() }()
 
-	if got := schemaVersion(t, db); got != 1 {
-		t.Errorf("Version = %d, erwartet 1", got)
+	if got := schemaVersion(t, db); got != CurrentSchemaVersion {
+		t.Errorf("Version = %d, erwartet %d", got, CurrentSchemaVersion)
 	}
 	for table, want := range map[string]int{"positions": 1, "income": 1, "notes": 1, "import_state": 1, "balance": 1} {
 		if got := count(t, db, table); got != want {
@@ -119,7 +119,7 @@ func TestOpenWithClock_IstIdempotentUndSichertNurEinmal(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Lauf %d: %v", run, err)
 		}
-		if got := schemaVersion(t, db); got != 1 {
+		if got := schemaVersion(t, db); got != CurrentSchemaVersion {
 			t.Errorf("Lauf %d: Version = %d", run, got)
 		}
 		if got := count(t, db, "schema_version"); got != 1 {
@@ -208,8 +208,8 @@ func TestOpenWithClock_Sicherung(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer func() { _ = db.Close() }()
-		if got := schemaVersion(t, db); got != 1 {
-			t.Errorf("Version = %d", got)
+		if got := schemaVersion(t, db); got != CurrentSchemaVersion {
+			t.Errorf("Version = %d, erwartet %d", got, CurrentSchemaVersion)
 		}
 		if got := backups(t, path); len(got) != 0 {
 			t.Errorf("Sicherungen = %v, erwartet keine", got)

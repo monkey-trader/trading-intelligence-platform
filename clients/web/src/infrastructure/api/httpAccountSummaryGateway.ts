@@ -46,6 +46,8 @@ function toSummary(dto: AccountSummaryDto): AccountSummary {
     monthlyPnlPercent: dto.monthlyPnlPercent ?? undefined,
     periods: dto.periods.map(toPeriodPnl),
     unrealizedPnl: dto.unrealizedPnl,
+    swingLongUnrealizedPnl: dto.swingLongUnrealizedPnl,
+    swingLongRealizedPnl: dto.swingLongRealizedPnl,
     unrealizedPnlPercent: dto.unrealizedPnlPercent ?? undefined,
   };
 }
@@ -84,6 +86,8 @@ function parseDto(body: unknown): AccountSummaryDto | undefined {
     periods,
     unrealizedPnl,
     unrealizedPnlPercent,
+    swingLongUnrealizedPnl,
+    swingLongRealizedPnl,
   } = body as Record<string, unknown>;
   const periodDtos = parsePeriodDtos(periods);
   if (
@@ -96,6 +100,8 @@ function parseDto(body: unknown): AccountSummaryDto | undefined {
     !(monthlyPnlPercent === null || isDecimal(monthlyPnlPercent)) ||
     !periodDtos ||
     !isDecimal(unrealizedPnl) ||
+    !isDecimal(swingLongUnrealizedPnl) ||
+    !isDecimal(swingLongRealizedPnl) ||
     !(unrealizedPnlPercent === null || isDecimal(unrealizedPnlPercent))
   )
     return undefined;
@@ -108,6 +114,8 @@ function parseDto(body: unknown): AccountSummaryDto | undefined {
     monthlyPnlPercent,
     periods: periodDtos,
     unrealizedPnl,
+    swingLongUnrealizedPnl,
+    swingLongRealizedPnl,
     unrealizedPnlPercent,
   };
 }

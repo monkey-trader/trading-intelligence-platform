@@ -15,6 +15,8 @@ const BODY = {
   ],
   unrealizedPnl: '125.08',
   unrealizedPnlPercent: '5.79',
+  swingLongUnrealizedPnl: '40.5',
+  swingLongRealizedPnl: '-12.25',
 };
 
 function jsonResponse(body: unknown, status = 200): Response {

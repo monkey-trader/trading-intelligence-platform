@@ -13,4 +13,6 @@ export const OPERATION_TEST_NAMES = {
   getAssetIcons: 'GET /assets/icons (getAssetIcons)',
   setInitialStopLoss: 'PUT /positions/{positionId}/initial-stop-loss (setInitialStopLoss)',
   clearInitialStopLoss: 'DELETE /positions/{positionId}/initial-stop-loss (clearInitialStopLoss)',
+  setSwingLong: 'PUT /positions/{positionId}/swing-long (setSwingLong)',
+  clearSwingLong: 'DELETE /positions/{positionId}/swing-long (clearSwingLong)',
 } as const satisfies Readonly<Record<string, string>>;

@@ -14,17 +14,25 @@ type ClosedPositionView struct {
 	RResult        *string
 	BreakEvenPrice *string
 	TP1Price       *string
+	SwingLong      bool
 }
 
 // GetClosedPositionsUseCase liest nur; es speichert nie ein Risiko.
 type GetClosedPositionsUseCase struct {
 	lister interfaces.ClosedPositionLister
 	risks  interfaces.PositionRiskRepository
+	swing  interfaces.SwingLongRepository // optional
 }
 
 // NewGetClosedPositionsUseCase erzeugt den Use Case.
 func NewGetClosedPositionsUseCase(lister interfaces.ClosedPositionLister, risks interfaces.PositionRiskRepository) *GetClosedPositionsUseCase {
 	return &GetClosedPositionsUseCase{lister: lister, risks: risks}
+}
+
+// WithSwingLong liest das Swing-Long-Flag je Position (optional).
+func (useCase *GetClosedPositionsUseCase) WithSwingLong(flags interfaces.SwingLongRepository) *GetClosedPositionsUseCase {
+	useCase.swing = flags
+	return useCase
 }
 
 // Execute liefert die Positionen in Listen-Reihenfolge. Ohne verwertbares Risiko bleiben die Kennzahlen nil.
@@ -33,9 +41,13 @@ func (useCase *GetClosedPositionsUseCase) Execute(ctx context.Context, query dom
 	if err != nil {
 		return nil, fmt.Errorf("geschlossene Positionen lesen: %w", err)
 	}
+	swingIDs, err := readSwingLongIDs(ctx, useCase.swing)
+	if err != nil {
+		return nil, err
+	}
 	views := make([]ClosedPositionView, 0, len(closed))
 	for _, item := range closed {
-		view := ClosedPositionView{ClosedPosition: item}
+		view := ClosedPositionView{ClosedPosition: item, SwingLong: swingIDs[item.PositionID]}
 		risk, found, err := useCase.risks.Get(ctx, item.PositionID)
 		if err != nil {
 			return nil, fmt.Errorf("risiko von position %s lesen: %w", item.PositionID, err)

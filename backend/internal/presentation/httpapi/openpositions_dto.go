@@ -30,13 +30,15 @@ type openPositionDto struct {
 	Levels                  []rLevelDto `json:"levels,omitempty"`
 	OpenTime                int64       `json:"openTime"`
 	UpdateTime              int64       `json:"updateTime"`
+	SwingLong               bool        `json:"swingLong"`
 }
 
 // openPositionsSnapshotDto ist das Schema OpenPositionsSnapshot; positions ist nie null.
 type openPositionsSnapshotDto struct {
-	Positions             []openPositionDto `json:"positions"`
-	TotalUnrealizedProfit string            `json:"totalUnrealizedProfit"`
-	FetchedAt             int64             `json:"fetchedAt"`
+	Positions                 []openPositionDto `json:"positions"`
+	TotalUnrealizedProfit     string            `json:"totalUnrealizedProfit"`
+	SwingLongUnrealizedProfit string            `json:"swingLongUnrealizedProfit"`
+	FetchedAt                 int64             `json:"fetchedAt"`
 }
 
 // toOpenPositionsSnapshotDto bildet das Ergebnis des Use Cases auf den API-Vertrag ab.
@@ -70,11 +72,13 @@ func toOpenPositionsSnapshotDto(overview appposition.OpenPositionsOverview) open
 			Levels:                  toRLevelDtos(entry.Levels),
 			OpenTime:                entry.OpenTime,
 			UpdateTime:              entry.UpdateTime,
+			SwingLong:               entry.SwingLong,
 		})
 	}
 	return openPositionsSnapshotDto{
-		Positions:             positions,
-		TotalUnrealizedProfit: overview.TotalUnrealizedProfit,
-		FetchedAt:             overview.FetchedAt,
+		Positions:                 positions,
+		TotalUnrealizedProfit:     overview.TotalUnrealizedProfit,
+		SwingLongUnrealizedProfit: overview.SwingLongUnrealizedProfit,
+		FetchedAt:                 overview.FetchedAt,
 	}
 }

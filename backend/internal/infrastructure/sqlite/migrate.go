@@ -13,7 +13,7 @@ import (
 )
 
 // CurrentSchemaVersion ist die neueste bekannte Schema-Version.
-const CurrentSchemaVersion = 1
+const CurrentSchemaVersion = 2
 
 const (
 	backupFileMode  = 0o600

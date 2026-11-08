@@ -17,6 +17,8 @@ export type PositionSide = 'LONG' | 'SHORT';
  * Dezimalwerte bleiben Strings, damit nichts durch Gleitkomma verfälscht wird.
  */
 export type OpenPosition = Readonly<{
+  /** Manuelles Swing-Long-Flag (docs/domain.md). */
+  swingLong: boolean;
   positionId: string;
   symbol: string;
   side: PositionSide;
@@ -60,7 +62,10 @@ export type OpenPosition = Readonly<{
 /** Alle offenen Positionen zu einem Zeitpunkt, samt exakter PnL-Summe. */
 export type OpenPositionsSnapshot = Readonly<{
   positions: readonly OpenPosition[];
+  /** Unrealisierter PnL aller offenen Positionen ohne Swing Long. */
   totalUnrealizedProfit: string;
+  /** Unrealisierter PnL der offenen Swing-Long-Positionen. */
+  swingLongUnrealizedProfit: string;
   /** Zeitpunkt der Abfrage bei BingX in Epoch-Millisekunden. */
   fetchedAt: number;
 }>;

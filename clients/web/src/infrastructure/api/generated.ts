@@ -148,6 +148,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/positions/{positionId}/swing-long": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Position als Swing Long markieren
+         * @description Setzt das Swing-Long-Flag (leerer Body). Idempotent. Das Flag bleibt nach dem Schließen erhalten. Positionen mit Flag fließen nicht in die Handels-Summen ein (siehe `docs/domain.md`). Nur auf Loopback registriert. Schreibt nur in die eigene Datenbank, nie zu BingX.
+         */
+        put: operations["setSwingLong"];
+        post?: never;
+        /**
+         * Swing-Long-Flag entfernen
+         * @description Immer 204 (idempotent), auch ohne vorhandenes Flag.
+         */
+        delete: operations["clearSwingLong"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/assets/icons": {
         parameters: {
             query?: never;
@@ -216,9 +240,14 @@ export interface components {
             monthlyRealizedPnl: components["schemas"]["Decimal"];
             /** @description Monats-PnL in Prozent der Equity; `null` bei Equity 0. */
             monthlyPnlPercent: components["schemas"]["Decimal"] | null;
-            /** @description Netto-PnL (REALIZED_PNL + TRADING_FEE + FUNDING_FEE) für Heute, 7T und 30T in dieser Reihenfolge. `today` beginnt um 00:00 Europe/Zurich, `7d`/`30d` sind gleitende Fenster bis jetzt. */
+            /** @description Netto-PnL (REALIZED_PNL + TRADING_FEE + FUNDING_FEE) für Heute, 7T und 30T in dieser Reihenfolge. `today` beginnt um 00:00 Europe/Zurich, `7d`/`30d` sind gleitende Fenster bis jetzt. Ohne Swing Long (Näherung, siehe `docs/domain.md`). */
             periods: components["schemas"]["PeriodPnl"][];
+            /** @description Unrealisierter PnL des Kontos **ohne** Swing Long. */
             unrealizedPnl: components["schemas"]["Decimal"];
+            /** @description Unrealisierter PnL der offenen Swing-Long-Positionen. */
+            swingLongUnrealizedPnl: components["schemas"]["Decimal"];
+            /** @description Realisierter Netto-PnL des Monats, der laut Näherung (Symbol + Zeitraum, `docs/domain.md`) zu Swing Long gehört. `monthlyRealizedPnl` und `periods` enthalten ihn nicht. */
+            swingLongRealizedPnl: components["schemas"]["Decimal"];
             /** @description Unrealisierter PnL des Kontos in Prozent der `equity`; `null` bei Equity <= 0 oder unbekanntem Wert. */
             unrealizedPnlPercent: components["schemas"]["Decimal"] | null;
         };
@@ -231,8 +260,10 @@ export interface components {
         };
         OpenPositionsSnapshot: {
             positions: components["schemas"]["OpenPosition"][];
-            /** @description Summe des unrealisierten PnL aller offenen Positionen (exakt, "0" wenn keine). */
+            /** @description Summe des unrealisierten PnL aller offenen Positionen **ohne** Swing Long (exakt, "0" wenn keine). */
             totalUnrealizedProfit: components["schemas"]["Decimal"];
+            /** @description Summe des unrealisierten PnL der offenen Swing-Long-Positionen ("0" wenn keine). */
+            swingLongUnrealizedProfit: components["schemas"]["Decimal"];
             /** @description Zeitpunkt der Abfrage bei BingX in Epoch-Millisekunden. */
             fetchedAt: number;
         };
@@ -253,6 +284,8 @@ export interface components {
             positions: components["schemas"]["ClosedPosition"][];
         };
         ClosedPosition: {
+            /** @description Manuelles Swing-Long-Flag (siehe `docs/domain.md`). */
+            swingLong: boolean;
             /** @description BingX-Positions-ID (19-stellig, immer String). */
             positionId: string;
             /** @example SUI-USDT */
@@ -279,6 +312,8 @@ export interface components {
             tp1Price: components["schemas"]["Decimal"] | null;
         };
         OpenPosition: {
+            /** @description Manuelles Swing-Long-Flag (siehe `docs/domain.md`). */
+            swingLong: boolean;
             /** @description BingX-Positions-ID (19-stellig, immer String). */
             positionId: string;
             /** @example SUI-USDT */
@@ -659,6 +694,56 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Der manuelle Wert ist entfernt (oder war nicht vorhanden). */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            500: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    setSwingLong: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description BingX-Positions-ID (19-stellig, immer String). */
+                positionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Das Flag ist gesetzt (oder war schon gesetzt). */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            500: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    clearSwingLong: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description BingX-Positions-ID (19-stellig, immer String). */
+                positionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Das Flag ist entfernt (oder war nicht vorhanden). */
             204: {
                 headers: {
                     [name: string]: unknown;

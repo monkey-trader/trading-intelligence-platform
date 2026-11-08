@@ -11,7 +11,12 @@ import { suiLongPosition } from '@/test/fixtures/openPositions';
 
 it('lädt die Liste nach dem Speichern des Ursprungs-SL neu', async () => {
   const position = { ...suiLongPosition, levels: undefined, initialStopLossSource: null };
-  const snapshot = { positions: [position], totalUnrealizedProfit: '25', fetchedAt: 1 };
+  const snapshot = {
+    positions: [position],
+    totalUnrealizedProfit: '25',
+    swingLongUnrealizedProfit: '0',
+    fetchedAt: 1,
+  };
   const fetchOpenPositions = vi
     .fn<OpenPositionsGateway['fetchOpenPositions']>()
     .mockResolvedValue({ kind: 'ok', snapshot });

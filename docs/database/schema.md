@@ -139,9 +139,20 @@ Manuell gesetzter ursprünglicher SL (`PUT /positions/{positionId}/initial-stop-
 
 Keine Schema-Version-Erhöhung: Die Tabelle entsteht per `CREATE TABLE IF NOT EXISTS`.
 
+## Tabelle `position_swing_long`
+Markiert eine Position als Swing Long (Flag, vom Nutzer gesetzt). Eingeführt mit Schema-Version 2
+(Migration 1→2, rein additiv: `CREATE TABLE`, keine Änderung an bestehenden Tabellen).
+
+| Spalte | Typ | Bedeutung |
+|---|---|---|
+| `position_id` | TEXT, PK | 19-stellige positionId, immer als String |
+| `set_at` | INTEGER | Zeitpunkt des Setzens (Epoch-ms) |
+
+Das Flag liegt bewusst nicht in `positions`, weil der Import diese Zeilen per Upsert überschreibt.
+
 ## Tabelle `schema_version`
 Nur Go-Backend. Spalte `version INTEGER NOT NULL`, genau eine Zeile mit der aktuellen Version
-(`CurrentSchemaVersion`, derzeit 1). Eine TS-DB ohne diese Tabelle gilt als Version 0.
+(`CurrentSchemaVersion`, derzeit 2). Eine TS-DB ohne diese Tabelle gilt als Version 0.
 
 - Beim Öffnen einer bestehenden DB mit älterer Version wird vor der Migration eine Sicherung angelegt:
   `<datei>.bak-v<alteVersion>-<UTC 20060102T150405Z>` (Rechte 0600, `O_EXCL`, identischer Inhalt).

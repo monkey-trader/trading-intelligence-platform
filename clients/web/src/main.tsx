@@ -6,6 +6,7 @@ import { createHttpAssetIconsGateway } from '@/infrastructure/api/httpAssetIcons
 import { AppHeader } from '@/presentation/shared/components/AppHeader';
 import { markWailsApp } from '@/presentation/shared/platform/wailsApp';
 import { createHttpInitialStopLossGateway } from '@/infrastructure/api/httpInitialStopLossGateway';
+import { createHttpSwingLongGateway } from '@/infrastructure/api/httpSwingLongGateway';
 import { createHttpOpenPositionsGateway } from '@/infrastructure/api/httpOpenPositionsGateway';
 import { createHttpPositionChartGateway } from '@/infrastructure/api/httpPositionChartGateway';
 import { createLightweightChartRenderer } from '@/infrastructure/chart/lightweightChartRenderer';
@@ -37,6 +38,7 @@ createRoot(rootElement).render(
       accountSummaryGateway={createHttpAccountSummaryGateway(fetch, apiBase)}
       assetIconsGateway={assetIconsGateway}
       gateway={openPositionsGateway}
+      swingLongGateway={createHttpSwingLongGateway(fetch, apiBase)}
       initialStopLossGateway={createHttpInitialStopLossGateway()}
       chartGateway={positionChartGateway}
       createChartRenderer={createLightweightChartRenderer}

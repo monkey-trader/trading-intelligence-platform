@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -30,6 +31,9 @@ type AccountSummary struct { //nolint:revive // Name ist durch die Tests und den
 	UnrealizedPnl        string  // unrealisierter PnL des Kontos, "0" wenn unbekannt
 	UnrealizedPnlPercent *string // in Prozent der Equity, nil bei Equity <= 0 oder unbekanntem Wert
 	Periods              []PeriodPnl
+
+	SwingLongUnrealizedPnl string // unrealisierter PnL der offenen Swing-Long-Positionen, "0" ohne
+	SwingLongRealizedPnl   string // realisierter Monats-PnL laut Näherung, "0" ohne
 }
 
 // PeriodPnl ist der realisierte PnL einer Periode ("today", "7d", "30d") samt Prozent.
@@ -49,11 +53,18 @@ type GetAccountSummaryUseCase struct {
 	incomes interfaces.IncomeRangeReader
 	now     func() int64
 	loc     *time.Location
+	spans   interfaces.SwingLongSpanSource // optional
 }
 
 // NewGetAccountSummaryUseCase bekommt Balance-Quelle, Income-Repository, Uhr (Epoch-ms) und Monatszeitzone.
 func NewGetAccountSummaryUseCase(source accountinterfaces.BalanceSource, incomes interfaces.IncomeRangeReader, now func() int64, loc *time.Location) *GetAccountSummaryUseCase {
 	return &GetAccountSummaryUseCase{source: source, incomes: incomes, now: now, loc: loc}
+}
+
+// WithSwingLong trennt Swing Long aus unrealisiertem und Monats-PnL (optional).
+func (useCase *GetAccountSummaryUseCase) WithSwingLong(spans interfaces.SwingLongSpanSource) *GetAccountSummaryUseCase {
+	useCase.spans = spans
+	return useCase
 }
 
 // Execute liest Balance und Monats-Income und berechnet PnL und Prozent exakt.
@@ -62,18 +73,33 @@ func (useCase *GetAccountSummaryUseCase) Execute(ctx context.Context) (AccountSu
 	if err != nil {
 		return AccountSummary{}, err
 	}
+	var spans []position.SwingLongSpan
+	if useCase.spans != nil {
+		if spans, err = useCase.spans.ListSwingLongSpans(ctx); err != nil {
+			return AccountSummary{}, fmt.Errorf("swing-long-zeiträume lesen: %w", err)
+		}
+	}
 	window := account.MonthWindow(useCase.now(), useCase.loc)
-	total, err := useCase.sumRange(ctx, window.StartMs, window.EndExclusiveMs)
+	total, swingRealized, err := useCase.sumRange(ctx, window.StartMs, window.EndExclusiveMs, spans)
 	if err != nil {
 		return AccountSummary{}, err
 	}
-	periods, err := useCase.periods(ctx, balance.Equity)
+	periods, err := useCase.periods(ctx, balance.Equity, spans)
 	if err != nil {
 		return AccountSummary{}, err
 	}
 	percent, err := monthlyPercent(total, balance.Equity)
 	if err != nil {
 		return AccountSummary{}, err
+	}
+	swingUnrealized, err := sumSwingLongUnrealized(spans)
+	if err != nil {
+		return AccountSummary{}, err
+	}
+	if balance.UnrealizedProfit != "" {
+		if balance.UnrealizedProfit, err = decimal.Subtract(balance.UnrealizedProfit, swingUnrealized); err != nil {
+			return AccountSummary{}, fmt.Errorf("unrealisierten pnl trennen: %w", err)
+		}
 	}
 	unrealized, unrealizedPercent, err := unrealizedPnl(balance)
 	if err != nil {
@@ -83,6 +109,7 @@ func (useCase *GetAccountSummaryUseCase) Execute(ctx context.Context) (AccountSu
 		UnrealizedPnl: unrealized, UnrealizedPnlPercent: unrealizedPercent,
 		Balance: balance.Balance, Equity: balance.Equity, AvailableMargin: balance.AvailableMargin,
 		Month: window.Label, MonthlyRealizedPnl: total, MonthlyPnlPercent: percent, Periods: periods,
+		SwingLongUnrealizedPnl: swingUnrealized, SwingLongRealizedPnl: swingRealized,
 	}, nil
 }
 
@@ -103,23 +130,42 @@ func monthlyPercent(pnl, equity string) (*string, error) {
 	return &percent, nil
 }
 
-// sumRange summiert den Income im Fenster [fromMs, toMs).
-func (useCase *GetAccountSummaryUseCase) sumRange(ctx context.Context, fromMs, toMs int64) (string, error) {
-	entries, err := useCase.incomes.ListIncomeByTypesInRange(ctx, incomeTypes, fromMs, toMs)
-	if err != nil {
-		return "", fmt.Errorf("income lesen: %w", err)
-	}
+// sumSwingLongUnrealized summiert den unrealisierten PnL der offenen Swing-Long-Positionen ("0" ohne).
+func sumSwingLongUnrealized(spans []position.SwingLongSpan) (string, error) {
 	total := "0"
-	for _, entry := range entries {
-		if total, err = decimal.Add(total, entry.Amount); err != nil {
-			return "", fmt.Errorf("income summieren: %w", err)
+	for _, span := range spans {
+		if span.UnrealizedProfit == "" {
+			continue
+		}
+		var err error
+		if total, err = decimal.Add(total, span.UnrealizedProfit); err != nil {
+			return "", fmt.Errorf("swing-long-pnl summieren: %w", err)
 		}
 	}
 	return total, nil
 }
 
+// sumRange summiert den Income im Fenster [fromMs, toMs) getrennt in normal und Swing Long (Näherung).
+func (useCase *GetAccountSummaryUseCase) sumRange(ctx context.Context, fromMs, toMs int64, spans []position.SwingLongSpan) (normal, swing string, err error) {
+	entries, err := useCase.incomes.ListIncomeByTypesInRange(ctx, incomeTypes, fromMs, toMs)
+	if err != nil {
+		return "", "", fmt.Errorf("income lesen: %w", err)
+	}
+	normal, swing = "0", "0"
+	for _, entry := range entries {
+		target := &normal
+		if slices.ContainsFunc(spans, func(span position.SwingLongSpan) bool { return span.Covers(entry.Symbol, entry.Time) }) {
+			target = &swing
+		}
+		if *target, err = decimal.Add(*target, entry.Amount); err != nil {
+			return "", "", fmt.Errorf("income summieren: %w", err)
+		}
+	}
+	return normal, swing, nil
+}
+
 // periods berechnet PnL und Prozent für heute (ab 00:00 lokal), 7 und 30 Tage gleitend.
-func (useCase *GetAccountSummaryUseCase) periods(ctx context.Context, equity string) ([]PeriodPnl, error) {
+func (useCase *GetAccountSummaryUseCase) periods(ctx context.Context, equity string, spans []position.SwingLongSpan) ([]PeriodPnl, error) {
 	nowMs := useCase.now()
 	local := time.UnixMilli(nowMs).In(useCase.loc)
 	todayStart := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, useCase.loc).UnixMilli()
@@ -133,7 +179,7 @@ func (useCase *GetAccountSummaryUseCase) periods(ctx context.Context, equity str
 	}
 	result := make([]PeriodPnl, 0, len(definitions))
 	for _, definition := range definitions {
-		pnl, err := useCase.sumRange(ctx, definition.fromMs, nowMs)
+		pnl, _, err := useCase.sumRange(ctx, definition.fromMs, nowMs, spans)
 		if err != nil {
 			return nil, err
 		}
