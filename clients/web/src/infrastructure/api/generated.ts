@@ -148,6 +148,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/prices/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Live-Kurse der offenen Positionen (Server-Sent Events)
+         * @description Das Backend fragt BingX alle ~2 s mit einem einzigen Request (`/quote/ticker`, alle Symbole) ab und sendet jedem Abonnenten ein Event `prices` mit dem Kurs je offener Position. Direkt nach dem Verbinden kommt der letzte bekannte Stand. Alle 15 s folgt ein Kommentar als Heartbeat. Fällt die Kursquelle aus, kommt weiter ein Event mit `stale: true` und den letzten Kursen; das Backend verbindet mit Backoff neu. Der Browser spricht nie selbst mit BingX. Der Kurs ist der letzte Handelspreis (`lastPrice`), nicht der Mark Price. Ohne BingX-Keys antwortet die Route mit 503 `not-configured`.
+         */
+        get: operations["streamPrices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/positions/{positionId}/swing-long": {
         parameters: {
             query?: never;
@@ -310,6 +330,27 @@ export interface components {
             breakEvenPrice: components["schemas"]["Decimal"] | null;
             /** @description TP1-Level (3R-Preis, `THREE_R`); `null` ohne bekanntes Risiko. */
             tp1Price: components["schemas"]["Decimal"] | null;
+        };
+        PriceSnapshot: {
+            /** @description Ein Eintrag je offener Position, Reihenfolge wie `/positions/open`. */
+            prices: components["schemas"]["PositionPrice"][];
+            /** @description Zeitpunkt des Kursabrufs bei BingX in Epoch-Millisekunden. */
+            fetchedAt: number;
+            /** @description `true`, wenn der letzte Abruf fehlschlug und die Kurse veraltet sind. */
+            stale: boolean;
+        };
+        PositionPrice: {
+            positionId: string;
+            /** @example SUI-USDT */
+            symbol: string;
+            /** @description Letzter Handelspreis (`lastPrice` aus BingX `/quote/ticker`). */
+            price: components["schemas"]["Decimal"];
+            /** @description Änderung im rollenden 24-h-Fenster in Prozent (BingX `priceChangePercent`, 1.3 = +1,3 %). */
+            change24hPercent: components["schemas"]["Decimal"];
+            /** @description (BE-Level − Kurs) ÷ Kurs in Prozent, vorzeichenbehaftet; positiv heißt, das Level liegt in Gewinnrichtung noch vor dem Kurs (LONG und SHORT gleich). `null` ohne bekanntes Risiko. */
+            distanceToBreakEvenPercent: components["schemas"]["Decimal"] | null;
+            /** @description Wie `distanceToBreakEvenPercent`, aber zum TP1-Level (3R). `null` ohne bekanntes Risiko. */
+            distanceToTp1Percent: components["schemas"]["Decimal"] | null;
         };
         OpenPosition: {
             /** @description Manuelles Swing-Long-Flag (siehe `docs/domain.md`). */
@@ -703,6 +744,28 @@ export interface operations {
             400: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             500: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    streamPrices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dauerhafter Stream (`text/event-stream`); jedes Event `prices` trägt `PriceSnapshot` als JSON. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["PriceSnapshot"];
+                };
+            };
+            403: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
         };
     };

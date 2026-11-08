@@ -1,0 +1,10 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": [
+    {"symbol":"BTC-USDT","priceChange":"-512.3","priceChangePercent":"-0.45","lastPrice":"113250.5","lastQty":"0.0021","highPrice":"114100.0","lowPrice":"112400.2","volume":"18234.55","quoteVolume":"2064000000.1","openPrice":"113762.8","openTime":1791713400000,"closeTime":1791799800000,"askPrice":"113250.6","askQty":"1.2","bidPrice":"113250.5","bidQty":"0.9"},
+    {"symbol":"SUI-USDT","priceChange":"0.0412","priceChangePercent":"1.30","lastPrice":"3.2105","lastQty":"150","highPrice":"3.30","lowPrice":"3.10","volume":"9123456.0","quoteVolume":"29300000.0","openPrice":"3.1693","openTime":1791713400000,"closeTime":1791799800000,"askPrice":"3.2106","askQty":"500","bidPrice":"3.2104","bidQty":"620"},
+    {"symbol":"DEAD-USDT","priceChange":"0","priceChangePercent":"0","lastPrice":"","lastQty":"0","highPrice":"0","lowPrice":"0","volume":"0","quoteVolume":"0","openPrice":"0","openTime":1791713400000,"closeTime":1791799800000,"askPrice":"0","askQty":"0","bidPrice":"0","bidQty":"0"},
+    {"symbol":"XYZ-USDT","priceChange":"0","priceChangePercent":"n/a","lastPrice":"1.5","lastQty":"0","highPrice":"0","lowPrice":"0","volume":"0","quoteVolume":"0","openPrice":"0","openTime":1791713400000,"closeTime":1791799800000,"askPrice":"0","askQty":"0","bidPrice":"0","bidQty":"0"}
+  ]
+}

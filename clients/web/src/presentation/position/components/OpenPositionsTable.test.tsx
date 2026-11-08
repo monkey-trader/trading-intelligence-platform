@@ -15,6 +15,7 @@ import { OpenPositionsTable } from '@/presentation/position/components/OpenPosit
 
 const COLUMN_LABELS = [
   'Symbol',
+  'Kurs',
   'Wert / Margin',
   'Unreal. PnL',
   'Real. PnL',
@@ -82,7 +83,7 @@ function hasTone(cell: HTMLElement, tone: 'positive' | 'negative' | 'neutral'): 
 }
 
 describe('OpenPositionsTable', () => {
-  it('ist eine semantische Tabelle mit den 7 Spalten in fester Reihenfolge', () => {
+  it('ist eine semantische Tabelle mit den 8 Spalten in fester Reihenfolge', () => {
     const table = renderTable([suiLongPosition]);
 
     // Gestapelte Spalten tragen zwei Sortierknöpfe ("Wert" / "Margin"), daher ohne Leerzeichen.
@@ -91,6 +92,7 @@ describe('OpenPositionsTable', () => {
       .map((header) => header.textContent?.trim());
     expect(headers).toEqual([
       'Symbol',
+      'Kurs',
       'Wert/Margin',
       'Unreal. PnL',
       'Real. PnL',
