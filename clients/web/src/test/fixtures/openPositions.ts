@@ -5,6 +5,7 @@ import type { OpenPosition, OpenPositionsSnapshot } from '@/domain/position/Open
 export const FETCHED_AT = Date.UTC(2026, 9, 16, 12, 34, 56);
 
 export const suiLongPosition: OpenPosition = {
+  swingLong: false,
   positionId: '9100000000000000001',
   symbol: 'SUI-USDT',
   side: 'LONG',
@@ -33,6 +34,7 @@ export const suiLongPosition: OpenPosition = {
 };
 
 export const goldShortPosition: OpenPosition = {
+  swingLong: false,
   positionId: '9100000000000000002',
   symbol: 'NCCOGOLD2USD-USDT',
   side: 'SHORT',
@@ -62,6 +64,7 @@ export const goldShortPosition: OpenPosition = {
 
 /** Position mit PnL genau 0. */
 export const flatPosition: OpenPosition = {
+  swingLong: false,
   positionId: '9100000000000000003',
   symbol: 'BTC-USDT',
   side: 'LONG',
@@ -93,12 +96,14 @@ export const flatPosition: OpenPosition = {
 export const sampleSnapshot: OpenPositionsSnapshot = {
   positions: [goldShortPosition, suiLongPosition],
   totalUnrealizedProfit: '18.75',
+  swingLongUnrealizedProfit: '0',
   fetchedAt: FETCHED_AT,
 };
 
 export const emptySnapshot: OpenPositionsSnapshot = {
   positions: [],
   totalUnrealizedProfit: '0',
+  swingLongUnrealizedProfit: '0',
   fetchedAt: FETCHED_AT,
 };
 
@@ -123,4 +128,21 @@ export const noStopLossPosition: OpenPosition = {
   stopLoss: null,
   takeProfit: null,
   breakEven: false,
+};
+
+/** Swing-Long-Position (BTC LONG, +40.5 unrealisiert). */
+export const swingLongPosition: OpenPosition = {
+  ...flatPosition,
+  swingLong: true,
+  positionId: '9100000000000000004',
+  symbol: 'ETH-USDT',
+  unrealizedProfit: '40.5000',
+};
+
+/** Handels-Positionen (Summe 18.75) plus eine Swing-Long-Position (40.5), getrennt summiert. */
+export const mixedSnapshot: OpenPositionsSnapshot = {
+  positions: [goldShortPosition, suiLongPosition, swingLongPosition],
+  totalUnrealizedProfit: '18.75',
+  swingLongUnrealizedProfit: '40.5',
+  fetchedAt: FETCHED_AT,
 };

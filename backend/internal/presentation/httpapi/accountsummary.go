@@ -22,6 +22,9 @@ type accountSummaryDto struct {
 
 	UnrealizedPnl        string  `json:"unrealizedPnl"`
 	UnrealizedPnlPercent *string `json:"unrealizedPnlPercent"`
+
+	SwingLongUnrealizedPnl string `json:"swingLongUnrealizedPnl"`
+	SwingLongRealizedPnl   string `json:"swingLongRealizedPnl"`
 }
 
 // periodPnlDto ist ein Eintrag in "periods".
@@ -63,6 +66,7 @@ func newAccountSummaryHandler(
 			Month: summary.Month, MonthlyRealizedPnl: summary.MonthlyRealizedPnl,
 			MonthlyPnlPercent: summary.MonthlyPnlPercent, Periods: periods,
 			UnrealizedPnl: summary.UnrealizedPnl, UnrealizedPnlPercent: summary.UnrealizedPnlPercent,
+			SwingLongUnrealizedPnl: summary.SwingLongUnrealizedPnl, SwingLongRealizedPnl: summary.SwingLongRealizedPnl,
 		})
 		if err != nil {
 			logger.Error("Kontoübersicht konnte nicht serialisiert werden", slog.String("cause", err.Error()))

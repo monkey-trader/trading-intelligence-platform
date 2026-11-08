@@ -25,6 +25,12 @@ Es gibt **keine** 1R-Stufe und kein TP2/TP3 (seit TASK-14). Die Aufteilung der R
 |---|---|---|
 | **R-Ergebnis** (`rResult`) | Gewinn oder Verlust geteilt durch den Risikobetrag: `netProfit ÷ (|Entry − SL| × positionAmount)`, Einheit R (zum Beispiel +3 oder −1). `null`, wenn das ursprüngliche Risiko unbekannt ist, nie geschätzt. Berechnung im Backend. | Formel aus TASK-17, **offen:** netto (`netProfit`, nach Gebühren und Funding) oder brutto (`realisedProfit`). Bisherige Annahme: netto. |
 
+## Swing Long
+| Begriff | Bedeutung | API / Code |
+|---|---|---|
+| **Swing Long** | Manuelles Flag pro Position (`positionId`), bleibt nach dem Schließen erhalten. Diese Positionen dürfen ins Minus gehen und fließen **nicht** in die Handels-Summen ein; sie werden separat ausgewiesen. | `swingLong`, `PUT`/`DELETE /positions/{positionId}/swing-long` |
+| **Realisierter PnL (Näherung)** | `income` kennt nur Symbol und Zeit. Einträge mit dem Symbol einer Swing-Long-Position im Zeitraum Eröffnung bis Schluss (offen: bis jetzt) zählen als Swing Long. Ungenau, wenn dasselbe Symbol gleichzeitig normal gehandelt wird (auch eine Gegenposition im Hedge-Modus). Monats-PnL und Heute/7T/30T enthalten Swing Long nicht; ausgewiesen wird nur der Monatswert. | `swingLongRealizedPnl` |
+
 ## Querschnittsregeln
 - Beträge und Preise sind **Dezimal-Strings**, nie Float (Datenbank `TEXT`).
 - Zeitpunkte sind Epoch-Millisekunden (UTC).

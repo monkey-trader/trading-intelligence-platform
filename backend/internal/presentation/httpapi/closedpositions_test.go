@@ -33,12 +33,12 @@ func strPtr(value string) *string { return &value }
 const closedJSON = `{"positionId":"9100000000000000003","symbol":"SUI-USDT","side":"LONG","openTime":1791500000000,` +
 	`"closeTime":1791600000000,"avgOpenPrice":"100","avgClosePrice":"130","positionAmount":"2","leverage":7.5,` +
 	`"realisedProfit":"61","netProfit":"60","commission":"-0.5","totalFunding":"0.1",` +
-	`"rResult":"3","breakEvenPrice":"120","tp1Price":"130"}`
+	`"rResult":"3","breakEvenPrice":"120","tp1Price":"130","swingLong":false}`
 
 const closedNullJSON = `{"positionId":"9100000000000000004","symbol":"SUI-USDT","side":"SHORT","openTime":1791500000000,` +
 	`"closeTime":1791500500000,"avgOpenPrice":"100","avgClosePrice":"105","positionAmount":"2","leverage":3,` +
 	`"realisedProfit":"-10","netProfit":"-11","commission":"-0.5","totalFunding":"0",` +
-	`"rResult":null,"breakEvenPrice":null,"tp1Price":null}`
+	`"rResult":null,"breakEvenPrice":null,"tp1Price":null,"swingLong":false}`
 
 func closedView(id, side string, closeTime int64, avgClose, netProfit string, leverage float64, withR bool) appposition.ClosedPositionView {
 	view := appposition.ClosedPositionView{ClosedPosition: position.ClosedPosition{

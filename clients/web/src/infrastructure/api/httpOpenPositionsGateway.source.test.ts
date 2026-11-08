@@ -8,7 +8,12 @@ async function fetchWith(extra: Record<string, unknown>, removeKey = false) {
   const { initialStopLossSource, ...base } = suiLongPosition;
   void initialStopLossSource;
   const position = removeKey ? base : { ...base, ...extra };
-  const body = { positions: [position], totalUnrealizedProfit: '25', fetchedAt: 1792154096000 };
+  const body = {
+    positions: [position],
+    totalUnrealizedProfit: '25',
+    swingLongUnrealizedProfit: '0',
+    fetchedAt: 1792154096000,
+  };
   const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(
     new Response(JSON.stringify(body), {
       status: 200,

@@ -44,10 +44,10 @@ func TestAccountSummary_Erfolg(t *testing.T) {
 				{Period: "30d", RealizedPnl: "-5.5", PnlPercent: &percent},
 			}},
 			`{"balance":"1000","equity":"1259.5","availableMargin":"1150.25","month":"2026-10","monthlyRealizedPnl":"97.125","monthlyPnlPercent":"9.71",` +
-				`"periods":[{"period":"today","realizedPnl":"10","pnlPercent":"9.71"},{"period":"7d","realizedPnl":"0","pnlPercent":null},{"period":"30d","realizedPnl":"-5.5","pnlPercent":"9.71"}],"unrealizedPnl":"25","unrealizedPnlPercent":"9.71"}`},
+				`"periods":[{"period":"today","realizedPnl":"10","pnlPercent":"9.71"},{"period":"7d","realizedPnl":"0","pnlPercent":null},{"period":"30d","realizedPnl":"-5.5","pnlPercent":"9.71"}],"unrealizedPnl":"25","unrealizedPnlPercent":"9.71","swingLongUnrealizedPnl":"","swingLongRealizedPnl":""}`},
 		{"Prozent null", appaccount.AccountSummary{Balance: "0", Equity: "0", AvailableMargin: "0",
 			Month: "2026-10", MonthlyRealizedPnl: "0", UnrealizedPnl: "0"},
-			`{"balance":"0","equity":"0","availableMargin":"0","month":"2026-10","monthlyRealizedPnl":"0","monthlyPnlPercent":null,"periods":[],"unrealizedPnl":"0","unrealizedPnlPercent":null}`},
+			`{"balance":"0","equity":"0","availableMargin":"0","month":"2026-10","monthlyRealizedPnl":"0","monthlyPnlPercent":null,"periods":[],"unrealizedPnl":"0","unrealizedPnlPercent":null,"swingLongUnrealizedPnl":"","swingLongRealizedPnl":""}`},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

@@ -30,6 +30,7 @@ type OpenPositionEntry struct {
 	Reached2RAt             *int64                  // Kerzenbeginn, nil wenn nicht erreicht oder unbekannt
 	Levels                  []domainposition.RLevel // 2R/3R, nil bei unbekanntem Risiko
 	InitialStopLossSource   *string                 // "MANUAL" | "AUTO", nil bei unbekanntem Risiko
+	SwingLong               bool                    // manuelles Flag
 }
 
 // riskCandleLimit ist die Zahl der 15-Minuten-Kerzen, in denen ohne Kerzen-Source nach 2R gesucht wird.
@@ -50,8 +51,10 @@ const (
 // OpenPositionsOverview ist das Ergebnis: sortierte Positionen (nie nil), exakte PnL-Summe, Abfragezeit.
 type OpenPositionsOverview struct {
 	Positions             []OpenPositionEntry
-	TotalUnrealizedProfit string
-	FetchedAt             int64
+	TotalUnrealizedProfit string // ohne Swing Long
+	// SwingLongUnrealizedProfit ist die Summe der offenen Swing-Long-Positionen ("0" wenn keine).
+	SwingLongUnrealizedProfit string
+	FetchedAt                 int64
 }
 
 // GetOpenPositionsUseCase liefert die offenen Positionen, neueste zuerst.
@@ -63,6 +66,7 @@ type GetOpenPositionsUseCase struct {
 	candles  chartinterfaces.CandleRepository // optional
 	fresh    chartinterfaces.CandleSource     // optional
 	now      func() int64
+	swing    interfaces.SwingLongRepository // optional
 }
 
 // WithRisk ergänzt R-Multiple und 2R-Status; now liefert die Zeit in Epoch-ms für das erste Sehen.
@@ -95,6 +99,17 @@ func (useCase *GetOpenPositionsUseCase) WithInitialStopLossOverrides(overrides i
 	return useCase
 }
 
+// WithSwingLong liest das Swing-Long-Flag je Position (optional).
+func (useCase *GetOpenPositionsUseCase) WithSwingLong(flags interfaces.SwingLongRepository) *GetOpenPositionsUseCase {
+	useCase.swing = flags
+	return useCase
+}
+
+// swingLongIDs liest die markierten IDs; ohne Repository leer.
+func (useCase *GetOpenPositionsUseCase) swingLongIDs(ctx context.Context) (map[string]bool, error) {
+	return readSwingLongIDs(ctx, useCase.swing)
+}
+
 // NewGetOpenPositionsUseCase baut den Use Case mit der injizierten Source.
 func NewGetOpenPositionsUseCase(source interfaces.OpenPositionSource) *GetOpenPositionsUseCase {
 	return &GetOpenPositionsUseCase{source: source}
@@ -118,10 +133,14 @@ func (useCase *GetOpenPositionsUseCase) Execute(ctx context.Context) (OpenPositi
 		}
 		useCase.resolver.BeginRun(openIDs)
 	}
+	swingIDs, err := useCase.swingLongIDs(ctx)
+	if err != nil {
+		return OpenPositionsOverview{}, err
+	}
 	groupedOrders := useCase.ordersByPosition(ctx)
 	entries := make([]OpenPositionEntry, 0, len(sortedPositions))
 	for _, openPosition := range sortedPositions {
-		entry := OpenPositionEntry{OpenPosition: openPosition}
+		entry := OpenPositionEntry{OpenPosition: openPosition, SwingLong: swingIDs[openPosition.PositionID]}
 		if groupedOrders != nil {
 			applyProtection(ctx, &entry, groupedOrders[openPosition.PositionID])
 		}
@@ -131,15 +150,28 @@ func (useCase *GetOpenPositionsUseCase) Execute(ctx context.Context) (OpenPositi
 		entries = append(entries, entry)
 	}
 
-	totalUnrealizedProfit, err := domainposition.SummarizeOpenPositions(sortedPositions)
+	var tradingPositions, swingPositions []domainposition.OpenPosition
+	for _, openPosition := range sortedPositions {
+		if swingIDs[openPosition.PositionID] {
+			swingPositions = append(swingPositions, openPosition)
+		} else {
+			tradingPositions = append(tradingPositions, openPosition)
+		}
+	}
+	totalUnrealizedProfit, err := domainposition.SummarizeOpenPositions(tradingPositions)
 	if err != nil {
 		return OpenPositionsOverview{}, fmt.Errorf("summiere unrealisierten PnL: %w", err)
 	}
+	swingLongProfit, err := domainposition.SummarizeOpenPositions(swingPositions)
+	if err != nil {
+		return OpenPositionsOverview{}, fmt.Errorf("summiere Swing-Long-PnL: %w", err)
+	}
 
 	return OpenPositionsOverview{
-		Positions:             entries,
-		TotalUnrealizedProfit: totalUnrealizedProfit,
-		FetchedAt:             snapshot.FetchedAt,
+		Positions:                 entries,
+		TotalUnrealizedProfit:     totalUnrealizedProfit,
+		SwingLongUnrealizedProfit: swingLongProfit,
+		FetchedAt:                 snapshot.FetchedAt,
 	}, nil
 }
 

@@ -11,6 +11,8 @@ import { OpenPositionsHeader } from '@/presentation/position/components/OpenPosi
 import { OpenPositionsTable } from '@/presentation/position/components/OpenPositionsTable';
 import { useOpenPositionsViewModel } from '@/presentation/position/hooks/useOpenPositionsViewModel';
 import type { InitialStopLossGateway } from '@/domain/position/InitialStopLossGateway';
+import type { SwingLongGateway } from '@/domain/position/SwingLongGateway';
+import { PositionTabs, type PositionTab } from '@/presentation/position/components/PositionTabs';
 import styles from '@/presentation/position/components/OpenPositionsPage.module.css';
 
 type OpenPositionsPageProps = Readonly<{
@@ -24,6 +26,8 @@ type OpenPositionsPageProps = Readonly<{
   initialStopLossGateway?: InitialStopLossGateway;
   /** Ohne Gateway zeigt der Kopf keinen Kontostand. */
   accountSummaryGateway?: AccountSummaryGateway;
+  /** Ohne Gateway gibt es keine Swing-Long-Schalter. */
+  swingLongGateway?: SwingLongGateway | undefined;
 }>;
 
 /** Seite "Offene Positionen": lädt über das injizierte Gateway und pollt. */
@@ -34,6 +38,7 @@ export function OpenPositionsPage({
   assetIconsGateway,
   initialStopLossGateway,
   accountSummaryGateway,
+  swingLongGateway,
 }: OpenPositionsPageProps) {
   const { status, snapshot, errorMessage, isStale, refresh } = useOpenPositionsViewModel(gateway);
   const account = useAccountSummary(accountSummaryGateway);
@@ -43,6 +48,14 @@ export function OpenPositionsPage({
   );
   const iconsBySymbol = useAssetIcons(assetIconsGateway, symbols);
 
+  const [activeTab, setActiveTab] = useState<PositionTab>('trades');
+  const visiblePositions = useMemo(
+    () =>
+      snapshot?.positions.filter(
+        (position) => position.swingLong === (activeTab === 'swing-long'),
+      ) ?? [],
+    [snapshot, activeTab],
+  );
   const [chartPositionId, setChartPositionId] = useState<string>();
   const toggleChart = (positionId: string) =>
     setChartPositionId((current) => (current === positionId ? undefined : positionId));
@@ -75,6 +88,8 @@ export function OpenPositionsPage({
           isLoading
           initialStopLossGateway={initialStopLossGateway}
           onInitialStopLossChanged={refresh}
+          swingLongGateway={swingLongGateway}
+          onSwingLongChanged={refresh}
         />
       )}
 
@@ -82,7 +97,9 @@ export function OpenPositionsPage({
         <>
           <OpenPositionsHeader
             totalUnrealizedProfit={snapshot.totalUnrealizedProfit}
-            positionCount={snapshot.positions.length}
+            swingLongUnrealizedProfit={snapshot.swingLongUnrealizedProfit}
+            positionCount={visiblePositions.length}
+            view={activeTab}
             fetchedAt={snapshot.fetchedAt}
             onRefresh={refresh}
             account={account}
@@ -92,18 +109,25 @@ export function OpenPositionsPage({
               {`Daten möglicherweise veraltet. ${errorMessage}`}
             </p>
           )}
-          {snapshot.positions.length > 0 ? (
+          <PositionTabs active={activeTab} onChange={setActiveTab} />
+          {visiblePositions.length > 0 ? (
             <OpenPositionsTable
-              positions={snapshot.positions}
+              positions={visiblePositions}
               iconsBySymbol={iconsBySymbol}
               isLoading={status === 'loading'}
               initialStopLossGateway={initialStopLossGateway}
               onInitialStopLossChanged={refresh}
+              swingLongGateway={swingLongGateway}
+              onSwingLongChanged={refresh}
               selectedPositionId={chartPositionId}
               onSelectPosition={chartGateway && createChartRenderer ? toggleChart : undefined}
             />
           ) : (
-            <p className={styles.message}>Keine offenen Positionen.</p>
+            <p className={styles.message}>
+              {activeTab === 'swing-long'
+                ? 'Keine Swing-Long-Positionen.'
+                : 'Keine offenen Positionen.'}
+            </p>
           )}
           {chartPositionId && chartGateway && createChartRenderer && (
             <PositionChartPanel

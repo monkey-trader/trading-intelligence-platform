@@ -72,4 +72,8 @@ var schemaStatements = []string{
 		initial_stop_loss TEXT NOT NULL,
 		set_at INTEGER NOT NULL
 	)`,
+	`CREATE TABLE IF NOT EXISTS position_swing_long (
+		position_id TEXT PRIMARY KEY,
+		set_at INTEGER NOT NULL
+	)`,
 }

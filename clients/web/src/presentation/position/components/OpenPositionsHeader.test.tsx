@@ -112,6 +112,8 @@ describe('OpenPositionsHeader', () => {
       ],
       unrealizedPnl: '18.75',
       unrealizedPnlPercent: '1.52',
+      swingLongUnrealizedPnl: '40.5',
+      swingLongRealizedPnl: '-12.25',
     };
 
     it('zeigt ohne Kontodaten keinen Kontobereich', () => {
