@@ -23,7 +23,7 @@ const openPositionsFetchedAt int64 = 1791800000000
 
 // openPositionSchemaFields: required-Liste von OpenPosition in docs/openapi.yaml, in Spec-Reihenfolge.
 var openPositionSchemaFields = []string{
-	"positionId", "symbol", "side", "isolated", "positionAmount", "avgOpenPrice", "markPrice",
+	"positionId", "symbol", "baseAsset", "displayName", "side", "isolated", "positionAmount", "avgOpenPrice", "markPrice",
 	"leverage", "initialMargin", "margin", "positionValue", "unrealizedProfit", "realisedProfit",
 	"pnlRatio", "stopLoss", "takeProfit", "breakEven", "openTime", "updateTime", "swingLong",
 }
@@ -38,6 +38,7 @@ var goldEntry = appposition.OpenPositionEntry{
 		RealisedProfit: "-0.5187", PnlRatio: "-0.0904", LiquidationPrice: "4410.5",
 		OpenTime: 1791700000000, UpdateTime: 1791710000000,
 	},
+	BaseAsset: "XAU", DisplayName: "Gold",
 }
 
 // crossEntry ohne Liquidationspreis: Dezimal-Hebel.
@@ -49,15 +50,16 @@ var crossEntry = appposition.OpenPositionEntry{
 		RealisedProfit: "-0.2400", PnlRatio: "0.5208", LiquidationPrice: "0",
 		OpenTime: 1791500000000, UpdateTime: 1791600000000,
 	},
+	BaseAsset: "SUI", DisplayName: "SUI",
 }
 
-const goldJSON = `{"positionId":"9100000000000000002","symbol":"NCCOGOLD2USD-USDT","side":"SHORT","isolated":true,` +
+const goldJSON = `{"positionId":"9100000000000000002","symbol":"NCCOGOLD2USD-USDT","baseAsset":"XAU","displayName":"Gold","side":"SHORT","isolated":true,` +
 	`"positionAmount":"0.25","avgOpenPrice":"4150.00","markPrice":"4175.00","leverage":15,` +
 	`"initialMargin":"69.1667","margin":"65.0000","positionValue":"1043.75","unrealizedProfit":"-6.2500",` +
 	`"realisedProfit":"-0.5187","pnlRatio":"-0.0904",` +
 	`"stopLoss":null,"takeProfit":null,"breakEven":null,"openTime":1791700000000,"updateTime":1791710000000,"swingLong":false}`
 
-const crossJSON = `{"positionId":"9100000000000000001","symbol":"SUI-USDT","side":"LONG","isolated":false,` +
+const crossJSON = `{"positionId":"9100000000000000001","symbol":"SUI-USDT","baseAsset":"SUI","displayName":"SUI","side":"LONG","isolated":false,` +
 	`"positionAmount":"500","avgOpenPrice":"0.9600","markPrice":"1.0100","leverage":2.5,` +
 	`"initialMargin":"48.0000","margin":"60.5000","positionValue":"505","unrealizedProfit":"25.0000",` +
 	`"realisedProfit":"-0.2400","pnlRatio":"0.5208",` +

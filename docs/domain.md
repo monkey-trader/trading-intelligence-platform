@@ -37,6 +37,7 @@ Es gibt **keine** 1R-Stufe und kein TP2/TP3 (seit TASK-14). Die Aufteilung der R
 |---|---|---|
 | **Swing Long** | Manuelles Flag pro Position (`positionId`), bleibt nach dem Schließen erhalten. Diese Positionen dürfen ins Minus gehen und fließen **nicht** in die Handels-Summen ein; sie werden separat ausgewiesen. | `swingLong`, `PUT`/`DELETE /positions/{positionId}/swing-long` |
 | **Realisierter PnL (Näherung)** | `income` kennt nur Symbol und Zeit. Einträge mit dem Symbol einer Swing-Long-Position im Zeitraum Eröffnung bis Schluss (offen: bis jetzt) zählen als Swing Long. Ungenau, wenn dasselbe Symbol gleichzeitig normal gehandelt wird (auch eine Gegenposition im Hedge-Modus). Monats-PnL und Heute/7T/30T enthalten Swing Long nicht; ausgewiesen wird nur der Monatswert. | `swingLongRealizedPnl` |
+| **Anzeigename** | Aus dem Symbol abgeleitet, ohne externen Aufruf: `NCCOGOLD2USD-USDT` ist Basis-Asset `XAU` und Anzeigename „Gold“, Rohstoffe mit großem Anfangsbuchstaben (`1oilwti`), sonst der Ticker. Liefert die API je Position, damit Clients (z.B. der MCP-Server) dieselben Namen wie die App nennen. | `baseAsset`, `displayName`, `asset.DisplayName` |
 
 ## Querschnittsregeln
 - Beträge und Preise sind **Dezimal-Strings**, nie Float (Datenbank `TEXT`).

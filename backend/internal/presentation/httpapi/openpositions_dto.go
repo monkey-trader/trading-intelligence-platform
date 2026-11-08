@@ -6,6 +6,8 @@ import appposition "github.com/monkey-trader/trading-intelligence-platform/backe
 type openPositionDto struct {
 	PositionID              string      `json:"positionId"`
 	Symbol                  string      `json:"symbol"`
+	BaseAsset               string      `json:"baseAsset"`
+	DisplayName             string      `json:"displayName"`
 	Side                    string      `json:"side"`
 	Isolated                bool        `json:"isolated"`
 	PositionAmount          string      `json:"positionAmount"`
@@ -48,6 +50,8 @@ func toOpenPositionsSnapshotDto(overview appposition.OpenPositionsOverview) open
 		positions = append(positions, openPositionDto{
 			PositionID:              entry.PositionID,
 			Symbol:                  entry.Symbol,
+			BaseAsset:               entry.BaseAsset,
+			DisplayName:             entry.DisplayName,
 			Side:                    string(entry.Side),
 			Isolated:                entry.Isolated,
 			PositionAmount:          entry.PositionAmount,

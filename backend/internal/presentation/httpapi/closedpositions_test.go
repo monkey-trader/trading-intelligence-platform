@@ -30,12 +30,12 @@ func getClosed(t *testing.T, settings Settings, target string) (int, http.Header
 
 func strPtr(value string) *string { return &value }
 
-const closedJSON = `{"positionId":"9100000000000000003","symbol":"SUI-USDT","side":"LONG","openTime":1791500000000,` +
+const closedJSON = `{"positionId":"9100000000000000003","symbol":"SUI-USDT","baseAsset":"SUI","displayName":"SUI","side":"LONG","openTime":1791500000000,` +
 	`"closeTime":1791600000000,"avgOpenPrice":"100","avgClosePrice":"130","positionAmount":"2","leverage":7.5,` +
 	`"realisedProfit":"61","netProfit":"60","commission":"-0.5","totalFunding":"0.1",` +
 	`"rResult":"3","breakEvenPrice":"120","tp1Price":"130","swingLong":false}`
 
-const closedNullJSON = `{"positionId":"9100000000000000004","symbol":"SUI-USDT","side":"SHORT","openTime":1791500000000,` +
+const closedNullJSON = `{"positionId":"9100000000000000004","symbol":"SUI-USDT","baseAsset":"SUI","displayName":"SUI","side":"SHORT","openTime":1791500000000,` +
 	`"closeTime":1791500500000,"avgOpenPrice":"100","avgClosePrice":"105","positionAmount":"2","leverage":3,` +
 	`"realisedProfit":"-10","netProfit":"-11","commission":"-0.5","totalFunding":"0",` +
 	`"rResult":null,"breakEvenPrice":null,"tp1Price":null,"swingLong":false}`
@@ -45,7 +45,8 @@ func closedView(id, side string, closeTime int64, avgClose, netProfit string, le
 		PositionID: id, Symbol: "SUI-USDT", Side: position.PositionSide(side), OpenTime: 1791500000000, CloseTime: closeTime,
 		AvgOpenPrice: "100", AvgClosePrice: avgClose, PositionAmount: "2", Leverage: leverage,
 		RealisedProfit: map[bool]string{true: "61", false: "-10"}[withR], NetProfit: netProfit,
-		Commission: "-0.5", TotalFunding: map[bool]string{true: "0.1", false: "0"}[withR], FullyClosed: true}}
+		Commission: "-0.5", TotalFunding: map[bool]string{true: "0.1", false: "0"}[withR], FullyClosed: true},
+		BaseAsset: "SUI", DisplayName: "SUI"}
 	if withR {
 		view.RResult, view.BreakEvenPrice, view.TP1Price = strPtr("3"), strPtr("120"), strPtr("130")
 	}

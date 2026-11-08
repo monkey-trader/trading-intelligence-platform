@@ -31,6 +31,8 @@ type OpenPositionEntry struct {
 	Levels                  []domainposition.RLevel // 2R/3R, nil bei unbekanntem Risiko
 	InitialStopLossSource   *string                 // "MANUAL" | "AUTO", nil bei unbekanntem Risiko
 	SwingLong               bool                    // manuelles Flag
+	BaseAsset               string                  // Basis-Asset aus dem Symbol (NCCOGOLD2USD-USDT wird XAU)
+	DisplayName             string                  // Anzeigename wie in der App (Gold, Silber, Ticker)
 }
 
 // riskCandleLimit ist die Zahl der 15-Minuten-Kerzen, in denen ohne Kerzen-Source nach 2R gesucht wird.
@@ -140,7 +142,8 @@ func (useCase *GetOpenPositionsUseCase) Execute(ctx context.Context) (OpenPositi
 	groupedOrders := useCase.ordersByPosition(ctx)
 	entries := make([]OpenPositionEntry, 0, len(sortedPositions))
 	for _, openPosition := range sortedPositions {
-		entry := OpenPositionEntry{OpenPosition: openPosition, SwingLong: swingIDs[openPosition.PositionID]}
+		baseAsset, displayName := assetLabel(openPosition.Symbol)
+		entry := OpenPositionEntry{OpenPosition: openPosition, SwingLong: swingIDs[openPosition.PositionID], BaseAsset: baseAsset, DisplayName: displayName}
 		if groupedOrders != nil {
 			applyProtection(ctx, &entry, groupedOrders[openPosition.PositionID])
 		}

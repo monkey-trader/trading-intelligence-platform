@@ -15,6 +15,8 @@ type ClosedPositionView struct {
 	BreakEvenPrice *string
 	TP1Price       *string
 	SwingLong      bool
+	BaseAsset      string // Basis-Asset aus dem Symbol
+	DisplayName    string // Anzeigename wie in der App
 }
 
 // GetClosedPositionsUseCase liest nur; es speichert nie ein Risiko.
@@ -47,7 +49,8 @@ func (useCase *GetClosedPositionsUseCase) Execute(ctx context.Context, query dom
 	}
 	views := make([]ClosedPositionView, 0, len(closed))
 	for _, item := range closed {
-		view := ClosedPositionView{ClosedPosition: item, SwingLong: swingIDs[item.PositionID]}
+		baseAsset, displayName := assetLabel(item.Symbol)
+		view := ClosedPositionView{ClosedPosition: item, SwingLong: swingIDs[item.PositionID], BaseAsset: baseAsset, DisplayName: displayName}
 		risk, found, err := useCase.risks.Get(ctx, item.PositionID)
 		if err != nil {
 			return nil, fmt.Errorf("risiko von position %s lesen: %w", item.PositionID, err)

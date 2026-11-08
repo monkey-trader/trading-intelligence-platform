@@ -726,6 +726,8 @@ components:
         - swingLong
         - positionId
         - symbol
+        - baseAsset
+        - displayName
         - side
         - openTime
         - closeTime
@@ -750,6 +752,16 @@ components:
         symbol:
           type: string
           example: SUI-USDT
+        baseAsset:
+          type: string
+          description: >-
+            Basis-Asset aus dem Symbol (`SUI-USDT` wird `SUI`, Rohstoff-Kontrakt `NCCOGOLD2USD-USDT` wird `XAU`).
+            Gleiche Quelle wie `GET /assets/icons`, aber ohne externen Aufruf.
+          example: SUI
+        displayName:
+          type: string
+          description: Anzeigename wie in der Web-App ("Gold", "Silber", Rohstoffe mit großem Anfangsbuchstaben, sonst der Ticker).
+          example: SUI
         side:
           type: string
           enum:
@@ -854,6 +866,8 @@ components:
         - swingLong
         - positionId
         - symbol
+        - baseAsset
+        - displayName
         - side
         - isolated
         - positionAmount
@@ -881,6 +895,16 @@ components:
         symbol:
           type: string
           example: SUI-USDT
+        baseAsset:
+          type: string
+          description: >-
+            Basis-Asset aus dem Symbol (`SUI-USDT` wird `SUI`, Rohstoff-Kontrakt `NCCOGOLD2USD-USDT` wird `XAU`).
+            Gleiche Quelle wie `GET /assets/icons`, aber ohne externen Aufruf.
+          example: SUI
+        displayName:
+          type: string
+          description: Anzeigename wie in der Web-App ("Gold", "Silber", Rohstoffe mit großem Anfangsbuchstaben, sonst der Ticker).
+          example: SUI
         side:
           type: string
           enum:
