@@ -1,4 +1,5 @@
-// Package mcp implementiert das Model Context Protocol über stdio (eine JSON-Nachricht pro Zeile).
+// Package mcp implementiert das Model Context Protocol über stdio (eine JSON-Nachricht pro Zeile)
+// und Streamable HTTP (siehe http.go).
 package mcp
 
 import (
@@ -101,6 +102,20 @@ func (s *Server) Serve(ctx context.Context, in io.Reader, out io.Writer) error {
 			}
 		}
 	}
+}
+
+// Handle verarbeitet genau eine JSON-RPC-Nachricht (für den HTTP-Transport). Bei Benachrichtigungen
+// und Antworten des Clients ist das Ergebnis nil.
+func (s *Server) Handle(ctx context.Context, message []byte) ([]byte, error) {
+	reply := s.handle(ctx, message)
+	if reply == nil {
+		return nil, nil
+	}
+	data, err := json.Marshal(reply)
+	if err != nil {
+		return nil, fmt.Errorf("antwort kodieren: %w", err)
+	}
+	return data, nil
 }
 
 func (s *Server) handle(ctx context.Context, line []byte) *response {

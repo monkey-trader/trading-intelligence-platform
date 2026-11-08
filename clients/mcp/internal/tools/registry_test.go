@@ -260,3 +260,46 @@ func TestToolsMeldenErrUnreachableWennBackendFehlt(t *testing.T) {
 		t.Fatalf("erwartet ErrUnreachable, bekam %v", err)
 	}
 }
+
+// Nur lesend: genau diese vier Tools, keiner schreibt (Backend sieht nur GET) und Namen sind Lese-Namen.
+func TestRegistryHatKeinSchreibendesToolUndSendetNurGET(t *testing.T) {
+	var mu sync.Mutex
+	var methods []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		methods = append(methods, r.Method)
+		mu.Unlock()
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	t.Cleanup(server.Close)
+	r := tools.NewRegistry(apiclient.New(server.URL, time.Second))
+
+	names := []string{}
+	for _, tool := range r.List() {
+		names = append(names, tool.Name)
+		args := json.RawMessage(`{}`)
+		if tool.Name == "get_position_note" {
+			args = json.RawMessage(`{"positionId":"123"}`)
+		}
+		if !strings.HasPrefix(tool.Name, "get_") {
+			t.Errorf("%s: kein Lese-Name", tool.Name)
+		}
+		if _, err := tool.Call(context.Background(), args); err != nil {
+			t.Errorf("%s: %v", tool.Name, err)
+		}
+	}
+	want := "get_open_positions,get_closed_positions,get_account_summary,get_position_note"
+	if strings.Join(names, ",") != want {
+		t.Fatalf("Tools = %v", names)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(methods) != 4 {
+		t.Fatalf("Backend-Aufrufe = %d", len(methods))
+	}
+	for _, method := range methods {
+		if method != http.MethodGet {
+			t.Errorf("Backend-Methode %s", method)
+		}
+	}
+}
