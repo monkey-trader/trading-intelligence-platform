@@ -45,7 +45,7 @@ func newSwingLongHandler(
 		}
 		if err := action(r.Context(), positionID); err != nil {
 			logger.Error("Swing-Long-Flag nicht änderbar", slog.String("error", truncateForLog(err.Error())))
-			writeProblem(w, ProblemInternal)
+			writeProblem(w, problemTypeFor(err))
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)

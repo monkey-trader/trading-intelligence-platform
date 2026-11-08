@@ -37,6 +37,11 @@ describe(OPERATION_TEST_NAMES.setSwingLong, () => {
         const response = await send({ method: 'PUT', path: swingPath(UNKNOWN_POSITION_ID) });
 
         expectDocumentedResponse(validator, 'setSwingLong', response);
+        // Ohne BingX-Keys (CI) gibt es keine Datenbank: dokumentiert ist dann 503 not-configured.
+        if (response.status === 503) {
+          expectProblem(validator, response, 503, 'not-configured');
+          return;
+        }
         expect(response.status).toBe(204);
       }
     } finally {
@@ -68,6 +73,11 @@ describe(OPERATION_TEST_NAMES.clearSwingLong, () => {
     const response = await send({ method: 'DELETE', path: swingPath(UNKNOWN_POSITION_ID) });
 
     expectDocumentedResponse(validator, 'clearSwingLong', response);
+    // Ohne BingX-Keys (CI) gibt es keine Datenbank: dokumentiert ist dann 503 not-configured.
+    if (response.status === 503) {
+      expectProblem(validator, response, 503, 'not-configured');
+      return;
+    }
     expect(response.status).toBe(204);
   });
 });

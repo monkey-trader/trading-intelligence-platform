@@ -179,3 +179,15 @@ func TestSwingLong_KontoLiefertGetrennteFelder(t *testing.T) {
 		t.Errorf("Body: %s", recorder.Body.String())
 	}
 }
+
+func TestSwingLong_NichtKonfiguriertErgibt503(t *testing.T) {
+	notConfigured := &position.OpenPositionsUnavailableError{Reason: position.ReasonNotConfigured}
+	for _, method := range []string{http.MethodPut, http.MethodDelete} {
+		t.Run(method, func(t *testing.T) {
+			recorder := sendSwing(swingSettings(&swingCalls{}, notConfigured, notConfigured), method, swingPath, "")
+			if recorder.Code != http.StatusServiceUnavailable {
+				t.Fatalf("Status %d, erwartet 503", recorder.Code)
+			}
+		})
+	}
+}

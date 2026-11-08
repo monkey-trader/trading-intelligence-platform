@@ -118,6 +118,11 @@ func run(logger *slog.Logger) error {
 		swingFlags := sqlite.NewSwingLongRepository(database)
 		settings.SetSwingLong = appposition.NewSetSwingLongUseCase(swingFlags, time.Now().UnixMilli).Execute
 		settings.ClearSwingLong = appposition.NewUnsetSwingLongUseCase(swingFlags).Execute
+	} else {
+		// Ohne Datenbank bleiben die Routen registriert (Anfrageprüfung greift) und liefern 503 not-configured.
+		notConfigured := &domainposition.OpenPositionsUnavailableError{Reason: domainposition.ReasonNotConfigured}
+		settings.SetSwingLong = func(context.Context, string) error { return notConfigured }
+		settings.ClearSwingLong = func(context.Context, string) error { return notConfigured }
 	}
 	var candleSource chartinterfaces.CandleSource
 	if chartClient != nil {
