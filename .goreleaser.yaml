@@ -1,4 +1,4 @@
-# Release des Go-Backends (trading-intelligence) und des MCP-Servers (trading-intelligence-mcp) als Homebrew-Formula.
+# Release des Go-Backends (trading-intelligence) und des MCP-Servers (trading-intelligence-mcp) als Homebrew-Formula (macOS) und als Linux-Binaries (linux/amd64).
 # Ausgelöst von .github/workflows/release.yml, nachdem semantic-release Tag + Release angelegt hat.
 version: 2
 project_name: trading-intelligence
@@ -10,8 +10,11 @@ builds:
     binary: trading-intelligence
     env:
       - CGO_ENABLED=0 # SQLite via modernc: reines Go, Cross-Compile ohne macOS-Runner
-    goos: [darwin]
+    goos: [darwin, linux]
     goarch: [arm64, amd64]
+    ignore:
+      - goos: linux
+        goarch: arm64 # Server: nur linux/amd64
     flags: [-trimpath]
     ldflags: ["-s -w"]
 
@@ -21,8 +24,11 @@ builds:
     binary: trading-intelligence-mcp
     env:
       - CGO_ENABLED=0
-    goos: [darwin]
+    goos: [darwin, linux]
     goarch: [arm64, amd64]
+    ignore:
+      - goos: linux
+        goarch: arm64 # Server: nur linux/amd64
     flags: [-trimpath]
     ldflags: ["-s -w"]
 
