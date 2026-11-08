@@ -303,3 +303,58 @@ func TestRegistryHatKeinSchreibendesToolUndSendetNurGET(t *testing.T) {
 		}
 	}
 }
+
+// Ein Agent muss dieselben Zahlen nennen können wie die App: Anzeigename, Swing-Long-Flag und die
+// getrennten Summen kommen unverändert vom Backend durch.
+func TestOffenePositionenReichenAnzeigenameSwingLongUndGetrennteSummeDurch(t *testing.T) {
+	b := newBackend(t, 200, "open.json")
+	got, err := lookup(t, registry(b), "get_open_positions").Call(context.Background(), json.RawMessage(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var body struct {
+		Positions []struct {
+			Symbol      string `json:"symbol"`
+			BaseAsset   string `json:"baseAsset"`
+			DisplayName string `json:"displayName"`
+			SwingLong   bool   `json:"swingLong"`
+		} `json:"positions"`
+		TotalUnrealizedProfit     string `json:"totalUnrealizedProfit"`
+		SwingLongUnrealizedProfit string `json:"swingLongUnrealizedProfit"`
+	}
+	if err := json.Unmarshal(got, &body); err != nil {
+		t.Fatal(err)
+	}
+	names := map[string]string{}
+	swing := map[string]bool{}
+	for _, p := range body.Positions {
+		names[p.Symbol] = p.BaseAsset + "/" + p.DisplayName
+		swing[p.Symbol] = p.SwingLong
+	}
+	if names["NCCOGOLD2USD-USDT"] != "XAU/Gold" || names["BTC-USDT"] != "BTC/BTC" {
+		t.Errorf("Namen: %v", names)
+	}
+	if !swing["BTC-USDT"] || swing["NCCOGOLD2USD-USDT"] || swing["SUI-USDT"] {
+		t.Errorf("swingLong: %v", swing)
+	}
+	if body.TotalUnrealizedProfit != "5.21" || body.SwingLongUnrealizedProfit != "120.00" {
+		t.Errorf("Summen: %q / %q", body.TotalUnrealizedProfit, body.SwingLongUnrealizedProfit)
+	}
+}
+
+func TestBeschreibungenNennenAnzeigenameSwingLongUndGetrennteSummen(t *testing.T) {
+	r := registry(newBackend(t, 200, "open.json"))
+	want := map[string][]string{
+		"get_open_positions":   {"displayName", "baseAsset", "swingLong", "totalUnrealizedProfit", "swingLongUnrealizedProfit"},
+		"get_closed_positions": {"displayName", "baseAsset", "swingLong"},
+		"get_account_summary":  {"swingLongUnrealizedPnl", "swingLongRealizedPnl"},
+	}
+	for name, terms := range want {
+		description := lookup(t, r, name).Description
+		for _, term := range terms {
+			if !strings.Contains(description, term) {
+				t.Errorf("%s: Beschreibung nennt %q nicht", name, term)
+			}
+		}
+	}
+}

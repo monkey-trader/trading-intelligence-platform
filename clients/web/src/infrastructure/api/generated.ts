@@ -310,6 +310,16 @@ export interface components {
             positionId: string;
             /** @example SUI-USDT */
             symbol: string;
+            /**
+             * @description Basis-Asset aus dem Symbol (`SUI-USDT` wird `SUI`, Rohstoff-Kontrakt `NCCOGOLD2USD-USDT` wird `XAU`). Gleiche Quelle wie `GET /assets/icons`, aber ohne externen Aufruf.
+             * @example SUI
+             */
+            baseAsset: string;
+            /**
+             * @description Anzeigename wie in der Web-App ("Gold", "Silber", Rohstoffe mit großem Anfangsbuchstaben, sonst der Ticker).
+             * @example SUI
+             */
+            displayName: string;
             /** @enum {string} */
             side: "LONG" | "SHORT";
             /** @description Eröffnung in Epoch-Millisekunden. */
@@ -359,6 +369,16 @@ export interface components {
             positionId: string;
             /** @example SUI-USDT */
             symbol: string;
+            /**
+             * @description Basis-Asset aus dem Symbol (`SUI-USDT` wird `SUI`, Rohstoff-Kontrakt `NCCOGOLD2USD-USDT` wird `XAU`). Gleiche Quelle wie `GET /assets/icons`, aber ohne externen Aufruf.
+             * @example SUI
+             */
+            baseAsset: string;
+            /**
+             * @description Anzeigename wie in der Web-App ("Gold", "Silber", Rohstoffe mit großem Anfangsbuchstaben, sonst der Ticker).
+             * @example SUI
+             */
+            displayName: string;
             /** @enum {string} */
             side: "LONG" | "SHORT";
             isolated: boolean;

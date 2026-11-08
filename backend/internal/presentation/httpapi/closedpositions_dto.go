@@ -6,6 +6,8 @@ import appposition "github.com/monkey-trader/trading-intelligence-platform/backe
 type closedPositionDto struct {
 	PositionID     string  `json:"positionId"`
 	Symbol         string  `json:"symbol"`
+	BaseAsset      string  `json:"baseAsset"`
+	DisplayName    string  `json:"displayName"`
 	Side           string  `json:"side"`
 	OpenTime       int64   `json:"openTime"`
 	CloseTime      int64   `json:"closeTime"`
@@ -31,7 +33,7 @@ func toClosedPositionsDto(views []appposition.ClosedPositionView) closedPosition
 	positions := make([]closedPositionDto, 0, len(views))
 	for _, view := range views {
 		positions = append(positions, closedPositionDto{
-			PositionID: view.PositionID, Symbol: view.Symbol, Side: string(view.Side),
+			PositionID: view.PositionID, Symbol: view.Symbol, BaseAsset: view.BaseAsset, DisplayName: view.DisplayName, Side: string(view.Side),
 			OpenTime: view.OpenTime, CloseTime: view.CloseTime,
 			AvgOpenPrice: view.AvgOpenPrice, AvgClosePrice: view.AvgClosePrice,
 			PositionAmount: view.PositionAmount, Leverage: view.Leverage,

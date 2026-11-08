@@ -7,8 +7,17 @@ import type {
 } from '@/domain/position/OpenPositionsResult';
 import type { components } from '@/infrastructure/api/generated';
 
-type OpenPositionsSnapshotDto = components['schemas']['OpenPositionsSnapshot'];
-type OpenPositionDto = components['schemas']['OpenPosition'];
+export type OpenPositionsSnapshotDto = Omit<
+  components['schemas']['OpenPositionsSnapshot'],
+  'positions'
+> & {
+  positions: OpenPositionDto[];
+};
+// baseAsset und displayName (für den MCP-Server) nutzt die Web-App nicht: Namen kommen aus /assets/icons.
+export type OpenPositionDto = Omit<
+  components['schemas']['OpenPosition'],
+  'baseAsset' | 'displayName'
+>;
 type RLevelDto = components['schemas']['RLevel'];
 type ProblemDto = components['schemas']['Problem'];
 

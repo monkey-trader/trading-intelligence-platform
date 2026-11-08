@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { components } from '@/infrastructure/api/generated';
-import { createHttpOpenPositionsGateway } from '@/infrastructure/api/httpOpenPositionsGateway';
+import {
+  createHttpOpenPositionsGateway,
+  type OpenPositionsSnapshotDto,
+} from '@/infrastructure/api/httpOpenPositionsGateway';
 
-type SnapshotBody = components['schemas']['OpenPositionsSnapshot'];
+type SnapshotBody = OpenPositionsSnapshotDto;
 type ProblemBody = components['schemas']['Problem'];
 
 // Antwort von GET /positions/open laut docs/openapi.yaml 0.3.0 (erfundene Werte).
@@ -362,5 +365,22 @@ describe('createHttpOpenPositionsGateway – Timeout', () => {
     const result = await gateway.fetchOpenPositions(new AbortController().signal);
 
     expect(result).toEqual({ kind: 'problem', problemType: 'backend-unreachable' });
+  });
+
+  it('ignoriert baseAsset und displayName der Wire-Form (Namen kommen aus /assets/icons)', async () => {
+    const wire: components['schemas']['OpenPositionsSnapshot'] = {
+      ...snapshotBody,
+      positions: snapshotBody.positions.map((position) => ({
+        ...position,
+        baseAsset: 'SUI',
+        displayName: 'SUI',
+      })),
+    };
+    const gateway = createHttpOpenPositionsGateway(fakeFetchReturning(jsonResponse(wire)));
+
+    const result = await gateway.fetchOpenPositions(newSignal());
+
+    expect(result.kind).toBe('ok');
+    if (result.kind === 'ok') expect(result.snapshot.positions[0]).not.toHaveProperty('baseAsset');
   });
 });

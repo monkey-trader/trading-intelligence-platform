@@ -57,13 +57,13 @@ func NewRegistry(api Getter) *Registry {
 	return &Registry{list: []Tool{
 		{
 			Name:        "get_open_positions",
-			Description: "Liefert die aktuell offenen Positionen mit Entry, Stop-Loss, Take-Profit-Stufen, Margin, unrealisiertem PnL und Liquidationsabstand.",
+			Description: "Liefert die aktuell offenen Positionen mit Entry, Stop-Loss, Take-Profit-Stufen, Margin, unrealisiertem PnL und Liquidationsabstand. Zum Anzeigen displayName (z.B. Gold) statt des Roh-Symbols nennen, baseAsset ist das Basis-Asset. swingLong=true markiert Swing-Long-Positionen: Sie zählen nicht in totalUnrealizedProfit, ihre Summe steht getrennt in swingLongUnrealizedProfit (so zeigt es auch die App: Tab Trades gegen Tab Swing Long).",
 			InputSchema: json.RawMessage(emptySchema),
 			Call:        simple("/positions/open"),
 		},
 		{
 			Name:        "get_closed_positions",
-			Description: "Liefert geschlossene Positionen mit R-Ergebnis, BE- und TP1-Level. Optional nach Zeitraum (from/to in Unix-Millisekunden), Symbol und Anzahl (limit 1 bis 500) filtern.",
+			Description: "Liefert geschlossene Positionen mit R-Ergebnis, BE- und TP1-Level. displayName/baseAsset sind der Anzeigename und das Basis-Asset, swingLong=true markiert Swing-Long-Positionen. Optional nach Zeitraum (from/to in Unix-Millisekunden), Symbol und Anzahl (limit 1 bis 500) filtern.",
 			InputSchema: json.RawMessage(closedSchema),
 			Call: func(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 				return callClosed(ctx, api, args)
@@ -71,7 +71,7 @@ func NewRegistry(api Getter) *Registry {
 		},
 		{
 			Name:        "get_account_summary",
-			Description: "Liefert die Kontoübersicht: Guthaben, Equity, verfügbare Margin, realisierter PnL für heute, 7 und 30 Tage sowie den laufenden Monat.",
+			Description: "Liefert die Kontoübersicht: Guthaben, Equity, verfügbare Margin, realisierter PnL für heute, 7 und 30 Tage sowie den laufenden Monat. Die Werte ohne Swing Long (unrealizedPnl, periods, monthlyRealizedPnl) sind von Swing Long getrennt: swingLongUnrealizedPnl und swingLongRealizedPnl.",
 			InputSchema: json.RawMessage(emptySchema),
 			Call:        simple("/account/summary"),
 		},

@@ -391,6 +391,8 @@ describe('docs/openapi.yaml', () => {
     const position = {
       positionId: '9100000000000000001',
       symbol: 'SUI-USDT',
+      baseAsset: 'SUI',
+      displayName: 'SUI',
       side: 'LONG',
       isolated: true,
       positionAmount: '500',
